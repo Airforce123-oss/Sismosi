@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
@@ -50,6 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('students', StudentController::class);
+    // routes/web.php
+    Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.indexTeacher');
+
     Route::resource('kelas', ClassController::class);
     Route::get('/api/sections', [StudentController::class, 'getSections']);
     Route::get('/api/religions', [StudentController::class, 'getReligion']);

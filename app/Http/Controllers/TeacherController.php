@@ -2,51 +2,82 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Http\Resources\StudentResource;
 use App\Http\Resources\ClassesResource;
+use App\Http\Resources\TeacherResource;
+use App\Http\Resources\StudentResource;
+use App\Http\Resources\ReligionResource;
 use App\Http\Requests\StoreStudentRequest;
+use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateStudentRequest;
-use App\Models\Student;
-use App\Models\Classes;
-use App\Models\Section;
 use Illuminate\Database\Eloquent\Builder;
-
+use Illuminate\Http\Request;
+use App\Models\Student;
+use App\Models\Classes; 
+use App\Models\Teacher;
+use App\Models\Religion;
+use App\Models\Gender;
+use App\Models\NoInduk;
+use Illuminate\Support\Facades\Log;
 
 
 class TeacherController extends Controller
 {
-    public function dashboardTeacher() {
-        return inertia('Teachers/Dashboard');
-    }
 
-    public function bukuPenghubungDashboard() {
-        return inertia('Teachers/BukuPenghubung/index');
-    }
+   
+
     public function index(Request $request)
     {
+        $teacherQuery = Teacher::query();
 
-        $studentQuery = Student::query();
+        // Apply search filter if present
+        //$this->applySearch($teacherQuery, $request->search);
 
-     
-       // applysearch work
-       $this->applySearch($studentQuery, $request->search);
+        // Pagination
+        $wali_kelas = $teacherQuery->paginate(10)->appends($request->only('search'));
 
-         // Paginasi dengan nomor halaman dan tambahkan parameter pencarian ke link paginasi
-        $students = $studentQuery->paginate(10)->appends($request->only('search'));
-
-        return inertia('Teachers/index', [
-            'students' => StudentResource::collection($students),
+        return inertia('Teachers/indexTeacher', [
+            'wali_kelas' => TeacherResource::collection($wali_kelas),
             'search' => $request->input('search', '')
         ]);
-
     }
-    protected function applySearch(Builder $query, $search)
+
+
+    public function create()
     {
-        return $query->when($search, function ($query, $search) {
-            $query->where('name', 'like', '%' . $search . '%');
-        });
+        $classes = ClassesResource::collection(Classes::all());
+    
+        return inertia('Teachers/create', [
+            'classes' => $classes,
+        ]);
     }
 
-}
+    public function store(StoreTeacherRequest $request)
+    {
+        Log::info('Ini adalah pesan log sederhana.');
 
+        $data = $request->validated();
+        Log::info('Data yang diterima:', $data);
+    
+        $teacher = Teacher::create($data);
+    
+        Log::info('Data yang berhasil disimpan:', $teacher->toArray());
+
+        dd($request->all()); // Periksa data yang dikirim
+        Teacher::create($request->validated());
+
+        return redirect()->route('teachers.indexTeacher');
+    }
+
+    public function show($id)
+    {
+        $teacher = Teacher::find($id);
+
+        if (!$teacher) {
+            return redirect()->route('dashboard')->with('error', 'Teacher not found');
+        }
+
+        return inertia('Teachers/show', [
+            'teacher' => TeacherResource::make($teacher)
+        ]);
+    }
+}

@@ -7,28 +7,13 @@ import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 
 const { props } = usePage();
 
-defineProps({
-    students: {
-        type: Object,
-        required: true,
-    },
-    classes: {
-        type: Object,
-        required: true,
-    },
-    genders: {
-        type: Object,
-        required: true,
-    },
-    no_induks: {
-        type: Object,
-        required: true,
-    },
-    religions: {
-        type: Object,
-        required: true,
-    },
+const form1 = defineProps({
+    classes: { type: Object },
 });
+
+const classes = ref(props.classes.data || []);
+
+const waliKelas = ref(props.wali_kelas || { data: [] });
 
 const form = useForm({
     name: props.auth.user.name,
@@ -38,48 +23,6 @@ const form = useForm({
 
 let pageNumber = ref(1);
 let searchTerm = ref(props.search ?? "");
-
-const studentsUrl = computed(() => {
-    const url = new URL(route("students.index"));
-    url.searchParams.set("page", pageNumber.value);
-    if (searchTerm.value) {
-        url.searchParams.set("search", searchTerm.value);
-    }
-    return url;
-});
-
-watch(
-    () => studentsUrl.value,
-    (updatedStudentsUrl) => {
-        router.visit(updatedStudentsUrl.toString(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
-    }
-);
-
-const deleteForm = useForm({});
-
-const deleteStudent = (id) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-        deleteForm.delete(route("students.destroy", id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                pageNumber.value = 1;
-                router.visit(studentsUrl.value.toString(), {
-                    replace: true,
-                    preserveState: true,
-                    preserveScroll: true,
-                });
-            },
-        });
-    }
-};
-
-const updatedPageNumber = (link) => {
-    pageNumber.value = link.url.split("=").pop();
-};
 
 onMounted(() => {
     initFlowbite();
@@ -210,8 +153,7 @@ onMounted(() => {
                                 </span>
                                 <span
                                     class="block text-sm text-gray-900 truncate dark:text-white"
-                                    >{{ form.role_type }}</span
-                                >
+                                ></span>
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
@@ -234,203 +176,106 @@ onMounted(() => {
         <!-- start1 -->
 
         <main class="p-4 md:ml-64 h-auto pt-20">
-            <Head title="Students" />
-
-            <div class="flex-1 p-6">
-                <div class="mx-auto max-w-7xl sm:items-center">
-                    <div class="px-4 py-4 sm:px-6 lg:px-8">
-                        <div class="sm:flex sm:items-center">
-                            <div class="sm:flex-auto">
-                                <h1
-                                    class="text-3xl font-semibold text-gray-900"
-                                >
-                                    Siswa
-                                </h1>
-                                <p class="mt-2 text-sm text-gray-700">
-                                    Daftar Semua Siswa
-                                </p>
-                            </div>
-
-                            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                                <Link
-                                    :href="route('students.create')"
-                                    class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-                                    ><i class="fa fa-plus"></i>
-                                    Tambah Siswa
-                                </Link>
-                            </div>
-                        </div>
-                        <!-- mt-8 flex flex-auto p-4 md:ml-14 h-auto pt-10 -->
-                        <div
-                            class="flex flex-col justify-between sm:flex-row mt-6"
-                        >
+            <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
+                <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
+                <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
+                    <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
+                        <form @submit.prevent="createStudent">
                             <div
-                                class="relative text-sm text-gray-800 col-span-3"
+                                class="shadow sm:rounded-md sm:overflow-hidden"
                             >
                                 <div
-                                    class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
+                                    class="bg-white py-6 px-4 space-y-6 sm:p-6"
                                 >
-                                    <MagnifyingGlass />
-                                </div>
-
-                                <input
-                                    type="text"
-                                    v-model="searchTerm"
-                                    placeholder="Cari Data Siswa.."
-                                    id="search"
-                                    class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="mt-8 flex flex-col mr-20">
-                            <div
-                                class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
-                            >
-                                <div
-                                    class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
-                                >
-                                    <div
-                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
-                                    >
-                                        <table class="min-w-full bg-white">
-                                            <thead class="bg-gray-50">
-                                                <tr>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        ID
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Nomor Induk
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Nama
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Jenis Kelamin
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Kelas
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Agama
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Dibuat Pada
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="relative py-3.5 pl-3 pr-4 sm:pr-6"
-                                                    />
-                                                </tr>
-                                            </thead>
-                                            <tbody
-                                                class="divide-y divide-gray-200 bg-white"
-                                            >
-                                                <tr
-                                                    v-for="student in students.data"
-                                                    :key="student.id"
-                                                >
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{ student.id }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{
-                                                            student.noInduk
-                                                                .no_induk
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{ student.name }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{
-                                                            student.gender.name
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{ student.class.name }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{
-                                                            student.religion
-                                                                .name
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{ student.created_at }}
-                                                    </td>
-
-                                                    <td
-                                                        class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                                                    >
-                                                        <Link
-                                                            :href="
-                                                                route(
-                                                                    'students.edit',
-                                                                    student.id
-                                                                )
-                                                            "
-                                                            class="text-indigo-600 hover:text-indigo-900"
-                                                        >
-                                                            Edit
-                                                        </Link>
-                                                        <button
-                                                            @click="
-                                                                deleteStudent(
-                                                                    student.id
-                                                                )
-                                                            "
-                                                            class="ml-2 text-indigo-600 hover:text-indigo-900"
-                                                        >
-                                                            Hapus
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <div>
+                                        <h3
+                                            class="text-lg leading-6 font-medium text-gray-900"
+                                        >
+                                            Informasi Guru
+                                        </h3>
+                                        <p class="mt-1 text-sm text-gray-500">
+                                            Gunakan Form ini untuk mengisi data
+                                            guru
+                                        </p>
                                     </div>
-                                    <Pagination
-                                        :data="students"
-                                        :updatedPageNumber="updatedPageNumber"
-                                    />
+                                    <div class="grid grid-cols-6 gap-6">
+                                        <!-- Nama -->
+                                        <div class="col-span-6 sm:col-span-3">
+                                            <label
+                                                for="name"
+                                                class="block text-sm font-medium text-gray-700"
+                                            >
+                                                Nama
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="name"
+                                                placeholder="Masukkan Nama"
+                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                :class="{
+                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                                                        form.errors.name,
+                                                }"
+                                            />
+                                            <InputError
+                                                class="mt-2"
+                                                :message="form.errors.name"
+                                            />
+                                        </div>
+
+                                        <!-- Kelas -->
+                                        <div class="col-span-6 sm:col-span-3">
+                                            <label
+                                                for="class_id"
+                                                class="block text-sm font-medium text-gray-700"
+                                            >
+                                                Kelas
+                                            </label>
+                                            <select
+                                                v-model="form.class_id"
+                                                id="class_id"
+                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                :class="{
+                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                                                        form.errors.class_id,
+                                                }"
+                                            >
+                                                <option value="">
+                                                    Pilih Kelas
+                                                </option>
+                                                <option
+                                                    v-for="item in classes"
+                                                    :key="item.id"
+                                                    :value="item.id"
+                                                >
+                                                    {{ item.name }}
+                                                </option>
+                                            </select>
+                                            <InputError
+                                                class="mt-2"
+                                                :message="form.errors.class_id"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6"
+                                >
+                                    <Link
+                                        :href="route('teachers.index')"
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
+                                    >
+                                        Batal
+                                    </Link>
+                                    <button
+                                        type="submit"
+                                        class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                    >
+                                        Simpan
+                                    </button>
                                 </div>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -747,4 +592,3 @@ onMounted(() => {
         </aside>
     </div>
 </template>
-

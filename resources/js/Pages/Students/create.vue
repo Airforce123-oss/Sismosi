@@ -1,92 +1,55 @@
 <script setup>
-import { onMounted, watch, ref } from "vue";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import { watch, ref } from "vue";
 import axios from "axios";
-import { Head, useForm, Link } from "@inertiajs/vue3";
 import InputError from "@/Components/InputError.vue";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 
-const props = defineProps({
-    classes: { type: Object, default: () => ({ data: [] }) },
+const props =defineProps({
+    classes: { type: Object, },
     genders: { type: Object, default: () => ({ data: [] }) },
     no_induks: { type: Object, default: () => ({ data: [] }) },
     religions: { type: Object, default: () => ({ data: [] }) },
     students: { type: Object, default: () => ({ data: [] }) },
 });
 
-const form = useForm({
-    no_induk: "",
-    name: "",
-    gender_id: "",
-    class_id: "",
-    religion_id: "",
-});
+let sections = ref({});
 
-let sections = ref([]);
-//const students = ref(props.students.data || []);
 const classes = ref(props.classes.data || []);
 let genders = ref(props.genders.data || []);
 const religions = ref(props.religions.data || []);
 const no_induks = ref(props.no_induks.data || []);
 
-// Fetch sections based on class_id
-const getSections = (class_id) => {
-    axios.get(`/api/sections?class_id=${class_id}`).then((response) => {
-        console.log(response.data);
-    });
-};
-
-const getGender = (gender_id) => {
-    axios.get(`/api/genders?gender_id=${gender_id}`).then((response) => {
-        console.log(response.data);
-    });
-};
-
-onMounted(() => {
-    console.log("Students data on mounted:", props.students);
+const form = useForm({
+    name: "",
+    email: "",
+    section_id: "",
+    no_induk_id: "",
+    gender_id: "",
+    class_id: "",
+    religion_id: "",
 });
 
-// Create student function
-const createStudent = async () => {
-    try {
-        await form.post(route("students.store"), {
-            preserveScroll: true,
-        });
-
-        // Optionally, handle successful submission
-    } catch (error) {
-        if (
-            error.response &&
-            error.response.data &&
-            error.response.data.errors
-        ) {
-            Object.keys(error.response.data.errors).forEach((key) => {
-                form.errors[key] = error.response.data.errors[key];
-            });
-        }
-    }
-};
-
-// Watch for changes to class_id
 watch(
     () => form.class_id,
     (newValue) => {
-        if (newValue) {
-            getSections(newValue);
-        }
+        getSections(newValue);
     }
 );
 
-watch(
-    () => form.gender_id,
-    (newValue) => {
-        if (newValue) {
-            getGender(newValue);
-        }
-    }
-);
+const getSections = (class_id) => {
+    axios.get("/api/sections?class_id=" + class_id).then((response) => {
+        sections.value = response.data;
+    });
+};
+
+const createStudent = () => {
+    form.post(route("students.store"), {
+        preserveScroll: true,
+    });
+};
 </script>
 
-<!-- update tampilan create data siswa -->
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -185,7 +148,7 @@ watch(
                             xmlns:xlink="http://www.w3.org/1999/xlink"
                         >
                             <path
-                                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
+                                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3 c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768 C18.184,8.34,12,3,12,3z"
                                 fill="black"
                             />
                         </svg>
@@ -265,7 +228,7 @@ watch(
                                                 Nomor Induk
                                             </label>
                                             <input
-                                                v-model="form.no_induk"
+                                                v-model="form.no_induks"
                                                 type="text"
                                                 id="nomorInduk"
                                                 placeholder="Masukkan Nomor Induk"
@@ -370,6 +333,7 @@ watch(
                                                 :message="form.errors.class_id"
                                             />
                                         </div>
+
                                         <!-- Agama -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
@@ -412,13 +376,13 @@ watch(
                                 >
                                     <Link
                                         :href="route('students.index')"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-5"
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
                                     >
-                                        Kembali
+                                        Batal
                                     </Link>
                                     <button
                                         type="submit"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#7a8b8e] hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                     >
                                         Simpan
                                     </button>
@@ -488,7 +452,7 @@ watch(
                                 xmlns:xlink="http://www.w3.org/1999/xlink"
                             >
                                 <path
-                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
+                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3 c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768 C18.184,8.34,12,3,12,3z"
                                 />
                             </svg>
                             <span class="ml-3">Beranda</span>
@@ -573,7 +537,6 @@ watch(
                                 >Kelas</span
                             >
                             <svg
-                                aria-hidden="true"
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -622,7 +585,6 @@ watch(
                                 >Mata Pelajaran</span
                             >
                             <svg
-                                aria-hidden="true"
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"

@@ -16,7 +16,9 @@ class GenderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name, // Pastikan kolom nama gender disertakan
+            'name' => $this->name, 
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

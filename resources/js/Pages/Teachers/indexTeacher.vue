@@ -8,27 +8,13 @@ import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 const { props } = usePage();
 
 defineProps({
-    students: {
-        type: Object,
-        required: true,
-    },
     classes: {
         type: Object,
         required: true,
     },
-    genders: {
-        type: Object,
-        required: true,
-    },
-    no_induks: {
-        type: Object,
-        required: true,
-    },
-    religions: {
-        type: Object,
-        required: true,
-    },
 });
+
+const waliKelas = ref(props.wali_kelas || { data: [] });
 
 const form = useForm({
     name: props.auth.user.name,
@@ -38,48 +24,6 @@ const form = useForm({
 
 let pageNumber = ref(1);
 let searchTerm = ref(props.search ?? "");
-
-const studentsUrl = computed(() => {
-    const url = new URL(route("students.index"));
-    url.searchParams.set("page", pageNumber.value);
-    if (searchTerm.value) {
-        url.searchParams.set("search", searchTerm.value);
-    }
-    return url;
-});
-
-watch(
-    () => studentsUrl.value,
-    (updatedStudentsUrl) => {
-        router.visit(updatedStudentsUrl.toString(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
-    }
-);
-
-const deleteForm = useForm({});
-
-const deleteStudent = (id) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-        deleteForm.delete(route("students.destroy", id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                pageNumber.value = 1;
-                router.visit(studentsUrl.value.toString(), {
-                    replace: true,
-                    preserveState: true,
-                    preserveScroll: true,
-                });
-            },
-        });
-    }
-};
-
-const updatedPageNumber = (link) => {
-    pageNumber.value = link.url.split("=").pop();
-};
 
 onMounted(() => {
     initFlowbite();
@@ -210,8 +154,7 @@ onMounted(() => {
                                 </span>
                                 <span
                                     class="block text-sm text-gray-900 truncate dark:text-white"
-                                    >{{ form.role_type }}</span
-                                >
+                                ></span>
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
@@ -244,19 +187,19 @@ onMounted(() => {
                                 <h1
                                     class="text-3xl font-semibold text-gray-900"
                                 >
-                                    Siswa
+                                    Guru
                                 </h1>
                                 <p class="mt-2 text-sm text-gray-700">
-                                    Daftar Semua Siswa
+                                    Daftar Semua Guru
                                 </p>
                             </div>
 
                             <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
                                 <Link
-                                    :href="route('students.create')"
+                                    :href="route('teachers.create')"
                                     class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
                                     ><i class="fa fa-plus"></i>
-                                    Tambah Siswa
+                                    Tambah Guru
                                 </Link>
                             </div>
                         </div>
@@ -283,151 +226,94 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="mt-8 flex flex-col mr-20">
-                            <div
-                                class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
-                            >
+                        <div class="container mx-auto">
+                            <div class="mt-8 flex flex-col items-center">
                                 <div
-                                    class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                                    class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
                                 >
                                     <div
-                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
+                                        class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
                                     >
-                                        <table class="min-w-full bg-white">
-                                            <thead class="bg-gray-50">
-                                                <tr>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        ID
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Nomor Induk
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Nama
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Jenis Kelamin
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Kelas
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Agama
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                    >
-                                                        Dibuat Pada
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="relative py-3.5 pl-3 pr-4 sm:pr-6"
-                                                    />
-                                                </tr>
-                                            </thead>
-                                            <tbody
-                                                class="divide-y divide-gray-200 bg-white"
-                                            >
-                                                <tr
-                                                    v-for="student in students.data"
-                                                    :key="student.id"
-                                                >
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{ student.id }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{
-                                                            student.noInduk
-                                                                .no_induk
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{ student.name }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{
-                                                            student.gender.name
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{ student.class.name }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{
-                                                            student.religion
-                                                                .name
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                    >
-                                                        {{ student.created_at }}
-                                                    </td>
+                                        <div
+                                            class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
+                                        >
+                                            <table class="min-w-full bg-white">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th
+                                                            scope="col"
+                                                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                        >
+                                                            ID
+                                                        </th>
+                                                        <th
+                                                            scope="col"
+                                                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                        >
+                                                            Nama
+                                                        </th>
 
-                                                    <td
-                                                        class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                        <th
+                                                            scope="col"
+                                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                        >
+                                                            Kelas
+                                                        </th>
+
+                                                        <th
+                                                            scope="col"
+                                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                        >
+                                                            Dibuat Pada
+                                                        </th>
+                                                        <th
+                                                            scope="col"
+                                                            class="relative py-3.5 pl-3 pr-4 sm:pr-6"
+                                                        />
+                                                    </tr>
+                                                </thead>
+                                                <tbody
+                                                    class="divide-y divide-gray-200 bg-white"
+                                                >
+                                                    <tr
+                                                        v-for="student in waliKelas.data"
+                                                        :key="student.id"
                                                     >
-                                                        <Link
-                                                            :href="
-                                                                route(
-                                                                    'students.edit',
-                                                                    student.id
-                                                                )
-                                                            "
-                                                            class="text-indigo-600 hover:text-indigo-900"
+                                                        <td
+                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                         >
-                                                            Edit
-                                                        </Link>
-                                                        <button
-                                                            @click="
-                                                                deleteStudent(
-                                                                    student.id
-                                                                )
-                                                            "
-                                                            class="ml-2 text-indigo-600 hover:text-indigo-900"
+                                                            {{ student.id }}
+                                                        </td>
+                                                        <td
+                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                         >
-                                                            Hapus
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                                            {{ student.name }}
+                                                        </td>
+                                                        <td
+                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                        >
+                                                            {{ student.class }}
+                                                        </td>
+
+                                                        <td
+                                                            class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                        >
+                                                            <Link
+                                                                class="text-indigo-600 hover:text-indigo-900"
+                                                            >
+                                                                Edit
+                                                            </Link>
+                                                            <button
+                                                                class="ml-2 text-indigo-600 hover:text-indigo-900"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                    <Pagination
-                                        :data="students"
-                                        :updatedPageNumber="updatedPageNumber"
-                                    />
                                 </div>
                             </div>
                         </div>
@@ -747,4 +633,3 @@ onMounted(() => {
         </aside>
     </div>
 </template>
-

@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             GenderSeeder::class,
             ReligionSeeder::class,
             NoIndukSeeder::class,
+            TeacherSeeder::class,
             ClassesSeeder::class,
         ]);
     }
