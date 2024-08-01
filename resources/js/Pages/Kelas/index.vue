@@ -31,14 +31,14 @@ const form = useForm({
 
 const openModal = (type, classes = {}) => {
     showModal.value = true;
-    
-        modalTitle.value = "Tambah Kelas";
-        modalButton.value = "Simpan";
-        kelasForm.value = {
-            id_kelas: "",
-            nama_kelas: "",
-            kode_kelas: `MK-${Date.now()}`,  
-    } 
+
+    modalTitle.value = "Tambah Kelas";
+    modalButton.value = "Simpan";
+    kelasForm.value = {
+        id_kelas: "",
+        nama_kelas: "",
+        kode_kelas: `MK-${Date.now()}`,
+    };
     /*
 
       if (type === "add") {
