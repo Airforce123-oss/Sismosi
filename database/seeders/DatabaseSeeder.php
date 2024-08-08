@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ReligionSeeder::class,
             NoIndukSeeder::class,
             TeacherSeeder::class,
+            LaratrustSeeder::class,
             ClassesSeeder::class,
         ]);
     }

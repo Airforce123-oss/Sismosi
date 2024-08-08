@@ -118,7 +118,7 @@ onMounted(() => {
                         />
                         <span
                             class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>

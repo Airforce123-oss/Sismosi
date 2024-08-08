@@ -79,7 +79,7 @@ onMounted(() => {
                         />
                         <span
                             class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
@@ -198,7 +198,7 @@ onMounted(() => {
                                 <Link
                                     :href="route('teachers.create')"
                                     class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-                                    ><i class="fa fa-plus"></i>
+                                    ><i class="fa fa-plus mr-2"></i>
                                     Tambah Guru
                                 </Link>
                             </div>
@@ -264,7 +264,7 @@ onMounted(() => {
                                                             scope="col"
                                                             class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                                                         >
-                                                            Dibuat Pada
+                                                            Action
                                                         </th>
                                                         <th
                                                             scope="col"

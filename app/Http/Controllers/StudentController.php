@@ -20,16 +20,12 @@ use App\Models\NoInduk;
 use Illuminate\Support\Facades\Log;
 
 
-class studentController extends Controller
+class StudentController extends Controller
 {
     public function absensiSiswa() {
         return inertia('Students/absensiSiswa');
     }
-
-    public function dashboardStudent() {
-        return inertia('Students/Dashboard');
-    }
-
+    
     public function index(Request $request)
     {
         $studentQuery = Student::query()->with('noInduk', 'religion', 'gender', 'class');

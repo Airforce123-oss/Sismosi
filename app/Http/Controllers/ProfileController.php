@@ -6,6 +6,8 @@ use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Log; 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -13,6 +15,7 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+
     public function index()
     {
         return inertia('Profile/index');
@@ -28,6 +31,59 @@ class ProfileController extends Controller
             'status' => session('status'),
         ]);
     }
+
+    public function dashboard()
+    {
+        $user = auth()->user();
+        $roles = $user->roles->pluck('name');
+    
+        Log::info('User roles on dashboard access:', ['roles' => $roles]);
+    
+        // Cek berdasarkan peran dengan switch
+        switch (true) {
+            case $roles->contains('admin'):
+                return Inertia::render('dashboard');
+            case $roles->contains('teacher'):
+                return Inertia::render('teachersDashboard');
+            case $roles->contains('student'):
+                return Inertia::render('studentsDashboard');
+            default:
+                return redirect()->route('home');
+        }
+    }
+    
+    
+    
+    
+
+    /*
+        if ($user->hasRole('admin')) {
+            return Inertia::render('dashboard');
+        } elseif ($user->hasRole('teacher')) {
+            return Inertia::render('teachersDashboard');
+        } elseif ($user->hasRole('student')) {
+            return Inertia::render('studentsDashboard');
+        } else {
+            return redirect()->route('home'); 
+        }
+    */
+    
+    
+
+      /*
+
+
+            if(auth()->user()->hasRole('admin')){
+            return Inertia::render('dashboard');
+        }elseif(auth()->user()->hasRole('teacher')){
+            return Inertia::render('teachersDashboard');
+        }elseif(auth()->user()->hasRole('student')){
+            return Inertia::render('studentsDashboard');
+        }
+      */
+
+
+    
 
     /**
      * Update the user's profile information.

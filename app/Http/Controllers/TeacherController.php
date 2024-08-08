@@ -17,14 +17,12 @@ use App\Models\Teacher;
 use App\Models\Religion;
 use App\Models\Gender;
 use App\Models\NoInduk;
+use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
 
 class TeacherController extends Controller
 {
-
-   
-
     public function index(Request $request)
     {
         $teacherQuery = Teacher::query();
@@ -39,7 +37,7 @@ class TeacherController extends Controller
             'wali_kelas' => TeacherResource::collection($wali_kelas),
             'search' => $request->input('search', '')
         ]);
-    }
+    } 
 
 
     public function create()

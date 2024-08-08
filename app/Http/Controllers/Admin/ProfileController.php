@@ -12,8 +12,12 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
+
+
 class ProfileController extends Controller
 {
+
+
     public function index()
     {
         return inertia('Profile/index');
@@ -30,6 +34,7 @@ class ProfileController extends Controller
         ]);
     }
 
+    
     /**
      * Update the user's profile information.
      */
@@ -67,3 +72,5 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 }
+
+

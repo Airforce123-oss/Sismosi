@@ -45,14 +45,15 @@ const submit = () => {
     <!-- --->
     <div class="bg-[#9CF09C] flex items-center justify-center min-h-screen">
         <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
-            <div
-                class="w-1/2 bg-white rounded-l-lg flex items-center justify-center"
-            >
+            <div class="w-1/2 p-8 flex flex-col items-center justify-center">
                 <img
                     src="/images/barunawati.webp"
-                    class="w-1/2 h-3/2 object-cover"
+                    class="w-2/3 h-auto object-contain mb-4"
                     alt="Gambar Barunawati"
                 />
+                <h2 class="text-2xl font-bold text-center">
+                    SMA BARUNAWATI SURABAYA
+                </h2>
             </div>
             <div class="w-1/2 p-8">
                 <h2 class="text-2xl font-bold text-center">SELAMAT DATANG</h2>
@@ -91,28 +92,8 @@ const submit = () => {
                         />
                         <!-- mt-1 block w-full -->
                     </div>
-                    <div class="flex items-center justify-between mb-6">
-                        <label class="flex items-center">
-                            <Checkbox
-                                name="remember"
-                                v-model:checked="form.remember"
-                                class="form-checkbox text-blue-500"
-                            />
-                            <span class="ml-2 text-gray-700">Remember me</span>
-                        </label>
-                        <a href="#" class="text-sm text-blue-500"
-                            >Forgot Password?</a
-                        >
-                    </div>
-                    <!--
-                       <button
-                        class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
-                    >
-                        Login
-                    </button>
-                    -->
                     <PrimaryButton
-                        class="w-full bg-green-400 text-white py-2 rounded-lg hover:bg-blue-600 ms-4 flex items-center justify-center"
+                        class="w-full px-3 py-2 rounded-lg bg-green-400 items-center justify-center"
                         style="text-align: center; text-transform: none"
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"

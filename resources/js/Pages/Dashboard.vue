@@ -22,6 +22,8 @@ const form = useForm({
 onMounted(() => {
     initFlowbite();
 
+    
+
     // Line Chart Options
     const lineChartOptions = {
         chart: { height: 300, type: "line", toolbar: { show: false } },
@@ -144,7 +146,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -165,13 +166,14 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <button
+                    <!--
+                                        <button
                         type="button"
                         data-drawer-toggle="drawer-navigation"
                         aria-controls="drawer-navigation"
@@ -191,17 +193,16 @@ onMounted(() => {
                             ></path>
                         </svg>
                     </button>
+                    -->
                     <!-- Apps -->
                     <button
                         type="button"
                         class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">View notifications</span>
-                    </button>
+                    ></button>
 
                     <button
                         type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -226,7 +227,7 @@ onMounted(() => {
                     </button>
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
                         <div class="py-3 px-3">
@@ -279,13 +280,13 @@ onMounted(() => {
             </div>
 
             <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4"
+                class="flex justify-center items-center grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mb-4"
             >
                 <div
                     class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
                     id=""
                 >
-                    <h2 class="text-center">SISWA</h2>
+                    <h2 class="text-center text-[#ffffff]">Jumlah Siswa</h2>
                     <p
                         class="output text-center mt-5 text-xl text-[#ffffff]"
                         placeholder=""
@@ -297,7 +298,7 @@ onMounted(() => {
                 <div
                     class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
                 >
-                    <h2 class="text-center">KELAS</h2>
+                    <h2 class="text-center text-[#ffffff]">Jumlah Kelas</h2>
                     <p
                         class="output text-center mt-5 text-xl text-[#ffffff]"
                         placeholder=""
@@ -308,18 +309,7 @@ onMounted(() => {
                 <div
                     class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
                 >
-                    <h2 class="text-center">TOTAL KEHADIRAN SISWA</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        0
-                    </p>
-                </div>
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                >
-                    <h2 class="text-center">ABSEN MASUK HARI INI</h2>
+                    <h2 class="text-center text-[#ffffff]">Jumlah Pengguna</h2>
                     <p
                         class="output text-center mt-5 text-xl text-[#ffffff]"
                         placeholder=""
@@ -417,34 +407,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a

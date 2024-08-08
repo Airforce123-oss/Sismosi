@@ -237,7 +237,7 @@ onMounted(() => {
                                     @click="openModal('add')"
                                     class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
                                 >
-                                    <i class="fa fa-plus"></i>
+                                    <i class="fa fa-plus mr-2"></i>
                                     Tambah Mata Pelajaran
                                 </button>
                             </div>
@@ -263,7 +263,7 @@ onMounted(() => {
                                                         <th>Opsi</th>
                                                     </tr>
                                                 </thead>
-                                            <tbody
+                                                <tbody
                                                     class="divide-y divide-gray-200 bg-white"
                                                 >
                                                     <tr

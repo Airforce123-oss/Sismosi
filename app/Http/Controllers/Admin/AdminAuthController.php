@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -20,18 +21,33 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
+        
+        if (Auth::guard('admin')->attempt($credentials)) {
+            // Cek jika user login berhasil
+            $admin = Auth::guard('admin')->user();
+            Session::put('name', $admin->name);
 
-        if (Auth::attempt($credentials)) {
-            // Simpan nama user ke session
-            Session::put('name', Auth::user()->name);
+            $roles = $admin->roles->pluck('name')->toArray();
             
-            return redirect()->intended('dashboard');
-        }
+          // Redirect berdasarkan role
+            if (in_array('admin', $roles)) {
+                return redirect()->route('admin.dashboard');
+            } elseif (in_array('teacher', $roles)) {
+                return redirect()->route('teachers.dashboard');
+            } elseif (in_array('student', $roles)) {
+                return redirect()->route('students.dashboard');
+            } else {
+                return redirect()->route('home');
+            }
+    }
+        
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ]);
     }
-
+    
+    
+    
     public function showRegisterForm()
     {
         return Inertia::render('Admin/Auth/Register');
@@ -43,7 +59,6 @@ class AdminAuthController extends Controller
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:admins',
         'password' => 'required|string|min:8|confirmed',
-        'role_type' => 'required|string|in:Admin,Teachers,Student,Parent', // Ensure valid role_type
     ]);
 
     $admin = Admin::create([
@@ -54,10 +69,11 @@ class AdminAuthController extends Controller
     ]);
 
     Auth::guard('admin')->login($admin);
+    return redirect()->route('dashboard');
 }
     public function logout(Request $request)
-    {
-        Auth::guard('admin')->logout();
-        return redirect()->route('admin.login');
-    }
+{
+    Auth::guard('admin')->logout();
+    return redirect()->route('login'); // Redirect ke halaman login admin
+}
 }

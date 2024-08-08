@@ -13,9 +13,10 @@ const form = useForm({
     email: "",
     password: "",
     password_confirmation: "",
-    role_type: "",
+    //role_type: "",
 });
 
+/*
 const roleTypes = ref([]);
 
 const fetchRoleTypes = async () => {
@@ -30,6 +31,7 @@ const fetchRoleTypes = async () => {
 onMounted(() => {
     fetchRoleTypes();
 });
+*/
 
 const submit = () => {
     form.post(route("register"), {
@@ -41,14 +43,15 @@ const submit = () => {
 <template>
     <div class="bg-[#9CF09C] flex items-center justify-center min-h-screen">
         <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
-            <div
-                class="w-1/2 bg-white rounded-l-lg flex items-center justify-center"
-            >
+            <div class="w-1/2 p-8 flex flex-col items-center justify-center">
                 <img
                     src="/images/barunawati.webp"
-                    class="w-1/2 h-3/2 object-cover"
+                    class="w-2/3 h-auto object-contain mb-4"
                     alt="Gambar Barunawati"
                 />
+                <h2 class="text-2xl font-bold text-center">
+                    SMA BARUNAWATI SURABAYA
+                </h2>
             </div>
             <div class="w-1/2 p-8">
                 <h2 class="text-2xl font-bold text-center">SELAMAT DATANG</h2>
@@ -97,7 +100,8 @@ const submit = () => {
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
-                    <div class="mb-4">
+                    <!-- 
+                                        <div class="mb-4">
                         <InputLabel
                             for="role_type"
                             class="block text-gray-700 mb-2"
@@ -123,6 +127,8 @@ const submit = () => {
                             :message="form.errors.role_type"
                         />
                     </div>
+
+                    -->
 
                     <div class="mb-4">
                         <InputLabel
@@ -166,13 +172,8 @@ const submit = () => {
                         />
                     </div>
 
-                    <div class="flex items-center justify-between mb-6">
-                        <a href="#" class="text-sm text-blue-500"
-                            >Forgot Password?</a
-                        >
-                    </div>
                     <PrimaryButton
-                        class="w-full bg-green-400 text-white py-2 rounded-lg hover:bg-blue-600 ms-4 flex items-center justify-center"
+                        class="w-full px-3 py-2 rounded-lg bg-green-400 items-center justify-center"
                         style="text-align: center; text-transform: none"
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"
