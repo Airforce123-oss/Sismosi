@@ -2,34 +2,30 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class TeacherSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
+    public function run()
     {
         DB::table('wali_kelas')->insert([
-            ['name' => 'Bambang Nurdhiari D, S.Pd', 'class' => 'X-1'],
-            ['name' => 'Rully Ardiansyah, S.Pd., Gr', 'class' => 'X-2'],
-            ['name' => 'Dra. Darmi Sri Astuti', 'class' => 'X-3'],
-            ['name' => 'Dwi Rofikoh, S.Hum', 'class' => 'X-4'],
-            ['name' => 'Sri Puji Lestari, S.Pd', 'class' => 'X-5'],
-            ['name' => 'Aflah Aghniawan, S.Pd', 'class' => 'X-6'],
-            ['name' => 'Ernanda Dhimas, S.Pd', 'class' => 'XI-1'],
-            ['name' => 'Hariyati Prasetyorini, M.Pd', 'class' => 'XI-2'],
-            ['name' => 'Ratna Wijayanti, S.S', 'class' => 'XI-3'],
-            ['name' => 'Adjib Hidayat, S.Pd', 'class' => 'XI-4'],
-            ['name' => 'Suryandari Valentina Hapsariputri, S.Psi', 'class' => 'XI-5'],
-            ['name' => 'Yosi Trisa, M.Pd', 'class' => 'XI-6'],
-            ['name' => 'Slamet Santoso, S.Pd', 'class' => 'XII-1'],
-            ['name' => 'Herry Poerwanto, S.Pd', 'class' => 'XII-2'],
-            ['name' => 'Diana Ardianti, S.Pd', 'class' => 'XII-3'],
-            ['name' => 'Dwi Purnama, S.Si', 'class' => 'XII-4'],
+            ['class_id' => 1, 'name' => 'Bambang Nurdhiari, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 2, 'name' => 'Rully Ardiansyah, S.Pd., Gr', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 3, 'name' => 'Dra. Darmi Sri Astuti', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 4, 'name' => 'Dwi Rofikoh, S.Hum', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 5, 'name' => 'Sri Puji Lestari, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 6, 'name' => 'Aflah Aghniawan, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 7, 'name' => 'Ernanda Dhimas, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 8, 'name' => 'Hariyati Prasetyorini, M.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 9, 'name' => 'Ratna Wijayanti, S.S', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 10, 'name' => 'Adjib Hidayat, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 11, 'name' => 'Suryandari Valentina Hapsariputri, S.Psi', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 12, 'name' => 'Yosi Trisa, M.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 13, 'name' => 'Slamet Santoso, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 14, 'name' => 'Herry Poerwanto, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 15, 'name' => 'Diana Ardianti, S.Pd', 'created_at' => now(), 'updated_at' => now()],
+            ['class_id' => 16, 'name' => 'Dwi Purnama, S.Si', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

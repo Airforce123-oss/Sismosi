@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -16,10 +15,8 @@ return new class extends Migration {
             $table->foreignId('no_induk_id')->constrained('no_induks');
             $table->foreignId('class_id')->constrained('classes');
             $table->foreignId('gender_id')->constrained('genders');
-            $table->foreignId('section_id')->constrained();
             $table->foreignId('religion_id')->constrained('religions');
             $table->string('name');
-            $table->string('email');
             $table->timestamps();
         });
     }

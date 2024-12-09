@@ -1,32 +1,37 @@
 <script setup>
 import { initFlowbite } from "flowbite";
-import Pagination from "../../Components/Pagination.vue";
-import { Link, Head, useForm, usePage, router } from "@inertiajs/vue3";
-import { ref, watch, computed, onMounted } from "vue";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import { Link, useForm, router } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
+import InputError from "@/Components/InputError.vue"; // Pastikan komponen InputError ada
 
-const { props } = usePage();
-
-const form1 = defineProps({
+const props = defineProps({
     classes: { type: Object },
 });
 
 const classes = ref(props.classes.data || []);
 
-const waliKelas = ref(props.wali_kelas || { data: [] });
-
 const form = useForm({
-    name: props.auth.user.name,
-    email: props.auth.user.email,
-    role_type: props.auth.user.role_type,
+    name: "",
+    class_id: "",
 });
-
-let pageNumber = ref(1);
-let searchTerm = ref(props.search ?? "");
 
 onMounted(() => {
     initFlowbite();
 });
+
+function createTeacher() {
+    console.log("Submitting data:", form);
+
+    form.post(route("teachers.store"), {
+        onSuccess: () => {
+            console.log("Data successfully submitted");
+            router.visit(route("teachers.index"));
+        },
+        onError: (errors) => {
+            console.error("Error:", errors);
+        },
+    });
+}
 </script>
 
 <template>
@@ -180,7 +185,7 @@ onMounted(() => {
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-                        <form @submit.prevent="createStudent">
+                        <form @submit.prevent="createTeacher">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -208,6 +213,7 @@ onMounted(() => {
                                                 Nama
                                             </label>
                                             <input
+                                                v-model="form.name"
                                                 type="text"
                                                 id="name"
                                                 placeholder="Masukkan Nama"
@@ -251,6 +257,7 @@ onMounted(() => {
                                                     {{ item.name }}
                                                 </option>
                                             </select>
+
                                             <InputError
                                                 class="mt-2"
                                                 :message="form.errors.class_id"

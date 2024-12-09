@@ -7,12 +7,8 @@ import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { ZiggyVue } from "../../vendor/tightenco/ziggy";
 import { Ziggy } from "./ziggy";
-import "admin-lte/plugins/jquery/jquery.min.js";
-import "admin-lte/plugins/bootstrap/js/bootstrap.bundle.min.js";
-import "admin-lte/dist/js/adminlte.min.js";
 import VueApexCharts from "vue-apexcharts";
 import Dashboard from "./Pages/dashboard.vue";
-
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 
@@ -88,9 +84,8 @@ app.component("apexchart", VueApexCharts);
 
 //app.component("dashboard", Dashboard);
 
-
 // Mount aplikasi Vue ke elemen dengan id 'app'
-app.mount("#app");
+//app.mount("#app");
 
 app.use(ZiggyVue, Ziggy);
 

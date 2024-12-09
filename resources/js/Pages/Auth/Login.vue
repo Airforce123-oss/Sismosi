@@ -7,6 +7,7 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+import axios from "axios";
 
 defineProps({
     canResetPassword: {
@@ -16,6 +17,10 @@ defineProps({
         type: String,
     },
 });
+
+axios.defaults.headers.common["X-CSRF-TOKEN"] = document.head.querySelector(
+    'meta[name="csrf-token"]'
+).content;
 
 const form = useForm({
     email: "",
@@ -35,15 +40,31 @@ const fetchSessionData = async () => {
 };
 
 const submit = () => {
+    // Kirim permintaan login
+    axios
+        .post("/login", { email: form.email, password: form.password })
+        .then((response) => {
+            if (response.data.token) {
+                localStorage.setItem("auth_token", response.data.token); // Menyimpan token di localStorage
+                console.log("Token saved:", response.data.token); // Debugging untuk memastikan token disimpan
+            } else {
+                console.error("Token is missing in the response.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error during login:", error);
+        });
+
+    // Mengirim form login menggunakan Inertia.js
     form.post(route("login"), {
-        onFinish: () => form.reset("password"),
+        onFinish: () => form.reset("password"), // Reset password setelah login
     });
 };
 </script>
 
 <template>
     <!-- --->
-    <div class="bg-[#9CF09C] flex items-center justify-center min-h-screen">
+    <div class="bg-[#12bdee] flex items-center justify-center min-h-screen">
         <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
             <div class="w-1/2 p-8 flex flex-col items-center justify-center">
                 <img
@@ -93,7 +114,7 @@ const submit = () => {
                         <!-- mt-1 block w-full -->
                     </div>
                     <PrimaryButton
-                        class="w-full px-3 py-2 rounded-lg bg-green-400 items-center justify-center"
+                        class="w-full px-3 py-2 rounded-lg bg-[#12bdee] items-center justify-center"
                         style="text-align: center; text-transform: none"
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"

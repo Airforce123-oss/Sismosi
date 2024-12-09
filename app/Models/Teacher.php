@@ -7,13 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Teacher extends Model
 {
+    use HasFactory;
 
-    protected $table = 'wali_kelas';
-    protected $fillable = ['name', 'class_id'];
-    
+    protected $fillable = [
+        'name',
+        'class_id',
+    ];
+
+    // Jika Anda menggunakan relasi
     public function class()
     {
         return $this->belongsTo(Classes::class, 'class_id');
     }
 
+    protected $table = 'wali_kelas';
 }

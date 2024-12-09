@@ -25,19 +25,32 @@ class TeacherController extends Controller
 {
     public function index(Request $request)
     {
-        $teacherQuery = Teacher::query();
+        $teacherQuery = Teacher::query()->with('class');
 
         // Apply search filter if present
-        //$this->applySearch($teacherQuery, $request->search);
+        $this->applySearch($teacherQuery, $request->search);
 
         // Pagination
-        $wali_kelas = $teacherQuery->paginate(10)->appends($request->only('search'));
+        $wali_kelas = $teacherQuery->paginate(60)->appends($request->only('search'));
 
-        return inertia('Teachers/indexTeacher', [
+        return inertia('Teachers/index', [
             'wali_kelas' => TeacherResource::collection($wali_kelas),
             'search' => $request->input('search', '')
         ]);
     } 
+
+    protected function applySearch(Builder $query, $search)
+    {
+        return $query->when($search, function ($query, $search) {
+            $query->where('name', 'like', '%' . $search . '%');
+        });
+    }
+
+
+    public function absensiSiswa()
+    {
+        return inertia('teachers/absensiSiswa');
+    }
 
 
     public function create()
@@ -49,22 +62,19 @@ class TeacherController extends Controller
         ]);
     }
 
+
     public function store(StoreTeacherRequest $request)
     {
-        Log::info('Ini adalah pesan log sederhana.');
-
-        $data = $request->validated();
-        Log::info('Data yang diterima:', $data);
+        // Validate the request data
+        $validated = $request->validated();
     
-        $teacher = Teacher::create($data);
+        // Store the teacher data
+        Teacher::create($validated);
     
-        Log::info('Data yang berhasil disimpan:', $teacher->toArray());
-
-        dd($request->all()); // Periksa data yang dikirim
-        Teacher::create($request->validated());
-
-        return redirect()->route('teachers.indexTeacher');
+        // Redirect to the index page with a success message
+        return redirect()->route('teachers.index')->with('success', 'Teacher created successfully.');
     }
+    
 
     public function show($id)
     {

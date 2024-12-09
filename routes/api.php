@@ -4,9 +4,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SectionController;
 use App\Models\Student;
+use App\Models\Attendance;
+//use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceController;
 use App\Models\Mapel;
 use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\AuthController;
 
 
 /*
@@ -24,7 +29,21 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::post('/login', [AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->get('/attendance', [AttendanceController::class, 'indexApi1']);
+
+
 Route::get('sections', SectionController::class)->name('sections.index');
+
+Route::get('/students/{id}', [StudentController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/attendance', [AttendanceController::class, 'indexApi1']);
+    Route::get('/attendance', [AttendanceController::class, 'getAttendances']);
+    Route::post('/attendance', [AttendanceController::class, 'store']);
+});
 
 Route::get('/students/count', function () {
     $totalSiswa = Student::count();

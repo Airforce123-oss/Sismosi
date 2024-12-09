@@ -1,36 +1,29 @@
 <script setup>
-import { onMounted } from "vue";
-import { initFlowbite } from "flowbite";
-import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, Link, useForm, router } from "@inertiajs/vue3";
 import { watch, ref } from "vue";
 import axios from "axios";
 import InputError from "@/Components/InputError.vue";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import { error } from "jquery";
 
-const { props } = usePage();
-const form1 = useForm({
-    name: props.auth.user.name,
-    email: props.auth.user.email,
-    role_type: props.auth.user.role_type,
-});
-
-defineProps({
-    classes: {
-        type: Object,
-    },
-    genders: {
-        type: Object,
-    },
+const props = defineProps({
+    classes: { type: Object },
+    genders: { type: Object, default: () => ({ data: [] }) },
+    religions: { type: Object, default: () => ({ data: [] }) },
+    students: { type: Object, default: () => ({ data: [] }) },
 });
 
 let sections = ref({});
 
+const classes = ref(props.classes.data || []);
+let genders = ref(props.genders.data || []);
+const religions = ref(props.religions.data || []);
 const form = useForm({
     name: "",
-    email: "",
+    no_induk_id: "",
+    gender_id: "",
     class_id: "",
-    section_id: "",
+    religion_id: "",
 });
 
 watch(
@@ -46,11 +39,28 @@ const getSections = (class_id) => {
     });
 };
 
-const submit = () => {
-    form.post(route("students.store"), {
-        preserveScroll: true,
-    });
+const formData = {
+    name: "John Doe",
+    gender_id: 2,
+    class_id: 1,
+    religion_id: 3,
+    no_induk_id: 24,
 };
+
+function submit() {
+    console.log("Submitting data:", formData);
+
+    form.post(route("students.store"), {
+        data: formData,
+        onSuccess: () => {
+            console.log("Data successfully submitted");
+            router.visit(route("students.index"));
+        },
+        onError: (errors) => {
+            console.error("Error:", errors);
+        },
+    });
+}
 </script>
 
 <!-- update tampilan create data siswa -->
@@ -178,7 +188,7 @@ const submit = () => {
                                 </span>
                                 <span
                                     class="block text-sm text-gray-900 truncate dark:text-white"
-                                    >{{ form1.role_type }}</span
+                                    >{{ form.role_type }}</span
                                 >
                             </div>
                         </div>
@@ -204,7 +214,7 @@ const submit = () => {
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-                        <form @submit.prevent="createStudent">
+                        <form @submit.prevent="submit">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -222,36 +232,41 @@ const submit = () => {
                                             siswa
                                         </p>
                                     </div>
-
                                     <div class="grid grid-cols-6 gap-6">
+                                        <!-- Nomor Induk -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
-                                                for="name"
+                                                for="nomorInduk"
                                                 class="block text-sm font-medium text-gray-700"
-                                                >Nomor Induk</label
                                             >
+                                                Nomor Induk
+                                            </label>
                                             <input
+                                                v-model="form.no_induk_id"
                                                 type="text"
                                                 id="nomorInduk"
                                                 placeholder="Masukkan Nomor Induk"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
+                                                        form.errors.no_induk_id,
                                                 }"
                                             />
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.name"
+                                                :message="
+                                                    form.errors.no_induk_id
+                                                "
                                             />
                                         </div>
-
+                                        <!-- Nama -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
                                                 for="name"
                                                 class="block text-sm font-medium text-gray-700"
-                                                >Nama</label
                                             >
+                                                Nama
+                                            </label>
                                             <input
                                                 v-model="form.name"
                                                 type="text"
@@ -263,67 +278,53 @@ const submit = () => {
                                                         form.errors.name,
                                                 }"
                                             />
+
                                             <InputError
                                                 class="mt-2"
                                                 :message="form.errors.name"
                                             />
                                         </div>
-
+                                        <!-- Jenis Kelamin -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
-                                                for="name"
+                                                for="gender_id"
                                                 class="block text-sm font-medium text-gray-700"
-                                                >Jenie Kelamin</label
                                             >
-                                            <input
-                                                v-model="form.name"
-                                                type="text"
-                                                placeholder="Masukkan Jenis Kelamin"
-                                                id="name"
-                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
-                                                }"
-                                            />
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.name"
-                                            />
-                                        </div>
-
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="class_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                                >Jenis Kelamin</label
-                                            >
+                                                Jenis Kelamin
+                                            </label>
                                             <select
-                                                v-model="form.class_id"
-                                                id="class_id"
+                                                v-model="form.gender_id"
+                                                id="gender_id"
                                                 class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.class_id,
+                                                        form.errors.gender_id,
                                                 }"
                                             >
                                                 <option value="">
                                                     Pilih Jenis Kelamin
                                                 </option>
-                                      
+                                                <option
+                                                    v-for="item in genders"
+                                                    :key="item.id"
+                                                    :value="item.id"
+                                                >
+                                                    {{ item.name }}
+                                                </option>
                                             </select>
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.class_id"
+                                                :message="form.errors.gender_id"
                                             />
                                         </div>
-
+                                        <!-- Kelas -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
                                                 for="class_id"
                                                 class="block text-sm font-medium text-gray-700"
-                                                >Kelas</label
                                             >
+                                                Kelas
+                                            </label>
                                             <select
                                                 v-model="form.class_id"
                                                 id="class_id"
@@ -337,7 +338,7 @@ const submit = () => {
                                                     Pilih Kelas
                                                 </option>
                                                 <option
-                                                    v-for="item in classes.data"
+                                                    v-for="item in classes"
                                                     :key="item.id"
                                                     :value="item.id"
                                                 >
@@ -350,27 +351,28 @@ const submit = () => {
                                             />
                                         </div>
 
+                                        <!-- Agama -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
-                                                for="class_id"
+                                                for="religion_id"
                                                 class="block text-sm font-medium text-gray-700"
-                                                >Agama</label
                                             >
+                                                Agama
+                                            </label>
                                             <select
-                                                v-model="form.class_id"
-                                                placeholder="Masukkan Agama"
-                                                id="class_id"
+                                                v-model="form.religion_id"
+                                                id="religion_id"
                                                 class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.class_id,
+                                                        form.errors.religion_id,
                                                 }"
                                             >
                                                 <option value="">
                                                     Pilih Agama
                                                 </option>
                                                 <option
-                                                    v-for="item in classes.data"
+                                                    v-for="item in religions"
                                                     :key="item.id"
                                                     :value="item.id"
                                                 >
@@ -379,7 +381,9 @@ const submit = () => {
                                             </select>
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.class_id"
+                                                :message="
+                                                    form.errors.religion_id
+                                                "
                                             />
                                         </div>
                                     </div>
@@ -397,7 +401,7 @@ const submit = () => {
                                         type="submit"
                                         class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                     >
-                                        Simpan
+                                        Perbarui
                                     </button>
                                 </div>
                             </div>

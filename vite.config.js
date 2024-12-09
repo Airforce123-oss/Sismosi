@@ -1,4 +1,6 @@
 import { defineConfig } from "vite";
+import { createHtmlPlugin } from 'vite-plugin-html'
+import vueDevTools from 'vite-plugin-vue-devtools'
 import laravel from "laravel-vite-plugin";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
@@ -17,6 +19,8 @@ export default defineConfig({
                 },
             },
         }),
+        vueDevTools(),
+        createHtmlPlugin({})
     ],
     resolve: {
         alias: {

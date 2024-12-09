@@ -6,6 +6,15 @@ import { ref, watch, computed, onMounted } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 
 const { props } = usePage();
+const pageNumber = ref(1);
+const perPage = ref(5);
+
+console.log("pageNumber:", pageNumber.value);
+console.log("perPage:", perPage.value);
+
+console.log("pageNumber:", pageNumber.value);
+console.log("perPage:", perPage.value);
+//console.log("index:", index);
 
 defineProps({
     students: {
@@ -36,12 +45,19 @@ const form = useForm({
     role_type: props.auth.user.role_type,
 });
 
-let pageNumber = ref(1);
 let searchTerm = ref(props.search ?? "");
+
+const updatedPageNumber = (link) => {
+    const page = new URL(link.url).searchParams.get("page"); // Ambil nilai page dari URL
+    pageNumber.value = page;
+    router.visit(`/students?page=${pageNumber.value}`, {
+        preserveScroll: true,
+    });
+};
 
 const studentsUrl = computed(() => {
     const url = new URL(route("students.index"));
-    url.searchParams.set("page", pageNumber.value);
+    url.searchParams.set("page", pageNumber.value); // pastikan pageNumber ada
     if (searchTerm.value) {
         url.searchParams.set("search", searchTerm.value);
     }
@@ -51,6 +67,7 @@ const studentsUrl = computed(() => {
 watch(
     () => studentsUrl.value,
     (updatedStudentsUrl) => {
+        console.log("Navigating to URL:", updatedStudentsUrl.toString());
         router.visit(updatedStudentsUrl.toString(), {
             preserveState: true,
             preserveScroll: true,
@@ -77,11 +94,11 @@ const deleteStudent = (id) => {
     }
 };
 
-const updatedPageNumber = (link) => {
-    pageNumber.value = link.url.split("=").pop();
-};
+pageNumber.value = 2;
+console.log(pageNumber.value); // Akses dengan .value
 
 onMounted(() => {
+    console.log("students data:", props.students);
     initFlowbite();
 });
 </script>
@@ -100,7 +117,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -113,7 +129,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -134,7 +149,7 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
                             >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
@@ -142,31 +157,7 @@ onMounted(() => {
                 <div class="flex items-center lg:order-2">
                     <button
                         type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            aria-hidden="true"
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
-                    <!-- Apps -->
-
-                    <button
-                        type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -348,13 +339,35 @@ onMounted(() => {
                                                 class="divide-y divide-gray-200 bg-white"
                                             >
                                                 <tr
-                                                    v-for="student in students.data"
+                                                    v-for="(
+                                                        student, index
+                                                    ) in students.data"
                                                     :key="student.id"
                                                 >
                                                     <td
                                                         class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                     >
-                                                        {{ student.id }}
+                                                        <span
+                                                            v-if="
+                                                                pageNumber &&
+                                                                perPage
+                                                            "
+                                                        >
+                                                            {{
+                                                                (Number(
+                                                                    pageNumber
+                                                                ) -
+                                                                    1) *
+                                                                    Number(
+                                                                        perPage
+                                                                    ) +
+                                                                Number(index) +
+                                                                1
+                                                            }}
+                                                        </span>
+                                                        <span v-else
+                                                            >Loading...</span
+                                                        >
                                                     </td>
                                                     <td
                                                         class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"

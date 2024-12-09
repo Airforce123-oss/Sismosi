@@ -17,10 +17,11 @@ class DatabaseSeeder extends Seeder
             UsersTableSeeder::class,
             GenderSeeder::class,
             ReligionSeeder::class,
-            NoIndukSeeder::class,
-            TeacherSeeder::class,
             LaratrustSeeder::class,
+            NoIndukSeeder::class,
+            AttendanceSeeder::class,
             ClassesSeeder::class,
+            TeacherSeeder::class,
         ]);
     }
 }

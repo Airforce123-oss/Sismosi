@@ -9,12 +9,14 @@ use App\Http\Resources\ReligionResource;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\NoIndukResource;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Classes; 
 use App\Models\Section;
 use App\Models\Religion;
+use App\Models\Teacher;
 use App\Models\Gender;
 use App\Models\NoInduk;
 use Illuminate\Support\Facades\Log;
@@ -22,16 +24,16 @@ use Illuminate\Support\Facades\Log;
 
 class StudentController extends Controller
 {
-    public function absensiSiswa() {
-        return inertia('Students/absensiSiswa');
-    }
-    
+
     public function index(Request $request)
     {
         $studentQuery = Student::query()->with('noInduk', 'religion', 'gender', 'class');
 
+
         // Apply search filter if present
         $this->applySearch($studentQuery, $request->search);
+        $studentQuery->orderBy('id');
+        
 
         // Pagination
         $students = $studentQuery->paginate(5)->appends($request->only('search'));
@@ -49,8 +51,10 @@ class StudentController extends Controller
         // Apply search filter if present
         $this->applySearch($studentQuery, $request->search);
 
+        $studentQuery->orderBy('id');
+
         // Pagination
-        $students = $studentQuery->paginate(2)->appends($request->only('search'));
+        $students = $studentQuery->paginate(5)->appends($request->only('search'));
 
         return response()->json($students);
     }
@@ -69,6 +73,7 @@ class StudentController extends Controller
         $religions = ReligionResource::collection(Religion::all());
         $no_induks = NoIndukResource::collection(NoInduk::all());
 
+
         return inertia('Students/create', [
             'no_induks' => $no_induks,
             'classes' => $classes,
@@ -79,30 +84,36 @@ class StudentController extends Controller
 
     public function store(StoreStudentRequest $request)
     {
-        Log::info('Ini adalah pesan log sederhana.');
+        //Log::info('Data yang diterima:', $request->validated());
+        
+        //$student = Student::create($request->validated());
+        
+        //Log::info('Data yang berhasil disimpan:', $student->toArray());
 
-        $data = $request->validated();
-        Log::info('Data yang diterima:', $data);
-    
-        $student = Student::create($data);
-    
-        Log::info('Data yang berhasil disimpan:', $student->toArray());
-
-        dd($request->all()); // Periksa data yang dikirim
-        Student::create($request->validated());
-
-        return redirect()->route('students.index');
+        try {
+            Student::create($request->validated());
+            return redirect()->route('students.index')->with('success', 'Student created successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error creating student:', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Failed to create student.');
+        }
     }
+    
 
     public function edit(Student $student)
     {
         $classes = ClassesResource::collection(Classes::all());
         $religions = ReligionResource::collection(Religion::all());
+        $no_induks = NoIndukResource::collection(NoInduk::all());
+        $genders = GenderResource::collection(Gender::all());
+
 
         return inertia('Students/edit', [
             'student' => StudentResource::make($student),
             'classes' => $classes,
             'religions' => $religions,
+            'genders' => $genders,
+            'no_induks' => $no_induks,
         ]);
     }
 

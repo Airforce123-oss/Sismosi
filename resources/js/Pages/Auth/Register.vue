@@ -41,7 +41,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="bg-[#9CF09C] flex items-center justify-center min-h-screen">
+    <div class="bg-[#12bdee] flex items-center justify-center min-h-screen">
         <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
             <div class="w-1/2 p-8 flex flex-col items-center justify-center">
                 <img
@@ -173,7 +173,7 @@ const submit = () => {
                     </div>
 
                     <PrimaryButton
-                        class="w-full px-3 py-2 rounded-lg bg-green-400 items-center justify-center"
+                        class="w-full px-3 py-2 rounded-lg bg-[#12bdee] items-center justify-center"
                         style="text-align: center; text-transform: none"
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"

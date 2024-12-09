@@ -33,11 +33,6 @@ const openModal = (type, mapel = {}) => {
     if (type === "add") {
         modalTitle.value = "Tambah Mata Pelajaran";
         modalButton.value = "Simpan";
-        mapelForm.value = {
-            id_mapel: "",
-            kode_mapel: `MP-${Date.now()}`,
-            mapel: "",
-        };
     } else if (type === "edit") {
         modalTitle.value = "Edit Mapel";
         modalButton.value = "Edit";

@@ -1,14 +1,17 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm, router } from "@inertiajs/vue3";
+import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { watch, ref } from "vue";
 import axios from "axios";
 import InputError from "@/Components/InputError.vue";
+import { error } from "jquery";
 
-const props =defineProps({
-    classes: { type: Object, },
+//console.log(students);
+
+const props = defineProps({
+    classes: { type: Object },
     genders: { type: Object, default: () => ({ data: [] }) },
-    no_induks: { type: Object, default: () => ({ data: [] }) },
     religions: { type: Object, default: () => ({ data: [] }) },
     students: { type: Object, default: () => ({ data: [] }) },
 });
@@ -18,12 +21,8 @@ let sections = ref({});
 const classes = ref(props.classes.data || []);
 let genders = ref(props.genders.data || []);
 const religions = ref(props.religions.data || []);
-const no_induks = ref(props.no_induks.data || []);
-
 const form = useForm({
     name: "",
-    email: "",
-    section_id: "",
     no_induk_id: "",
     gender_id: "",
     class_id: "",
@@ -37,17 +36,36 @@ watch(
     }
 );
 
-const getSections = (class_id) => {
-    axios.get("/api/sections?class_id=" + class_id).then((response) => {
+const getSections = async (class_id) => {
+    try {
+        const response = await axios.get("/api/sections?class_id=" + class_id);
         sections.value = response.data;
-    });
+    } catch (error) {
+        console.error("Error fetching sections:", error);
+    }
 };
 
-const createStudent = () => {
-    form.post(route("students.store"), {
-        preserveScroll: true,
-    });
+const formData = {
+    name: "John Doe",
+    gender_id: 2,
+    class_id: 1,
+    religion_id: 3,
+    no_induk_id: 24,
 };
+
+function submit() {
+    console.log("Submitting data:", formData);
+
+    form.post(route("students.store"), {
+        onSuccess: () => {
+            console.log("Data successfully submitted");
+            router.visit(route("students.index"), { replace: true });
+        },
+        onError: (errors) => {
+            console.error("Error:", errors);
+        },
+    });
+}
 </script>
 
 <template>
@@ -106,31 +124,7 @@ const createStudent = () => {
                 <div class="flex items-center lg:order-2">
                     <button
                         type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            aria-hidden="true"
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
-                    <!-- Apps -->
-
-                    <button
-                        type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -148,7 +142,7 @@ const createStudent = () => {
                             xmlns:xlink="http://www.w3.org/1999/xlink"
                         >
                             <path
-                                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3 c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768 C18.184,8.34,12,3,12,3z"
+                                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
                                 fill="black"
                             />
                         </svg>
@@ -194,13 +188,14 @@ const createStudent = () => {
                 </div>
             </div>
         </nav>
+
         <!-- start1 -->
         <main class="p-4 md:ml-64 h-auto pt-20">
             <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-                        <form @submit.prevent="createStudent">
+                        <form @submit.prevent="submit">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -228,19 +223,21 @@ const createStudent = () => {
                                                 Nomor Induk
                                             </label>
                                             <input
-                                                v-model="form.no_induks"
+                                                v-model="form.no_induk_id"
                                                 type="text"
                                                 id="nomorInduk"
                                                 placeholder="Masukkan Nomor Induk"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.no_induk,
+                                                        form.errors.no_induk_id,
                                                 }"
                                             />
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.no_induk"
+                                                :message="
+                                                    form.errors.no_induk_id
+                                                "
                                             />
                                         </div>
                                         <!-- Nama -->
@@ -262,6 +259,7 @@ const createStudent = () => {
                                                         form.errors.name,
                                                 }"
                                             />
+
                                             <InputError
                                                 class="mt-2"
                                                 :message="form.errors.name"

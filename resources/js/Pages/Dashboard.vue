@@ -22,8 +22,6 @@ const form = useForm({
 onMounted(() => {
     initFlowbite();
 
-    
-
     // Line Chart Options
     const lineChartOptions = {
         chart: { height: 300, type: "line", toolbar: { show: false } },
@@ -120,6 +118,25 @@ onMounted(() => {
 });
 </script>
 
+<style scoped>
+@import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
+.bg-primary1 {
+    background-color: #0e70cc;
+}
+
+.bg-success {
+    background-color: #28a745;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+}
+
+.bg-cyan {
+    background-color: #10b0cc;
+}
+</style>
+
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -172,28 +189,6 @@ onMounted(() => {
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <!--
-                                        <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-                    -->
                     <!-- Apps -->
                     <button
                         type="button"
@@ -279,45 +274,86 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div
-                class="flex justify-center items-center grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mb-4"
-            >
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                    id=""
-                >
-                    <h2 class="text-center text-[#ffffff]">Jumlah Siswa</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        509
-                    </p>
-                </div>
+            <div class="container mx-auto py-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-primary1 text-white p-4 rounded shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-4xl font-bold text-white">
+                                    13
+                                </h3>
+                                <p class="font-bold">Data Siswa</p>
+                            </div>
+                            <i class="ion ion-person-stalker text-4xl"></i>
+                        </div>
+                        <a
+                            href="#"
+                            class="block mt-4 text-sm text-white hover:underline"
+                        >
+                            Lihat detail
+                            <i class="fas fa-arrow-circle-right"></i>
+                        </a>
+                    </div>
 
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                >
-                    <h2 class="text-center text-[#ffffff]">Jumlah Kelas</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        16
-                    </p>
-                </div>
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                >
-                    <h2 class="text-center text-[#ffffff]">Jumlah Pengguna</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        0
-                    </p>
+                    <div class="bg-success text-white p-4 rounded shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-4xl font-bold text-white">
+                                    16
+                                </h3>
+                                <p class="font-bold">Data Guru</p>
+                            </div>
+                            <i class="ion ion-person-stalker text-4xl"></i>
+                        </div>
+                        <a
+                            href="#"
+                            class="block mt-4 text-sm text-white hover:underline"
+                        >
+                            Lihat detail
+                            <i class="fas fa-arrow-circle-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="bg-warning text-white p-4 rounded shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-4xl font-bold text-white">
+                                    16
+                                </h3>
+                                <p class="font-bold">Data Kelas</p>
+                            </div>
+                            <i class="ion ion-stats-bars text-4xl"></i>
+                        </div>
+                        <a
+                            href="#"
+                            class="block mt-4 text-sm text-white hover:underline"
+                        >
+                            Lihat detail
+                            <i class="fas fa-arrow-circle-right"></i>
+                        </a>
+                    </div>
+
+                    <!-- Profil Card -->
+                    <div class="bg-cyan text-white p-4 rounded shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-4xl font-bold text-white">8</h3>
+                                <p class="font-bold">Data Mata Pelajaran</p>
+                            </div>
+                            <i class="ion ion-log-in text-4xl"></i>
+                        </div>
+                        <a
+                            href="/guru/profil"
+                            class="block mt-4 text-sm text-white hover:underline"
+                        >
+                            Lihat detail
+                            <i class="fas fa-arrow-circle-right"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            
             <div class="row">
                 <div class="col-md-12 col-lg-6">
                     <div class="card card-chart">
@@ -632,6 +668,7 @@ onMounted(() => {
                         </ul>
                     </li>
 
+                  <!--
                     <li>
                         <a
                             href="penilaian"
@@ -669,7 +706,8 @@ onMounted(() => {
                             </svg>
                             <span class="ml-3">Penilaian Siswa</span>
                         </a>
-                    </li>
+                    </li>  
+                  -->
                 </ul>
             </div>
         </aside>

@@ -226,6 +226,25 @@ onMounted(() => {
 });
 </script>
 
+<style scoped>
+@import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
+.bg-primary1 {
+    background-color: #0e70cc;
+}
+
+.bg-success {
+    background-color: #28a745;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+}
+
+.bg-cyan {
+    background-color: #10b0cc;
+}
+</style>
+
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -383,205 +402,76 @@ onMounted(() => {
                         </h3>
                     </div>
                 </div>
-            </div>
-            <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4"
-            >
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                    id=""
-                >
-                    <h2 class="text-center">TUGAS</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        0
-                    </p>
-                </div>
 
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                >
-                    <h2 class="text-center">PRESENSI</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        0
-                    </p>
-                </div>
-                <div
-                    class="border-2 border-solid border-gray-300 bg-[#8ec3b3] rounded-lg dark:border-gray-600 h-15 md:h-34"
-                >
-                    <h2 class="text-center">JADWAL PELAJARAN</h2>
-                    <p
-                        class="output text-center mt-5 text-xl text-[#ffffff]"
-                        placeholder=""
-                    >
-                        0
-                    </p>
+                <div class="container mx-auto py-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div
+                            class="bg-primary1 text-white p-4 rounded shadow-md"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-4xl font-bold text-white">
+                                        Absensi
+                                    </h3>
+                                    <p class="font-bold">Kehadiran Saya</p>
+                                </div>
+                                <i class="ion ion-person-stalker text-4xl"></i>
+                            </div>
+                            <a
+                                href="#"
+                                class="block mt-4 text-sm text-white hover:underline"
+                            >
+                                Lihat detail
+                                <i class="fas fa-arrow-circle-right"></i>
+                            </a>
+                        </div>
+
+                        <div
+                            class="bg-success text-white p-4 rounded shadow-md"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-4xl font-bold text-white">
+                                        Tugas
+                                    </h3>
+                                    <p class="font-bold">Tugas Saya</p>
+                                </div>
+                                <i class="ion ion-person-stalker text-4xl"></i>
+                            </div>
+                            <a
+                                href="#"
+                                class="block mt-4 text-sm text-white hover:underline"
+                            >
+                                Lihat detail
+                                <i class="fas fa-arrow-circle-right"></i>
+                            </a>
+                        </div>
+
+
+                        <!-- Profil Card -->
+                        <div class="bg-cyan text-white p-4 rounded shadow-md">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-4xl font-bold text-white">
+                                        8
+                                    </h3>
+                                    <p class="font-bold">Data Mata Pelajaran</p>
+                                </div>
+                                <i class="ion ion-log-in text-4xl"></i>
+                            </div>
+                            <a
+                                href="/guru/profil"
+                                class="block mt-4 text-sm text-white hover:underline"
+                            >
+                                Lihat detail
+                                <i class="fas fa-arrow-circle-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-12 col-lg-16 col-xl-6">
-                    <div class="card flex-fill comman-shadow">
-                        <div class="card-header">
-                            <div class="row align-items-center">
-                                <div class="col-6">
-                                    <h5 class="card-title">Today’s Lesson</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dash-circle">
-                            <div class="row">
-                                <div class="col-lg-3 col-md-3">
-                                    <div class="dash-details">
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!-- -->
-                                                <!--   <img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-01.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Class</h5>
-                                                <h4>Electrical Engg</h4>
-                                            </div>
-                                        </div>
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!--    <img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-02.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Lessons</h5>
-                                                <h4>5 Lessons</h4>
-                                            </div>
-                                        </div>
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!--<img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-03.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Time</h5>
-                                                <h4>Lessons</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3 col-md-3">
-                                    <div class="dash-details">
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!--
-                                                <img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-04.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Asignment</h5>
-                                                <h4>5 Asignment</h4>
-                                            </div>
-                                        </div>
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!--
-                                                <img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-05.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Staff</h5>
-                                                <h4>John Doe</h4>
-                                            </div>
-                                        </div>
-                                        <div class="lesson-activity">
-                                            <div class="lesson-imgs">
-                                                <!--
-                                                <img
-                                                    src="{{URL::to('assets/img/icons/lesson-icon-06.svg')}}"
-                                                    alt=""
-                                                /> -->
-                                            </div>
-                                            <div class="views-lesson">
-                                                <h5>Lesson Learned</h5>
-                                                <h4>10/50</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="col-lg-3 col-md-3 d-flex align-items-center justify-content-center"
-                                >
-                                    <div class="skip-group">
-                                        <button
-                                            type="submit"
-                                            class="btn btn-info skip-btn"
-                                        >
-                                            skip
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            class="btn btn-info continue-btn"
-                                        >
-                                            Continue
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12 col-lg-12 col-xl-12 d-flex">
-                            <div class="card flex-fill comman-shadow">
-                                <div class="card-header">
-                                    <div class="row align-items-center">
-                                        <div class="col-6">
-                                            <h5 class="card-title">
-                                                Learning Activity
-                                            </h5>
-                                        </div>
-                                        <div class="col-6">
-                                            <ul class="chart-list-out">
-                                                <li>
-                                                    <span
-                                                        class="circle-blue"
-                                                    ></span
-                                                    >Teacher
-                                                </li>
-                                                <li>
-                                                    <span
-                                                        class="circle-green"
-                                                    ></span
-                                                    >Student
-                                                </li>
-                                                <li class="star-menus">
-                                                    <a href="javascript:;"
-                                                        ><i
-                                                            class="fas fa-ellipsis-v"
-                                                        ></i
-                                                    ></a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div id="apexcharts-area"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <!-- 
                              <div class="row">
                         <div class="col-12 col-lg-12 col-xl-4 d-flex">
@@ -635,6 +525,12 @@ onMounted(() => {
                 melihat tugas, mengumpulkan tugas, melihat presensi, melakukan
                 presensi, melihat jadwal pelajaran
             </p>
+
+            <p>
+                siswa seira: melihat tugas, mengumpulkan tugas, melihat
+                presensi, melakukan presensi, melihat jadwal pelajara
+            </p>
+            <p>guru memberikan tugas</p>
         </main>
 
         <!-- Sidebar -->

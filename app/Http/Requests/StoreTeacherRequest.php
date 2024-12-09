@@ -11,7 +11,8 @@ class StoreTeacherRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        //return true;
+        return auth()->check();
     }
 
     /**
@@ -22,8 +23,8 @@ class StoreTeacherRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'exists:classes,id'],
+           'name' => 'required|string|max:255',
+           'class_id' => 'required|exists:classes,id',
         ];
     }
 }

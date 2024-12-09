@@ -11,16 +11,6 @@ defineProps({
         required: true,
     },
 });
-
-/**
- const pageNumberUpdated = (link) => {
-    let pageNumber = link.url.split("=")[1];
-
-    router.visit(`/students?&page=${pageNumber}`, {
-        preserveScroll: true,
-    });
-};
- */
 </script>
 
 <template>
@@ -30,55 +20,43 @@ defineProps({
                 <div
                     class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
                 >
-                    <div class="flex-1 flex justify-between sm:hidden" />
-                    <div
-                        class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
-                    >
-                        <div class="mr-10">
-                            <p class="text-sm text-gray-700">
-                                Showing
-                                <!-- space -->
-                                <span class="font-medium">{{
-                                    data.meta.from
-                                }}</span>
-                                <!-- space -->
-                                to
-                                <!-- space -->
-                                <span class="font-medium">{{
-                                    data.meta.to
-                                }}</span>
-                                <!-- space -->
-                                of
-                                <!-- space -->
-                                <span class="font-medium">{{
-                                    data.meta.total
-                                }}</span>
-                                <!-- space -->
-                                results
-                            </p>
-                        </div>
-                        <div>
-                            <nav
-                                class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                                aria-label="Pagination"
+                    <div class="mr-10">
+                        <p class="text-sm text-gray-700">
+                            Showing
+                            <span class="font-medium">{{
+                                data.meta.from
+                            }}</span>
+                            to
+                            <span class="font-medium">{{ data.meta.to }}</span>
+                            of
+                            <span class="font-medium">{{
+                                data.meta.total
+                            }}</span>
+                            results
+                        </p>
+                    </div>
+                    <div>
+                        <nav
+                            class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                            aria-label="Pagination"
+                        >
+                            <button
+                                v-for="(link, index) in data.meta.links"
+                                :key="index"
+                                @click.prevent="updatedPageNumber(link)"
+                                :disabled="link.active || !link.url"
+                                class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                :class="{
+                                    'z-10 bg-indigo-50 border-indigo-500 text-indigo-600':
+                                        link.active,
+                                    'bg-white border-gray-300 text-gray-500 hover:bg-gray-50':
+                                        !link.active,
+                                    'cursor-not-allowed': !link.url,
+                                }"
                             >
-                                <button
-                                    v-for="(link, index) in data.meta.links"
-                                    @click.prevent="updatedPageNumber(link)"
-                                    :key="index"
-                                    :disabled="link.active || !link.url"
-                                    class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-                                    :class="{
-                                        'z-10 bg-indigo-50 border-indigo-500 text-indigo-600':
-                                            link.active,
-                                        'bg-white border-gray-300 text-gray-500 hover:bg-gray-50':
-                                            !link.active,
-                                    }"
-                                >
-                                    <span v-html="link.label"></span> 
-                                </button>
-                            </nav>
-                        </div>
+                                <span v-html="link.label"></span>
+                            </button>
+                        </nav>
                     </div>
                 </div>
             </div>

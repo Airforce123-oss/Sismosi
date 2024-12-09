@@ -22,13 +22,10 @@ class StoreStudentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'no_induk' => ['required', 'exists:no_induks,id'],
+            'no_induk_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:students,email'],
             'class_id' => ['required', 'exists:classes,id'],
-            'section_id' => ['required', 'exists:sections,id'],
             'gender_id' => ['required', 'exists:genders,id'],
-
             'religion_id' => ['required', 'exists:religions,id'],
 
         ];
@@ -39,7 +36,6 @@ class StoreStudentRequest extends FormRequest
         return [
             'no_induk' => 'no induk',
             'name' => 'name',
-            'email' => 'email',
             'class_id' => 'class',
             'section_id' => 'section',
             'gender_id' => 'gender',
