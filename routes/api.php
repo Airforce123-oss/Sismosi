@@ -40,9 +40,9 @@ Route::get('sections', SectionController::class)->name('sections.index');
 Route::get('/students/{id}', [StudentController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/attendance', [AttendanceController::class, 'indexApi1']);
-    Route::get('/attendance', [AttendanceController::class, 'getAttendances']);
-    Route::post('/attendance', [AttendanceController::class, 'store']);
+    Route::get('/attendance1', [AttendanceController::class, 'indexApi1']);
+    Route::get('/attendance2', [AttendanceController::class, 'getAttendances']);
+    Route::post('/attendance3', [AttendanceController::class, 'store']);
 });
 
 Route::get('/students/count', function () {

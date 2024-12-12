@@ -44,10 +44,11 @@ public function absensiSiswaSatu(Request $request)
         })
         ->get();
 
-    // Format data attendances
-    $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
-        return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran');
-    });
+ // Format data attendances menjadi array yang lebih mudah dibaca
+$formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+    return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray(); // Convert to array
+});
+
 
     // Log formatted attendances sebelum mengirimkan response
     Log::info('Returning formatted attendances:', ['formattedAttendances' => $formattedAttendances]);
@@ -71,44 +72,6 @@ public function absensiSiswaSatu(Request $request)
     public function kelolaAbsensiSiswa() {
         return inertia('Students/kelolaAbsensiSiswa');
     }
-
-
-    /*
-        public function indexApi1(Request $request)
-    {
-        // Membuat query untuk mengambil absensi
-        $query = Attendance::query()->with('siswa');
-    
-        // Menambahkan filter berdasarkan tanggal jika ada
-        if ($request->has('date')) {
-            $query->whereDate('tanggal_kehadiran', $request->date);
-        }
-    
-        // Mengambil data absensi
-        $attendances = $query->get();
-    
-        Log::info('Fetched attendances:', ['attendances' => $attendances]);
-
-        if ($attendances->isEmpty()) {
-            Log::info('No attendance records found.');
-        }
-    
-        // Memformat data absensi menjadi array yang diinginkan
-        $formattedAttendances = $attendances->map(function ($attendance) {
-            return [
-                'student_id' => $attendance->student_id,
-                'date' => $attendance->tanggal_kehadiran,
-                'status' => $attendance->status_kehadiran,
-            ];
-        });
-    
-        
-        // Mengembalikan data dalam format yang sesuai
-        return response()->json([
-            'attendances' => $formattedAttendances
-        ]);
-    }
-    */
 
     public function indexApi1(Request $request)
     {
@@ -136,9 +99,6 @@ public function absensiSiswaSatu(Request $request)
         if (!auth()->check()) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-    
-        // Log untuk memastikan data benar
-        Log::info('Formatted Attendances:', $formattedAttendances);
     
         // Pastikan respons JSON dikembalikan
         return response()->json([
@@ -177,6 +137,12 @@ public function absensiSiswaSatu(Request $request)
     
         if (!is_array($attendances) || empty($attendances)) {
             return response()->json(['message' => 'Data absensi tidak valid.'], 400);
+        }
+        Log::info('Attendance Data:', ['attendance' => $attendances]);
+
+        
+        if (!isset($attendance['student_id']) || is_nan($attendances['student_id'])) {
+            Log::error('Invalid student_id:', ['attendance' => $attendances]);
         }
     
         try {
@@ -228,11 +194,10 @@ public function absensiSiswaSatu(Request $request)
     
     public function getAttendances()
     {
-        // Mengambil semua data absensi dari database
-        //$attendances = Attendance::all();
-       // $attendances = $attendanceQuery->get();
-        // Menampilkan data absensi untuk debugging
-       // dd($attendances);
+        $attendances = Attendance::all(); // Anda bisa menyesuaikan query ini
+        return response()->json([
+            'attendances' => $attendances
+        ]);
     }
 
 

@@ -94,7 +94,7 @@ const deleteStudent = (id) => {
     }
 };
 
-pageNumber.value = 2;
+pageNumber.value = 1;
 console.log(pageNumber.value); // Akses dengan .value
 
 onMounted(() => {
