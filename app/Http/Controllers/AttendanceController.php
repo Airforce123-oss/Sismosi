@@ -75,38 +75,57 @@ $formattedAttendances = $attendances->groupBy('student_id')->map(function ($atte
 
     public function indexApi1(Request $request)
     {
-        $query = Attendance::query()->with('siswa');
+        $perPage = $request->input('per_page', 5); // Ambil jumlah item per halaman
+        $page = $request->input('page', 1); // Ambil halaman saat ini
     
+        // Cek jika ada parameter 'date' yang dikirimkan dari frontend
         if ($request->has('date')) {
-            $query->whereDate('tanggal_kehadiran', $request->date);
+            $date = $request->input('date');
+            // Debugging: Cek nilai parameter date yang diterima
+            Log::info('Tanggal yang diterima:', ['date' => $date]);
+        
+            // Ambil data absensi dengan tanggal yang sesuai dan paginasi
+            $attendances = Attendance::with('siswa')
+                ->whereDate('tanggal_kehadiran', $date)
+                ->paginate($perPage, ['*'], 'page', $page); // Menambahkan paginasi
+        } else {
+            // Jika tidak ada parameter 'date', ambil seluruh data absensi dengan paginasi
+            $attendances = Attendance::with('siswa')
+                ->paginate($perPage, ['*'], 'page', $page); // Menambahkan paginasi
         }
     
-        $attendances = $query->get();
+        // Cek apakah data absensi ditemukan
+        if ($attendances->isEmpty()) {
+            Log::info('Tidak ada data absensi ditemukan.');
+        }
     
+        // Format data absensi untuk response
         $formattedAttendances = [];
         foreach ($attendances as $attendance) {
             $studentId = $attendance->student_id;
             $date = $attendance->tanggal_kehadiran;
             $status = $attendance->status_kehadiran;
-    
+        
             if (!isset($formattedAttendances[$studentId])) {
                 $formattedAttendances[$studentId] = [];
             }
-    
+        
             $formattedAttendances[$studentId][$date] = $status;
         }
-
-        if (!auth()->check()) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
     
-        // Pastikan respons JSON dikembalikan
+        // Kirim response dalam format JSON dengan data paginasi
         return response()->json([
-            'attendances' => $formattedAttendances
-        ], 200, ['Content-Type' => 'application/json']);
+            'attendances' => $formattedAttendances,
+            'pagination' => [
+                'total' => $attendances->total(),
+                'current_page' => $attendances->currentPage(),
+                'last_page' => $attendances->lastPage(),
+                'per_page' => $attendances->perPage(),
+            ]
+        ], 200);
     }
     
-
+    
     
     protected function applySearch(Builder $query, $search)
     {
@@ -123,8 +142,9 @@ $formattedAttendances = $attendances->groupBy('student_id')->map(function ($atte
             'tanggal_kehadiran' => 'required|date',
             'attendances' => 'required|array|min:1',
             'attendances.*.student_id' => 'required|integer|exists:students,id',
-            'attendances.*.status_kehadiran' => 'required|string|in:P,A,S,I',
+            'attendances.*.status_kehadiran' => 'required|string', // Tidak membatasi status
         ]);
+        
     
         // Parsing dan format tanggal
         $tanggal_kehadiran = Carbon::parse($request->tanggal_kehadiran)->format('Y-m-d');
@@ -191,6 +211,59 @@ $formattedAttendances = $attendances->groupBy('student_id')->map(function ($atte
             ], 500);
         }
     }
+
+
+    public function storeAttendance(Request $request)
+{
+    // Validasi input
+    $request->validate([
+        'tanggal_kehadiran' => 'required|date',
+        'attendances' => 'required|array|min:1',
+        'attendances.*.student_id' => 'required|integer|exists:students,id',
+        'attendances.*.status_kehadiran' => 'required|string',
+    ]);
+
+    // Logging data awal
+    Log::info('Data yang diterima:', $request->all());
+
+    // Filter data yang valid
+    $attendanceData = array_filter($request->attendances, function ($attendance) {
+        return $attendance['status_kehadiran'] !== 'Belum diabsen';
+    });
+
+    // Log jumlah data setelah filter
+    Log::info('Jumlah data absensi yang valid:', ['count' => count($attendanceData)]);
+
+    // Jika tidak ada data yang valid
+    if (empty($attendanceData)) {
+        Log::info('Tidak ada data absensi ditemukan setelah filter.');
+        return response()->json(['message' => 'Tidak ada data absensi yang valid untuk disimpan.'], 422);
+    }
+
+    // Proses menyimpan data absensi
+    try {
+        foreach ($attendanceData as $attendance) {
+            Attendance::updateOrCreate(
+                [
+                    'student_id' => $attendance['student_id'],
+                    'tanggal_kehadiran' => $attendance['tanggal_kehadiran']
+                ],
+                [
+                    'status_kehadiran' => $attendance['status_kehadiran']
+                ]
+            );
+        }
+
+        Log::info('Data absensi berhasil disimpan.', ['data' => $attendanceData]);
+
+        return response()->json(['message' => 'Data absensi berhasil disimpan.'], 200);
+
+    } catch (\Exception $e) {
+        Log::error('Gagal menyimpan data absensi:', ['error' => $e->getMessage()]);
+        return response()->json(['message' => 'Terjadi kesalahan saat menyimpan data absensi.'], 500);
+    }
+}
+
     
     public function getAttendances()
     {
@@ -203,26 +276,42 @@ $formattedAttendances = $attendances->groupBy('student_id')->map(function ($atte
 
     public function update(Request $request, $studentId)
     {
-
-            $validated = $request->validate([
+        // Validasi data yang diterima
+        $validated = $request->validate([
             'tanggal_kehadiran' => 'required|date',
-            'status_kehadiran' => 'required|string|max:1', // misalnya hanya status yang valid
+            'status_kehadiran' => 'required|string|max:1', // Misalnya status hanya P, A, I, S
         ]);
-    
+        
+        // Cek absensi berdasarkan student_id dan tanggal_kehadiran
         $attendance = Attendance::where('student_id', $studentId)
             ->where('tanggal_kehadiran', $validated['tanggal_kehadiran'])
             ->first();
+        
+        // Debugging: Menampilkan query yang digunakan untuk mengambil absensi
+        DB::listen(function ($query) {
+            Log::info('SQL Query:', [
+                'sql' => $query->sql,
+                'bindings' => $query->bindings,
+                'time' => $query->time,
+            ]);
+        });
+    
+        // Debugging: Menampilkan data absensi yang diambil
+        dd($attendance);
     
         if ($attendance) {
+            // Perbarui status kehadiran
             $attendance->status_kehadiran = $validated['status_kehadiran'];
             $attendance->save();
+        
+            // Kembalikan data absensi yang telah diperbarui
             return response()->json($attendance, 200);
         } else {
+            // Jika absensi tidak ditemukan
             return response()->json(['message' => 'Attendance not found'], 404);
         }
     }
-
-
+    
 }
 
 /*

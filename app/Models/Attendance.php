@@ -17,9 +17,18 @@ class Attendance extends Model
 
     protected $guarded = ['id'];
 
-    public function siswa()
+    /*
+       public function siswa()
     {
         return $this->belongsTo(Student::class, 'student_id', 'id');
     }
+    */
+
+    // Di dalam model Attendance
+    public function siswa()
+    {
+        return $this->belongsTo(Student::class, 'student_id');
+    }
+
     
 }
