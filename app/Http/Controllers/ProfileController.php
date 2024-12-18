@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Student;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,15 +39,23 @@ class ProfileController extends Controller
         $roles = $user->roles->pluck('name');
     
         Log::info('User roles on dashboard access:', ['roles' => $roles]);
+
+        $totalStudents = Student::count();
     
         // Cek berdasarkan peran dengan switch
         switch (true) {
             case $roles->contains('admin'):
-                return Inertia::render('dashboard');
+                return Inertia::render('dashboard', [
+                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                ]);
             case $roles->contains('teacher'):
-                return Inertia::render('teachersDashboard');
+                return Inertia::render('teachersDashboard', [
+                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                ]);
             case $roles->contains('student'):
-                return Inertia::render('studentsDashboard');
+                return Inertia::render('studentsDashboard', [
+                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                ]);
             default:
                 return redirect()->route('home');
         }

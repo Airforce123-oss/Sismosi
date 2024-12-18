@@ -19,6 +19,7 @@ const form = useForm({
     role_type: props.auth.user.role_type,
 });
 
+defineProps({ total: Number });
 onMounted(() => {
     initFlowbite();
 
@@ -280,7 +281,7 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    13
+                                    {{ total }}
                                 </h3>
                                 <p class="font-bold">Data Siswa</p>
                             </div>
@@ -353,7 +354,6 @@ onMounted(() => {
                 </div>
             </div>
 
-            
             <div class="row">
                 <div class="col-md-12 col-lg-6">
                     <div class="card card-chart">
@@ -668,7 +668,7 @@ onMounted(() => {
                         </ul>
                     </li>
 
-                  <!--
+                    <!--
                     <li>
                         <a
                             href="penilaian"

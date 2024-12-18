@@ -20,6 +20,9 @@ const form = useForm({
     role_type: props.auth.user.role_type,
 });
 
+defineProps({
+    total: Number, // Pastikan tipe data sesuai dengan yang dikirimkan dari Laravel
+});
 onMounted(() => {
     initFlowbite();
 
@@ -282,7 +285,7 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    13
+                                    {{ total }}
                                 </h3>
                                 <p class="font-bold">Data Siswa</p>
                             </div>
@@ -360,15 +363,7 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <p>
-                melihat tugas, mengumpulkan tugas, melihat presensi, melakukan
-                presensi, melihat jadwal pelajaran
-            </p>
-
-            <p>
-                isi dashboard guru, display data siswa, absensi, input, profil
-                guru
-            </p>
+            <p>*Memeriksa tugas submit, Absensi  siswa, akun wali kelas</p>
         </main>
 
         <!-- Sidebar -->
