@@ -3,18 +3,10 @@ import { initFlowbite } from "flowbite";
 import Pagination from "../../Components/Pagination.vue";
 import MagnifyingGlass from "../../Components/Icons/MagnifyingGlass.vue";
 import { Link, Head, useForm, usePage, router } from "@inertiajs/vue3";
+import axios from "axios";
+import Swal from "sweetalert2";
 import { onMounted, ref, watch, computed } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-
-// Deklarasikan state dengan ref
-const showModal = ref(false);
-const modalTitle = ref("");
-const modalButton = ref("");
-const kelasForm = ref({
-    id_kelas: "",
-    nama_kelas: "",
-    kode_kelas: "",
-});
 
 const props = defineProps({
     classes_for_student: {
@@ -28,54 +20,6 @@ const form = useForm({
     kode_kelas: "",
     classes: "",
 });
-
-const openModal = (type, classes = {}) => {
-    showModal.value = true;
-
-    modalTitle.value = "Tambah Kelas";
-    modalButton.value = "Simpan";
-    kelasForm.value = {
-        id_kelas: "",
-        nama_kelas: "",
-        kode_kelas: `MK-${Date.now()}`,
-    };
-    /*
-
-      if (type === "add") {
-    };
-    else if (type === "edit") {
-        modalTitle.value = "Edit Kelas";
-        modalButton.value = "Edit";
-        kelasForm.value = { ...classes };
-    }
-    form.reset(kelasForm.value);
-    */
-};
-
-const closeModal = () => {
-    showModal.value = false;
-};
-
-const saveKelas = () => {
-    if (modalButton.value === "Simpan") {
-        form.post(route("kelas.store"), {
-            onSuccess: () => {
-                showModal.value = false;
-                router.reload();
-            },
-        });
-    } else if (modalButton.value === "Edit") {
-        form.put(
-            route("classes_for_student.update", mapelForm.value.id_mapel),
-            {
-                onSuccess: () => {
-                    showModal.value = false;
-                    router.reload();
-                },
-            }
-        );
-    }
-};
 
 let pageNumber = ref(1),
     searchTerm = ref(usePage().props.search ?? "");
@@ -92,19 +36,66 @@ let studentsUrl = computed(() => {
     return url;
 });
 
-const deleteForm = useForm({});
+const mapelsUrl = computed(() => {
+    const url = new URL(route("kelas.index"));
+    url.searchParams.set("page", pageNumber.value); // pastikan pageNumber ada
+    if (searchTerm.value) {
+        url.searchParams.set("search", searchTerm.value);
+    }
+    return url;
+});
 
-const deleteStudent = (id) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-        deleteForm.delete(route("students.destroy", id), {
+watch(
+    () => mapelsUrl.value,
+    (updatedMapelsUrl) => {
+        console.log("Navigating to URL:", updatedMapelsUrl.toString());
+        router.visit(updatedMapelsUrl.toString(), {
+            preserveState: true,
             preserveScroll: true,
+            replace: true,
         });
     }
+);
+
+const deleteForm = useForm({});
+
+const deleteClass = (id) => {
+    Swal.fire({
+        title: "Apakah Anda yakin?",
+        text: "Data Kelas ini akan dihapus dan tidak dapat dikembalikan!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Ya, hapus!",
+        cancelButtonText: "Batal",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            deleteForm.delete(route("kelas.destroy", id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    pageNumber.value = 1;
+                    router.visit(mapelsUrl.value.toString(), {
+                        replace: true,
+                        preserveState: true,
+                        preserveScroll: true,
+                    });
+                },
+            });
+
+            Swal.fire(
+                "Terhapus!",
+                "Data guru telah berhasil dihapus.",
+                "success"
+            );
+        }
+    });
 };
 
+const currentPage = ref(1);
 const updatedPageNumber = (link) => {
-    //console.log(link.url);
-    pageNumber.value = link.url.split("=")[1];
+    const pageNumber = new URLSearchParams(link.url.split("?")[1]).get("page");
+    currentPage.value = parseInt(pageNumber, 10);
 };
 
 onMounted(() => {
@@ -126,7 +117,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -139,7 +129,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -160,7 +149,7 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
                             >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
@@ -168,31 +157,7 @@ onMounted(() => {
                 <div class="flex items-center lg:order-2">
                     <button
                         type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            aria-hidden="true"
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
-                    <!-- Apps -->
-
-                    <button
-                        type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -221,15 +186,24 @@ onMounted(() => {
                         class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
-                        <div class="py-3 px-4">
-                            <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                >Haikal Hanis (Admin)</span
+                        <div class="py-3 px-3">
+                            <div
+                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
                             >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >admin@gmail.com</span
-                            >
+                                <span
+                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
+                                    >{{ $page.props.auth.user.email }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                >
+                                    {{ $page.props.auth.user.name }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                    >{{ form.role_type }}</span
+                                >
+                            </div>
                         </div>
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
@@ -248,13 +222,12 @@ onMounted(() => {
             </div>
         </nav>
 
-        <!-- start1 -->
-
         <main class="p-4 md:ml-64 h-auto pt-20">
-            <Head title="Class" />
+            <Head title="Teachers" />
+
             <div class="flex-1 p-6">
                 <div class="mx-auto max-w-7xl sm:items-center">
-                    <div class="px-4 py-6 sm:px-6 lg:px-8">
+                    <div class="px-4 py-4 sm:px-6 lg:px-8">
                         <div class="sm:flex sm:items-center">
                             <div class="sm:flex-auto">
                                 <h1
@@ -268,17 +241,15 @@ onMounted(() => {
                             </div>
 
                             <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                                <div class="card-title">
-                                    <button
-                                        @click="openModal('add')"
-                                        class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-                                    >
-                                        <i class="fa fa-plus mr-2"></i>
-                                        Tambah Kelas
-                                    </button>
-                                </div>
+                                <Link
+                                    :href="route('kelas.create')"
+                                    class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    <i class="fa fa-plus mr-2"></i> Tambah Kelas
+                                </Link>
                             </div>
                         </div>
+
                         <div
                             class="flex flex-col justify-between sm:flex-row mt-6"
                         >
@@ -300,149 +271,127 @@ onMounted(() => {
                                 />
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Nama Kelas</th>
-                                            <th>Kode Kelas</th>
-                                            <th>Opsi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody
-                                        class="divide-y divide-gray-200 bg-white"
-                                    >
-                                        <tr
-                                            v-for="classForStudent in props
-                                                .classes_for_student.data"
-                                            :key="classForStudent.id_kelas"
-                                        >
-                                            <td
-                                                class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                            >
-                                                {{ classForStudent.id_kelas }}
-                                            </td>
-                                            <td
-                                                class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                            >
-                                                {{ classForStudent.kode_kelas }}
-                                            </td>
-                                            <td
-                                                class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                            >
-                                                {{ classForStudent.nama_kelas }}
-                                            </td>
-                                            <td
-                                                class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                                            >
-                                                <Link
-                                                    href="#"
-                                                    @click.prevent="
-                                                        openModal(
-                                                            'edit',
-                                                            classForStudent
-                                                        )
-                                                    "
-                                                    class="text-indigo-600 hover:text-indigo-900"
-                                                >
-                                                    Edit
-                                                </Link>
-                                                <button
-                                                    @click="
-                                                        deleteMapel(
-                                                            classForStudent.id_kelas
-                                                        )
-                                                    "
-                                                    class="ml-2 text-indigo-600 hover:text-indigo-900"
-                                                >
-                                                    Hapus
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <Pagination
-                                :data="classes_for_student"
-                                :updatedPageNumber="updatedPageNumber"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Add/Edit Modal -->
-            <div
-                v-if="showModal"
-                class="modal fade show"
-                style="display: block"
-                tabindex="-1"
-                role="dialog"
-            >
-                <div class="modal-dialog h-screen mt-20">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h4 class="modal-title">
-                                {{ modalTitle }}
-                            </h4>
-                            <button
-                                type="button"
-                                class="close"
-                                @click="closeModal"
-                                aria-label="Close"
+                        <div class="mt-8 flex flex-col mr-20">
+                            <div
+                                class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
                             >
-                                <span aria-hidden="true">×</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <form @submit.prevent="saveKelas">
-                                <div class="form-group">
-                                    <label>Kode Mata Pelajaran</label>
-                                    <input
-                                        v-model="kelasForm.kode_kelas"
-                                        type="text"
-                                        class="form-control"
-                                        placeholder="Kode Kelas...."
-                                    />
-                                    <!-- readable before-->
-                                </div>
-                                <div class="form-group">
-                                    <label>Nama Mata Pelajaran</label>
-                                    <input
-                                        v-model="kelasForm.classes"
-                                        type="text"
-                                        class="form-control"
-                                        placeholder="Nama Mata Kelas .."
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <button
-                                        type="submit"
-                                        class="btn btn-primary bg-[#8ec3b3]"
+                                <div
+                                    class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                                >
+                                    <div
+                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
                                     >
-                                        {{ modalButton }}
-                                    </button>
+                                        <table class="min-w-full bg-white">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th
+                                                        scope="col"
+                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                    >
+                                                        ID
+                                                    </th>
+                                                    <th
+                                                        scope="col"
+                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                    >
+                                                        Kode Kelas
+                                                    </th>
+
+                                                    <th
+                                                        scope="col"
+                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                    >
+                                                        Nama Kelas
+                                                    </th>
+
+                                                    <th
+                                                        scope="col"
+                                                        class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
+                                                    >
+                                                        Action
+                                                    </th>
+
+                                                    <th
+                                                        scope="col"
+                                                        class="relative py-3.5 pl-3 pr-4 sm:pr-6"
+                                                    />
+                                                </tr>
+                                            </thead>
+                                            <tbody
+                                                class="divide-y divide-gray-200 bg-white"
+                                            >
+                                                <tr
+                                                    v-for="classForStudent in props
+                                                        .classes_for_student
+                                                        .data"
+                                                    :key="
+                                                        classForStudent.id_kelas
+                                                    "
+                                                >
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{
+                                                            classForStudent.id_kelas
+                                                        }}
+                                                    </td>
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{
+                                                            classForStudent.kode_kelas
+                                                        }}
+                                                    </td>
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{
+                                                            classForStudent.nama_kelas
+                                                        }}
+                                                    </td>
+
+                                                    <td
+                                                        class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                    >
+                                                        <!-- Link untuk Edit -->
+                                                        <Link
+                                                            :href="
+                                                                route(
+                                                                    'kelas.edit',
+                                                                    classForStudent.id_kelas
+                                                                )
+                                                            "
+                                                            class="text-indigo-600 hover:text-indigo-900"
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                        <button
+                                                            @click="
+                                                                deleteClass(
+                                                                    classForStudent.id_kelas
+                                                                )
+                                                            "
+                                                            class="ml-2 text-indigo-600 hover:text-indigo-900"
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
 
-        <!-- end1-->
-
         <!-- Sidebar -->
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""
@@ -450,7 +399,8 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
+                <!--
+                     <form action="#" method="GET" class="md:hidden mb-2">
                     <label for="sidebar-search" class="sr-only">Search</label>
                     <div class="relative">
                         <div
@@ -478,6 +428,7 @@ onMounted(() => {
                         />
                     </div>
                 </form>
+            -->
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -527,7 +478,7 @@ onMounted(() => {
                                 >Siswa</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -628,7 +579,7 @@ onMounted(() => {
                                 >Kelas</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -677,7 +628,7 @@ onMounted(() => {
                                 >Mata Pelajaran</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -703,45 +654,6 @@ onMounted(() => {
                                 >
                             </li>
                         </ul>
-                    </li>
-
-                    <li>
-                        <a
-                            href="penilaian"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                fill="none"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                width="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M6 6C6 5.44772 6.44772 5 7 5H17C17.5523 5 18 5.44772 18 6C18 6.55228 17.5523 7 17 7H7C6.44771 7 6 6.55228 6 6Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 10C6 9.44771 6.44772 9 7 9H17C17.5523 9 18 9.44771 18 10C18 10.5523 17.5523 11 17 11H7C6.44771 11 6 10.5523 6 10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M7 13C6.44772 13 6 13.4477 6 14C6 14.5523 6.44771 15 7 15H17C17.5523 15 18 14.5523 18 14C18 13.4477 17.5523 13 17 13H7Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 18C6 17.4477 6.44772 17 7 17H11C11.5523 17 12 17.4477 12 18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    clip-rule="evenodd"
-                                    d="M2 4C2 2.34315 3.34315 1 5 1H19C20.6569 1 22 2.34315 22 4V20C22 21.6569 20.6569 23 19 23H5C3.34315 23 2 21.6569 2 20V4ZM5 3H19C19.5523 3 20 3.44771 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44771 3 5 3Z"
-                                    fill="currentColor"
-                                    fill-rule="evenodd"
-                                />
-                            </svg>
-                            <span class="ml-3">Penilaian Siswa</span>
-                        </a>
                     </li>
                 </ul>
             </div>

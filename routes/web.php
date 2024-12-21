@@ -54,13 +54,22 @@ Route::middleware('auth')->group(function () {
     // Resource routes for students and teachers
     Route::resource('students', StudentController::class);
     Route::resource('teachers', TeacherController::class);
+    Route::get('/membuatTugasSiswa', [TeacherController::class, 'membuatTugasSiswa'])->name('membuatTugasSiswa');
+    Route::get('/bukuPenghubung', [TeacherController::class, 'bukuPenghubung'])->name('bukuPenghubung');
+
+    Route::get('/melihatDataAbsensiSiswa', [StudentController::class, 'melihatDataAbsensiSiswa'])->name('melihatDataAbsensiSiswa');
 
     // Custom routes for teachers and attendance
     Route::put('/attendances/{studentId}', [AttendanceController::class, 'update']);
-    Route::post('/teachers', [TeacherController::class, 'store'])->name('teachersstore');
+    Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
     Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])->name('studentsabsensiSiswa');
     Route::get('/AbsensiSiswaSatu', [AttendanceController::class, 'absensiSiswaSatu'])->name('studentsabsensiSiswaSatu');
+    Route::get('/AbsensiSiswaDua', [AttendanceController::class, 'absensiSiswaDua'])->name('studentsabsensiSiswaDua');
+    Route::get('/AbsensiSiswaTiga', [AttendanceController::class, 'absensiSiswaTiga'])->name('studentsabsensiSiswaTiga');
+    Route::get('/AbsensiSiswaEmpat', [AttendanceController::class, 'absensiSiswaEmpat'])->name('studentsabsensiSiswaEmpat');
+    Route::get('/AbsensiSiswaLima', [AttendanceController::class, 'absensiSiswaLima'])->name('studentsabsensiSiswaLima');
+    Route::get('/AbsensiSiswaEnam', [AttendanceController::class, 'absensiSiswaEnam'])->name('studentsabsensiSiswaEnam');
     Route::get('/wali-kelas-profile', [StudentController::class, 'showWaliKelas']);
     Route::get('/bukuPenghubungDashboard', [TeacherController::class, 'bukuPenghubungDashboard'])->name('teacherbukuPenghubung');
 
@@ -72,9 +81,9 @@ Route::middleware('auth')->group(function () {
 
     // Resource route for classes
     Route::resource('kelas', ClassController::class);
+    //Route::get('/kelas', [ClassController::class, 'index'])->name('kelas');
 
     // API routes for various resources
-    Route::get('/api/sections', [StudentController::class, 'getSections']);
     Route::get('/api/religions', [StudentController::class, 'getReligion']);
     Route::get('/api/students', [StudentController::class, 'indexApi']);
     Route::get('/api/attendances', [AttendanceController::class, 'indexApi1']);
@@ -85,7 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('/Profile', ProfileController::class);
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::resource('/penilaian', PenilaianController::class);
-    Route::resource('matapelajaran', MataPelajaranController::class);
+    Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('mataPelajaran');
     Route::resource('master_mapel', MataPelajaranController::class);
 });
 

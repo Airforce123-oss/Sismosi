@@ -4,7 +4,7 @@ import { initFlowbite } from "flowbite";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import VueApexCharts from "vue-apexcharts";
 import ApexCharts from "apexcharts";
-import { Link, useForm, usePage } from "@inertiajs/vue3";
+import { Link, useForm, usePage, Head} from "@inertiajs/vue3";
 import $ from "jquery";
 //import "@/assets/plugins/jquery.simple-calendar.js";
 //import "@assets/js/bootstrap-datetimepicker.min.js";
@@ -305,9 +305,9 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    Absensi
+                                    16
                                 </h3>
-                                <p class="font-bold">Kehadiran Kelas Saya</p>
+                                <p class="font-bold">Total Kelas</p>
                             </div>
                             <!-- <i class="ion ion-file text-4xl"></i> -->
                             <i class="ion ion-person text-4xl"></i>
@@ -325,10 +325,8 @@ onMounted(() => {
                     <div class="bg-warning text-white p-4 rounded shadow-md">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-4xl font-bold text-white">
-                                    Input
-                                </h3>
-                                <p class="font-bold">Absen Hari Ini</p>
+                                <h3 class="text-4xl font-bold text-white">8</h3>
+                                <p class="font-bold">Total Mata Pelajaran</p>
                             </div>
                             <!-- <i class="ion ion-file text-4xl"></i> -->
                             <i class="ion ion-person text-4xl"></i>
@@ -341,29 +339,13 @@ onMounted(() => {
                             <i class="fas fa-arrow-circle-right"></i>
                         </a>
                     </div>
-
-                    <!-- Profil Card -->
-                    <div class="bg-cyan text-white p-4 rounded shadow-md">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-4xl font-bold text-white">
-                                    Profil
-                                </h3>
-                                <p class="font-bold">Profil Saya</p>
-                            </div>
-                            <i class="ion ion-person text-4xl"></i>
-                        </div>
-                        <a
-                            href="/guru/profil"
-                            class="block mt-4 text-sm text-white hover:underline"
-                        >
-                            Lihat detail
-                            <i class="fas fa-arrow-circle-right"></i>
-                        </a>
-                    </div>
                 </div>
             </div>
-            <p>*Memeriksa tugas submit, Absensi  siswa, akun wali kelas</p>
+            <p>*Memeriksa tugas submit, Absensi siswa, akun wali kelas</p>
+            <p>
+                Di dashboard guru ada total kelas, total siswa, total mata
+                pelajaran
+            </p>
         </main>
 
         <!-- Sidebar -->
@@ -408,7 +390,7 @@ onMounted(() => {
                 <ul class="space-y-2">
                     <li>
                         <a
-                            href="teachersDashboard"
+                            href="dashboard"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -452,7 +434,7 @@ onMounted(() => {
 
                     <li>
                         <a
-                            href="#"
+                            href="membuatTugasSiswa"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

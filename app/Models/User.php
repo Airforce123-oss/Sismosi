@@ -76,14 +76,27 @@ class User extends Authenticatable implements LaratrustUser
         });
     }
 
+    public function kelas()
+{
+    return $this->belongsTo(Classes::class); // Jika ada model Kelas
+}
+
     
 
         public function getRedirectRoute()
     {
         if ($this->hasRole('admin')){
             return 'dashboard';
-        }elseif($this->hasRole('teacher')){
-            return 'dashboardTeacher';
+        }elseif ($this->hasRole('teacher')) {
+            // Ambil kelas yang dipegang oleh teacher
+            $teacherClass = $this->kelas;  // Misalkan kelas disimpan di kolom 'kelas' pada tabel 'users'
+    
+            // Cek apakah kelas ada, jika ada redirect ke kelas tertentu
+            if ($teacherClass) {
+                return route('dashboardTeacher', ['kelas' => $teacherClass]); // Mengarahkan ke route dashboardTeacher dengan parameter kelas
+            } else {
+                return 'dashboardTeacher';  // Default jika kelas tidak ditemukan
+            }
         } elseif($this->hasRole('student')){
             return 'dashboardStudent';
         }

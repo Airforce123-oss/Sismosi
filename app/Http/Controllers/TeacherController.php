@@ -5,24 +5,34 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ClassesResource;
 use App\Http\Resources\TeacherResource;
 use App\Http\Resources\StudentResource;
-use App\Http\Resources\ReligionResource;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\StoreTeacherRequest;
-use App\Http\Requests\UpdateStudentRequest;
+use App\Http\Requests\UpdateTeacherRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\Student;
-use App\Models\Classes; 
+use App\Models\Classes;
 use App\Models\Teacher;
-use App\Models\Religion;
-use App\Models\Gender;
-use App\Models\NoInduk;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
-
 class TeacherController extends Controller
 {
+    public function absensiSiswa()
+    {
+        return inertia('Teachers/TugasSiswa/membuatTugasSiswa');
+    }
+    
+    public function bukuPenghubung()
+    {
+        return inertia('Teachers/BukuPenghubung/bukuPenghubung');
+    }
+
+    public function membuatTugasSiswa()
+    {
+        return inertia('Teachers/absensiSiswa');
+    }
+
     public function index(Request $request)
     {
         $teacherQuery = Teacher::query()->with('class');
@@ -33,11 +43,30 @@ class TeacherController extends Controller
         // Pagination
         $wali_kelas = $teacherQuery->paginate(60)->appends($request->only('search'));
 
+        // Pastikan 'classes' diteruskan ke komponen Vue
+        $classes = Classes::all();  // Ambil data classes yang relevan
+
         return inertia('Teachers/index', [
             'wali_kelas' => TeacherResource::collection($wali_kelas),
-            'search' => $request->input('search', '')
+            'search' => $request->input('search', ''),
+            'classes' => $classes,  // Kirim data classes ke vue
         ]);
-    } 
+    }
+
+    public function indexApi(Request $request)
+    {
+        $teacherQuery = Teacher::query()->with('class');
+
+        // Apply search filter if present
+        $this->applySearch($teacherQuery, $request->search);
+
+        $teacherQuery->orderBy('id');
+
+        // Pagination
+        $teachers = $teacherQuery->paginate(5)->appends($request->only('search'));
+
+        return response()->json($teachers);
+    }
 
     protected function applySearch(Builder $query, $search)
     {
@@ -45,13 +74,6 @@ class TeacherController extends Controller
             $query->where('name', 'like', '%' . $search . '%');
         });
     }
-
-
-    public function absensiSiswa()
-    {
-        return inertia('teachers/absensiSiswa');
-    }
-
 
     public function create()
     {
@@ -62,30 +84,50 @@ class TeacherController extends Controller
         ]);
     }
 
-
     public function store(StoreTeacherRequest $request)
     {
-        // Validate the request data
-        $validated = $request->validated();
-    
-        // Store the teacher data
-        Teacher::create($validated);
-    
-        // Redirect to the index page with a success message
-        return redirect()->route('teachers.index')->with('success', 'Teacher created successfully.');
+        try {
+            Teacher::create($request->validated());
+            return redirect()->route('teachers.index')->with('success', 'Teacher created successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error creating teacher:', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Failed to create teacher.');
+        }
     }
-    
 
-    public function show($id)
+    public function edit(Teacher $teacher)
     {
-        $teacher = Teacher::find($id);
+        $classes = ClassesResource::collection(Classes::all());
+    
+        return inertia('Teachers/edit', [
+            'student' => StudentResource::make($teacher),
+            'classes' => $classes,
+        ]);
+    }
 
-        if (!$teacher) {
+    public function update(UpdateTeacherRequest $request, Teacher $teacher)
+    {
+        $teacher->update($request->validated());
+
+        return redirect()->route('teachers.index');
+    }
+
+    public function destroy(Teacher $teacher)
+    {
+        $teacher->delete();
+
+        return redirect()->route('teachers.index');
+    }
+
+    public function show($id_kelas)
+    {
+        try {
+            $teacher = Teacher::findOrFail($id_kelas);
+            return inertia('Teachers/show', [
+                'teacher' => TeacherResource::make($teacher)
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->route('dashboard')->with('error', 'Teacher not found');
         }
-
-        return inertia('Teachers/show', [
-            'teacher' => TeacherResource::make($teacher)
-        ]);
     }
 }

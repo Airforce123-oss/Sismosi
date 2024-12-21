@@ -1,10 +1,15 @@
 <script setup>
-import { Link, useForm, router } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, Link, useForm, router } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { watch, ref } from "vue";
 import axios from "axios";
 import InputError from "@/Components/InputError.vue";
-import Swal from "sweetalert2";
+import { error } from "jquery";
+import MagnifyingGlass from "@/Components/Icons/MagnifyingGlass.vue";
+
+//console.log(students);
+
 const props = defineProps({
     classes: { type: Object },
     genders: { type: Object, default: () => ({ data: [] }) },
@@ -48,29 +53,17 @@ const formData = {
     religion_id: 3,
     no_induk_id: 24,
 };
+
 function submit() {
     console.log("Submitting data:", formData);
 
     form.post(route("students.store"), {
         onSuccess: () => {
             console.log("Data successfully submitted");
-            Swal.fire({
-                title: "Berhasil!",
-                text: "Data siswa berhasil disimpan.",
-                icon: "success",
-                confirmButtonText: "Ok",
-            }).then(() => {
-                router.visit(route("students.index"), { replace: true });
-            });
+            router.visit(route("students.index"), { replace: true });
         },
         onError: (errors) => {
             console.error("Error:", errors);
-            Swal.fire({
-                title: "Gagal!",
-                text: "Terjadi kesalahan saat menyimpan data siswa.",
-                icon: "error",
-                confirmButtonText: "Ok",
-            });
         },
     });
 }

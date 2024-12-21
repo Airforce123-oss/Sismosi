@@ -9,38 +9,72 @@ use App\Http\Resources\ReligionResource;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\NoIndukResource;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Database\Eloquent\Builder;
+
 use Illuminate\Http\Request;
 use App\Models\Student;
+use App\Models\Attendance;
 use App\Models\Classes; 
 use App\Models\Section;
 use App\Models\Religion;
 use App\Models\Teacher;
 use App\Models\Gender;
 use App\Models\NoInduk;
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Log;
 
 
 class StudentController extends Controller
 {
 
+
     public function index(Request $request)
     {
+        // Ambil data siswa dengan relasi
         $studentQuery = Student::query()->with('noInduk', 'religion', 'gender', 'class');
-
-
-        // Apply search filter if present
+    
+        // Terapkan filter pencarian jika ada
         $this->applySearch($studentQuery, $request->search);
         $studentQuery->orderBy('id');
         
-
         // Pagination
         $students = $studentQuery->paginate(5)->appends($request->only('search'));
-
+    
+        // Ambil data untuk classes, genders, no_induks, dan religions
+        $classes = Classes::all();  // Ganti dengan model yang sesuai
+        $genders = Gender::all();      // Ganti dengan model yang sesuai
+        $noInduks = NoInduk::all();    // Ganti dengan model yang sesuai
+        $religions = Religion::all();  // Ganti dengan model yang sesuai
+    
+        // Kirim data ke komponen Inertia
         return inertia('Students/index', [
             'students' => StudentResource::collection($students),
-            'search' => $request->input('search', '')
+            'search' => $request->input('search', ''),
+            'classes' => $classes,  // Kirim data classes
+            'genders' => $genders,  // Kirim data genders
+            'no_induks' => $noInduks, // Kirim data noInduks
+            'religions' => $religions, // Kirim data religions
+        ]);
+    }
+    
+
+ 
+
+    public function melihatDataAbsensiSiswa(Request $request)
+    {
+        // Misalnya kita mendapatkan tanggal hari ini
+        $currentDate = now()->format('Y-m-d'); // Format sesuai dengan yang Anda butuhkan
+        
+        // Ambil data absensi berdasarkan tanggal
+        $attendanceRecords = Attendance::whereDate('tanggal_kehadiran', $currentDate)
+            ->with('student') // Pastikan relasi dengan model Student ada
+            ;
+    
+        return inertia('Students/melihatDataAbsensiSiswa', [
+            'attendanceRecords' => $attendanceRecords,
+            'currentDate' => $currentDate,
         ]);
     }
 

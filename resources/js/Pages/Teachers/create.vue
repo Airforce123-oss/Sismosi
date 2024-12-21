@@ -2,36 +2,51 @@
 import { initFlowbite } from "flowbite";
 import { Link, useForm, router } from "@inertiajs/vue3";
 import { ref, onMounted } from "vue";
+import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import InputError from "@/Components/InputError.vue"; // Pastikan komponen InputError ada
+import Swal from "sweetalert2";
 
 const props = defineProps({
     classes: { type: Object },
+    teachers: { type: Object, default: () => ({ data: [] }) },
 });
 
 const classes = ref(props.classes.data || []);
 
-const form = useForm({
+const formData = useForm({
     name: "",
     class_id: "",
 });
 
-onMounted(() => {
-    initFlowbite();
-});
+function submit() {
+    console.log("Submitting data:", formData);
 
-function createTeacher() {
-    console.log("Submitting data:", form);
-
-    form.post(route("teachers.store"), {
+    formData.post(route("teachers.store"), {
         onSuccess: () => {
             console.log("Data successfully submitted");
-            router.visit(route("teachers.index"));
+            Swal.fire({
+                title: "Berhasil!",
+                text: "Data guru berhasil disimpan.",
+                icon: "success",
+                confirmButtonText: "Ok",
+            }).then(() => {
+                router.visit(route("teachers.index"), { replace: true });
+            });
         },
         onError: (errors) => {
             console.error("Error:", errors);
+            Swal.fire({
+                title: "Gagal!",
+                text: "Terjadi kesalahan saat menyimpan data guru.",
+                icon: "error",
+                confirmButtonText: "Ok",
+            });
         },
     });
 }
+onMounted(() => {
+    initFlowbite();
+});
 </script>
 
 <template>
@@ -48,7 +63,7 @@ function createTeacher() {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
+                            inert
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -61,7 +76,7 @@ function createTeacher() {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
+                            inert
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -96,7 +111,7 @@ function createTeacher() {
                     >
                         <span class="sr-only">Toggle search</span>
                         <svg
-                            aria-hidden="true"
+                            inert
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -185,7 +200,7 @@ function createTeacher() {
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-                        <form @submit.prevent="createTeacher">
+                        <form @submit.prevent="submit">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -213,19 +228,20 @@ function createTeacher() {
                                                 Nama
                                             </label>
                                             <input
-                                                v-model="form.name"
+                                                v-model="formData.name"
                                                 type="text"
                                                 id="name"
                                                 placeholder="Masukkan Nama"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
+                                                        formData.errors.name,
                                                 }"
                                             />
+
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.name"
+                                                :message="formData.errors.name"
                                             />
                                         </div>
 
@@ -238,12 +254,13 @@ function createTeacher() {
                                                 Kelas
                                             </label>
                                             <select
-                                                v-model="form.class_id"
+                                                v-model="formData.class_id"
                                                 id="class_id"
                                                 class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.class_id,
+                                                        formData.errors
+                                                            .class_id,
                                                 }"
                                             >
                                                 <option value="">
@@ -260,26 +277,31 @@ function createTeacher() {
 
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.class_id"
+                                                :message="
+                                                    formData.errors.class_id
+                                                "
                                             />
                                         </div>
                                     </div>
                                 </div>
                                 <div
-                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6"
+                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
                                 >
-                                    <Link
-                                        :href="route('teachers.index')"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
-                                    >
-                                        Batal
-                                    </Link>
-                                    <button
-                                        type="submit"
-                                        class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    >
-                                        Simpan
-                                    </button>
+                                    <div class="flex items-center space-x-4">
+                                        <Link
+                                            :href="route('teachers.index')"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Batal
+                                        </Link>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Simpan
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -292,7 +314,7 @@ function createTeacher() {
 
         <!-- Sidebar -->
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""
@@ -377,7 +399,7 @@ function createTeacher() {
                                 >Siswa</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -479,7 +501,7 @@ function createTeacher() {
                                 >Kelas</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -528,7 +550,7 @@ function createTeacher() {
                                 >Mata Pelajaran</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"

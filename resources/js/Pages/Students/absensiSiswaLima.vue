@@ -2056,16 +2056,14 @@ onMounted(async () => {
                                 -->
                             </div>
                         </div>
-                        
-                                 <div>
+                        <div>
                             <button
-                                class="btn btn-primary modal-title fs-5 block sm:inline-block w-full sm:w-auto"
+                                class="btn btn-primary modal-title fs-5"
                                 @click="showAddModal"
                             >
-                                <i class="fa fa-plus mr-2"></i> Tambah Absensi
+                                Tambah Absensi
                             </button>
                         </div>
-                        
                     </div>
 
                     <div class="g-responsive overflow-x-auto max-w-full">
@@ -2391,10 +2389,10 @@ onMounted(async () => {
                 <div>
                     <!-- Daftar Siswa dan Tanggal -->
                     <div v-for="student in students" :key="student.id">
-                        <!-- <p>{{ student.name }}</p> -->
-                        <!--  <p>Tanggal: {{ date }}</p> -->
+                        <p>{{ student.name }}</p>
+                        <p>Tanggal: {{ date }}</p>
                         <button @click="handleStatusChange(student.id, date)">
-                           <!-- Ubah Status Kehadiran-->
+                            Ubah Status Kehadiran
                         </button>
                     </div>
 
@@ -2554,7 +2552,6 @@ onMounted(async () => {
                             <span class="ml-3">Tugas Siswa</span>
                         </a>
                     </li>
-
                     <li>
                         <a
                             href="bukuPenghubung"

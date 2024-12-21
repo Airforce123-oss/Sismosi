@@ -29,7 +29,7 @@ const fetchSessionData = async () => {
 
 onMounted(() => {
     initFlowbite();
-    
+
     // Fetch session data
     fetchSessionData();
 });
@@ -192,645 +192,125 @@ onMounted(() => {
 
         <main class="p-7 md:ml-64 h-screen pt-20">
             <!-- section -->
-            <div class="col-sm-6">
-                <h4 class="fw-bold poppins m-0">Absensi Saya</h4>
+            <div class="col-sm-6 mb-2">
+                <h4 class="fw-bold poppins m-0">Absensi Siswa</h4>
             </div>
+
+            <!-- Card Header -->
+            <div class="content bg-yellow-100 p-4 py-6">
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <table class="table-auto w-full">
+                            <tbody>
+                                <tr>
+                                    <td class="font-bold">Kelas</td>
+                                    <td class="px-2">:</td>
+                                    <td>X-1</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">Wali Kelas</td>
+                                    <td class="px-2">:</td>
+                                    <td>
+                                        {{ $page.props.auth.user.name }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">Tahun Pelajaran</td>
+                                    <td class="px-2">:</td>
+                                    <td>2024/2025 - Semester 1</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- {{ $page.props.auth.user.name }}  --->
+
             <section class="content py-6">
-                <div class="container mx-auto">
-                    <div class="row">
-                        <div class="col-12">
-                            <div
-                                class="card bg-white shadow rounded-lg overflow-hidden"
-                            >
-                                <!-- Card Body -->
-                                <div class="card-body p-4">
-                                    <div class="table-responsive">
-                                        <div
-                                            class="dataTable-wrapper dataTable-loading no-footer sortable searchable fixed-columns"
-                                        >
-                                            <!-- Table Top -->
-                                            <div
-                                                class="dataTable-top flex items-center justify-between mb-4"
-                                            >
-                                                <div class="dataTable-dropdown">
-                                                    <label
-                                                        class="flex items-center"
-                                                    >
-                                                        <span class="mr-2"
-                                                            >Entries per
-                                                            page:</span
-                                                        >
-                                                        <select
-                                                            class="dataTable-selector form-select bg-gray-100 rounded-md border border-gray-300"
-                                                        >
-                                                            <option value="5">
-                                                                5
-                                                            </option>
-                                                            <option
-                                                                value="10"
-                                                                selected
-                                                            >
-                                                                10
-                                                            </option>
-                                                            <option value="15">
-                                                                15
-                                                            </option>
-                                                            <option value="20">
-                                                                20
-                                                            </option>
-                                                            <option value="25">
-                                                                25
-                                                            </option>
-                                                        </select>
-                                                    </label>
-                                                </div>
-                                                <div class="dataTable-search">
-                                                    <input
-                                                        class="dataTable-input bg-gray-100 rounded-md border border-gray-300 p-2"
-                                                        placeholder="Search..."
-                                                        type="text"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <!-- Table -->
-                                            <div
-                                                class="dataTable-container overflow-x-auto"
-                                            >
-                                                <table
-                                                    id="table1"
-                                                    class="table table-sm table-hover dataTable-table w-full text-left border-collapse"
-                                                >
-                                                    <thead>
-                                                        <tr
-                                                            class="bg-dark text-white"
-                                                        >
-                                                            <th
-                                                                scope="col"
-                                                                class="py-2 px-4 font-semibold"
-                                                            >
-                                                                ID
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="py-2 px-4 font-semibold"
-                                                            >
-                                                                Kelas
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="py-2 px-4 font-semibold"
-                                                            >
-                                                                Wali Kelas
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="py-2 px-4 font-semibold"
-                                                            >
-                                                                Tahun Pelajaran
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="py-2 px-4 font-semibold"
-                                                            >
-                                                                Aksi
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                1
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-1
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-2
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                3
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-3
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                4
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-4
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                5
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-5
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                6
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-6
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                7
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-7
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                8
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-8
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                9
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-9
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                10
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                X-10
-                                                            </td>
-                                                            <td
-                                                                class="py-2 px-4"
-                                                            >
-                                                                {{
-                                                                    $page.props
-                                                                        .auth
-                                                                        .user
-                                                                        .name
-                                                                }}
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                2024/2025 -
-                                                                Semester 1
-                                                            </td>
-                                                            <td
-                                                                class="py-4 px-4"
-                                                            >
-                                                                <a
-                                                                    href="kelolaAbsensiSiswa"
-                                                                    class="btn btn-success pb-1 pt-0 px-2 bg-green-500 text-white rounded-md shadow-md hover:bg-green-600"
-                                                                >
-                                                                    <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="16"
-                                                                        height="16"
-                                                                        fill="currentColor"
-                                                                        class="bi bi-list-columns-reverse"
-                                                                        viewBox="0 0 16 16"
-                                                                    >
-                                                                        <path
-                                                                            fill-rule="evenodd"
-                                                                            d="M0 .5A.5.5 0 0 1 .5 0h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 0 .5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10A.5.5 0 0 1 4 .5Zm-4 2A.5.5 0 0 1 .5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 4h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Zm-4 2A.5.5 0 0 1 .5 6h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1h-8a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-10a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5Zm-4 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm4 0a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5Z"
-                                                                        ></path>
-                                                                    </svg>
-                                                                    Kelola
-                                                                </a>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            <!-- Table Bottom -->
-                                            <div
-                                                class="dataTable-bottom flex items-center justify-between mt-4"
-                                            >
-                                                <div class="dataTable-info">
-                                                    Showing 1 to 1 of 1 entries
-                                                </div>
-                                                <nav
-                                                    class="dataTable-pagination"
-                                                >
-                                                    <ul
-                                                        class="dataTable-pagination-list pagination pagination-primary"
-                                                    ></ul>
-                                                </nav>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- /.card-body -->
+                <!-- Card Body -->
+                <div class="p-4">
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
+                    >
+                        <!-- Month Cards -->
+                        <a
+                            href="AbsensiSiswaSatu"
+                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Desember 2024</span
+                                >
                             </div>
-                        </div>
+                        </a>
+                        <a
+                            href="/AbsensiSiswaDua"
+                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Januari 2025</span
+                                >
+                            </div>
+                        </a>
+                        <a
+                            href="/AbsensiSiswaTiga"
+                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Februari 2025</span
+                                >
+                            </div>
+                        </a>
+                        <a
+                            href="/AbsensiSiswaEmpat"
+                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Maret 2025</span
+                                >
+                            </div>
+                        </a>
+                        <a
+                            href="/AbsensiSiswaLima"
+                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >April 2025</span
+                                >
+                            </div>
+                        </a>
+                        <a
+                            href="/AbsensiSiswaEnam"
+                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Mei 2025</span
+                                >
+                            </div>
+                        </a>
                     </div>
                 </div>
             </section>
@@ -921,7 +401,7 @@ onMounted(() => {
                     </li>
                     <li>
                         <a
-                            href=""
+                            href="membuatTugasSiswa"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

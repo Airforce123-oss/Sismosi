@@ -1,20 +1,103 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, defineProps } from "vue";
 import axios from "axios";
 import { initFlowbite } from "flowbite";
+import { Link, useForm, usePage } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import VueApexCharts from "vue-apexcharts";
 import ApexCharts from "apexcharts";
-import { Link, useForm, usePage } from "@inertiajs/vue3";
 import $ from "jquery";
+
+// Plugin untuk kalender
 import "@assets/plugins/simple-calendar/jquery.simple-calendar.js";
 import "@assets/plugins/simple-calendar/simple-calendar.css";
 
-// Fetch initial data
+// Mendefinisikan props yang diterima oleh komponen
+defineProps({
+    attendanceRecords: Array,
+    currentDate: String,
+});
+
+// State
+const userName = ref("");
+const form = useForm({
+    //name: props.auth.user.name,
+    //email: props.auth.user.email,
+    //role_type: props.auth.user.role_type,
+});
+
+// Fungsi untuk mengambil status absensi siswa untuk tanggal tertentu
+const getAttendanceStatus = (studentId, date) => {
+    const attendance = props.attendanceData.find(
+        (attendance) =>
+            attendance.student_id === studentId &&
+            formattedDate(attendance.tanggal_kehadiran) === date
+    );
+    return attendance ? attendance.status_kehadiran : "Belum diabsen";
+};
+
+// Fungsi untuk menampilkan nama hari berdasarkan tanggal
+const getDayName = (date) => {
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayIndex = new Date(date).getDay();
+    return dayNames[dayIndex];
+};
+
+// Fungsi untuk memformat tanggal menjadi yyyy-mm-dd
+const formattedDate = (date) => {
+    const dateObj = new Date(date);
+    const day = dateObj.getDate().toString().padStart(2, "0");
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+    const year = dateObj.getFullYear();
+    return `${year}-${month}-${day}`;
+};
+
+// Total hari dalam sebulan
+const totalDaysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+// Fungsi untuk mengambil data session
+const fetchSessionData = async () => {
+    try {
+        const response = await axios.get("/api/session-name");
+        userName.value = response.data.name;
+    } catch (error) {
+        console.error("There was an error fetching the session data:", error);
+    }
+};
+
+// Inisialisasi komponen saat halaman dimuat
 onMounted(() => {
-    initFlowbite();
+    initFlowbite(); // Inisialisasi Flowbite
+    // Fetch session data
+    fetchSessionData();
 });
 </script>
+
+<style scoped>
+@import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
+.bg-primary1 {
+    background-color: #0e70cc;
+}
+
+.bg-success {
+    background-color: #28a745;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+}
+
+.bg-cyan {
+    background-color: #10b0cc;
+}
+
+.attendance-record {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+</style>
 
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
@@ -30,7 +113,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -43,7 +125,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -64,13 +145,14 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
                             >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <button
+                    <!--
+                                        <button
                         type="button"
                         data-drawer-toggle="drawer-navigation"
                         aria-controls="drawer-navigation"
@@ -78,7 +160,6 @@ onMounted(() => {
                     >
                         <span class="sr-only">Toggle search</span>
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -91,16 +172,16 @@ onMounted(() => {
                             ></path>
                         </svg>
                     </button>
+                    -->
                     <!-- Apps -->
                     <button
                         type="button"
                         class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">View notifications</span>
-                    </button>
+                    ></button>
 
                     <button
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        type="button"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -125,22 +206,27 @@ onMounted(() => {
                     </button>
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
-                        <div class="py-3 px-4">
-                            <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                >{{ $page.props.auth.user.email }}</span
+                        <div class="py-3 px-3">
+                            <div
+                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
                             >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >{{ $page.props.auth.user.name }}</span
-                            >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >{{ $page.props.auth.user.role_type }}</span
-                            >
+                                <span
+                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
+                                    >{{ $page.props.auth.user.email }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                >
+                                    {{ $page.props.auth.user.name }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                    >{{ form.role_type }}</span
+                                >
+                            </div>
                         </div>
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
@@ -158,10 +244,30 @@ onMounted(() => {
                 </div>
             </div>
         </nav>
-
         <!-- Main -->
 
-        <main class="p-7 md:ml-64 h-screen pt-20"></main>
+        <main class="p-7 md:ml-64 h-screen pt-20">
+            <Head title="Dashboard" />
+            <div>
+                <h3>Daftar Absensi Siswa Dengan Kehadiran - {{ currentDate }}</h3>
+                <div v-if="attendanceRecords.length > 0">
+                    <div
+                        v-for="record in attendanceRecords"
+                        :key="record.student.id"
+                        class="attendance-record"
+                    >
+                        <p>
+                            <strong>{{ record.student.name }}</strong>
+                        </p>
+                        <p>Status Kehadiran: {{ record.status_kehadiran }}</p>
+                        <p>Tanggal Kehadiran: {{ record.tanggal_kehadiran }}</p>
+                    </div>
+                </div>
+                <div v-else>
+                    <p>Tidak ada absensi untuk tanggal ini.</p>
+                </div>
+            </div>
+        </main>
 
         <!-- Sidebar -->
         <aside
@@ -204,7 +310,7 @@ onMounted(() => {
                 <ul class="space-y-2">
                     <li>
                         <a
-                            href="dashboard"
+                            href="studentsDashboard"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -227,7 +333,7 @@ onMounted(() => {
                     </li>
                     <li>
                         <a
-                            href="absensiSiswa"
+                            href="#"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -241,12 +347,12 @@ onMounted(() => {
                                     d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Absensi Siswa</span>
+                            <span class="ml-3">Melihat Nilai</span>
                         </a>
                     </li>
                     <li>
                         <a
-                            href="membuatTugasSiswa"
+                            href="#"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -260,24 +366,47 @@ onMounted(() => {
                                     d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Tugas Siswa</span>
+                            <span class="ml-3">Melihat Absensi</span>
                         </a>
                     </li>
                     <li>
                         <a
-                            href="bukuPenghubung"
+                            href="mataPelajaran"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
-                                viewBox="0 0 576 512"
-                                class="w-6 h-6"
+                                viewBox="0 0 256 256"
                                 xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
                             >
+                                <rect fill="none" height="256" width="256" />
                                 <path
-                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                                    d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Buku Penghubung</span>
+                            <span class="ml-3">Mata Pelajaran</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="tugas"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="w-5 h-5"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M9.664 1.319a.75.75 0 0 1 .672 0 41.059 41.059 0 0 1 8.198 5.424.75.75 0 0 1-.254 1.285 31.372 31.372 0 0 0-7.86 3.83.75.75 0 0 1-.84 0 31.508 31.508 0 0 0-2.08-1.287V9.394c0-.244.116-.463.302-.592a35.504 35.504 0 0 1 3.305-2.033.75.75 0 0 0-.714-1.319 37 37 0 0 0-3.446 2.12A2.216 2.216 0 0 0 6 9.393v.38a31.293 31.293 0 0 0-4.28-1.746.75.75 0 0 1-.254-1.285 41.059 41.059 0 0 1 8.198-5.424ZM6 11.459a29.848 29.848 0 0 0-2.455-1.158 41.029 41.029 0 0 0-.39 3.114.75.75 0 0 0 .419.74c.528.256 1.046.53 1.554.82-.21.324-.455.63-.739.914a.75.75 0 1 0 1.06 1.06c.37-.369.69-.77.96-1.193a26.61 26.61 0 0 1 3.095 2.348.75.75 0 0 0 .992 0 26.547 26.547 0 0 1 5.93-3.95.75.75 0 0 0 .42-.739 41.053 41.053 0 0 0-.39-3.114 29.925 29.925 0 0 0-5.199 2.801 2.25 2.25 0 0 1-2.514 0c-.41-.275-.826-.541-1.25-.797a6.985 6.985 0 0 1-1.084 3.45 26.503 26.503 0 0 0-1.281-.78A5.487 5.487 0 0 0 6 12v-.54Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                            <span class="ml-3">Upload Tugas</span>
                         </a>
                     </li>
                 </ul>

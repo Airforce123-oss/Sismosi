@@ -1,79 +1,37 @@
 <script setup>
+import { initFlowbite } from "flowbite";
 import { Link, useForm, router } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { watch, ref } from "vue";
-import axios from "axios";
-import InputError from "@/Components/InputError.vue";
-import Swal from "sweetalert2";
+import InputError from "@/Components/InputError.vue"; // Pastikan komponen InputError ada
+
 const props = defineProps({
     classes: { type: Object },
-    genders: { type: Object, default: () => ({ data: [] }) },
-    religions: { type: Object, default: () => ({ data: [] }) },
-    students: { type: Object, default: () => ({ data: [] }) },
+    teachers: { type: Object, default: () => ({ data: [] }) },
 });
-
-let sections = ref({});
 
 const classes = ref(props.classes.data || []);
-let genders = ref(props.genders.data || []);
-const religions = ref(props.religions.data || []);
-const form = useForm({
-    name: "",
-    no_induk_id: "",
-    gender_id: "",
-    class_id: "",
-    religion_id: "",
+const formData = useForm({
+    name: "Bambang Nurdhiari, S.Pd",
+    class_id: "1",
 });
 
-watch(
-    () => form.class_id,
-    (newValue) => {
-        getSections(newValue);
-    }
-);
-
-const getSections = async (class_id) => {
-    try {
-        const response = await axios.get("/api/sections?class_id=" + class_id);
-        sections.value = response.data;
-    } catch (error) {
-        console.error("Error fetching sections:", error);
-    }
-};
-
-const formData = {
-    name: "John Doe",
-    gender_id: 2,
-    class_id: 1,
-    religion_id: 3,
-    no_induk_id: 24,
-};
 function submit() {
     console.log("Submitting data:", formData);
 
-    form.post(route("students.store"), {
+    formData.post(route("teachers.store"), {
         onSuccess: () => {
             console.log("Data successfully submitted");
-            Swal.fire({
-                title: "Berhasil!",
-                text: "Data siswa berhasil disimpan.",
-                icon: "success",
-                confirmButtonText: "Ok",
-            }).then(() => {
-                router.visit(route("students.index"), { replace: true });
-            });
+            router.visit(route("teachers.index"), { replace: true });
         },
         onError: (errors) => {
             console.error("Error:", errors);
-            Swal.fire({
-                title: "Gagal!",
-                text: "Terjadi kesalahan saat menyimpan data siswa.",
-                icon: "error",
-                confirmButtonText: "Ok",
-            });
         },
     });
 }
+onMounted(() => {
+    initFlowbite();
+});
 </script>
 
 <template>
@@ -90,7 +48,7 @@ function submit() {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            inert
+                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -103,7 +61,7 @@ function submit() {
                             ></path>
                         </svg>
                         <svg
-                            inert
+                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -132,7 +90,31 @@ function submit() {
                 <div class="flex items-center lg:order-2">
                     <button
                         type="button"
-                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        data-drawer-toggle="drawer-navigation"
+                        aria-controls="drawer-navigation"
+                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                    >
+                        <span class="sr-only">Toggle search</span>
+                        <svg
+                            aria-hidden="true"
+                            class="w-6 h-6"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                clip-rule="evenodd"
+                                fill-rule="evenodd"
+                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                            ></path>
+                        </svg>
+                    </button>
+
+                    <!-- Apps -->
+
+                    <button
+                        type="button"
+                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -176,8 +158,7 @@ function submit() {
                                 </span>
                                 <span
                                     class="block text-sm text-gray-900 truncate dark:text-white"
-                                    >{{ form.role_type }}</span
-                                >
+                                ></span>
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
@@ -198,6 +179,7 @@ function submit() {
         </nav>
 
         <!-- start1 -->
+
         <main class="p-4 md:ml-64 h-auto pt-20">
             <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
@@ -214,40 +196,14 @@ function submit() {
                                         <h3
                                             class="text-lg leading-6 font-medium text-gray-900"
                                         >
-                                            Informasi Siswa
+                                            Informasi Guru
                                         </h3>
                                         <p class="mt-1 text-sm text-gray-500">
-                                            Gunakan Form ini untuk mengisi data
-                                            siswa
+                                            Gunakan Form ini untuk memperbarui data
+                                            guru
                                         </p>
                                     </div>
                                     <div class="grid grid-cols-6 gap-6">
-                                        <!-- Nomor Induk -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="nomorInduk"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Nomor Induk
-                                            </label>
-                                            <input
-                                                v-model="form.no_induk_id"
-                                                type="text"
-                                                id="nomorInduk"
-                                                placeholder="Masukkan Nomor Induk"
-                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.no_induk_id,
-                                                }"
-                                            />
-                                            <InputError
-                                                class="mt-2"
-                                                :message="
-                                                    form.errors.no_induk_id
-                                                "
-                                            />
-                                        </div>
                                         <!-- Nama -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
@@ -257,55 +213,23 @@ function submit() {
                                                 Nama
                                             </label>
                                             <input
-                                                v-model="form.name"
+                                                v-model="formData.name"
                                                 type="text"
                                                 id="name"
                                                 placeholder="Masukkan Nama"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
+                                                        formData.errors.name,
                                                 }"
                                             />
 
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.name"
+                                                :message="formData.errors.name"
                                             />
                                         </div>
-                                        <!-- Jenis Kelamin -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="gender_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Jenis Kelamin
-                                            </label>
-                                            <select
-                                                v-model="form.gender_id"
-                                                id="gender_id"
-                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.gender_id,
-                                                }"
-                                            >
-                                                <option value="">
-                                                    Pilih Jenis Kelamin
-                                                </option>
-                                                <option
-                                                    v-for="item in genders"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                >
-                                                    {{ item.name }}
-                                                </option>
-                                            </select>
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.gender_id"
-                                            />
-                                        </div>
+
                                         <!-- Kelas -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
@@ -315,12 +239,13 @@ function submit() {
                                                 Kelas
                                             </label>
                                             <select
-                                                v-model="form.class_id"
+                                                v-model="formData.class_id"
                                                 id="class_id"
                                                 class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.class_id,
+                                                        formData.errors
+                                                            .class_id,
                                                 }"
                                             >
                                                 <option value="">
@@ -334,44 +259,11 @@ function submit() {
                                                     {{ item.name }}
                                                 </option>
                                             </select>
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.class_id"
-                                            />
-                                        </div>
 
-                                        <!-- Agama -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="religion_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Agama
-                                            </label>
-                                            <select
-                                                v-model="form.religion_id"
-                                                id="religion_id"
-                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.religion_id,
-                                                }"
-                                            >
-                                                <option value="">
-                                                    Pilih Agama
-                                                </option>
-                                                <option
-                                                    v-for="item in religions"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                >
-                                                    {{ item.name }}
-                                                </option>
-                                            </select>
                                             <InputError
                                                 class="mt-2"
                                                 :message="
-                                                    form.errors.religion_id
+                                                    formData.errors.class_id
                                                 "
                                             />
                                         </div>
@@ -382,7 +274,7 @@ function submit() {
                                 >
                                     <div class="flex items-center space-x-4">
                                         <Link
-                                            :href="route('students.index')"
+                                            :href="route('teachers.index')"
                                             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                         >
                                             Batal
@@ -392,7 +284,7 @@ function submit() {
                                             type="submit"
                                             class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                         >
-                                            Simpan
+                                            Perbarui
                                         </button>
                                     </div>
                                 </div>
@@ -407,7 +299,7 @@ function submit() {
 
         <!-- Sidebar -->
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""
@@ -461,7 +353,7 @@ function submit() {
                                 xmlns:xlink="http://www.w3.org/1999/xlink"
                             >
                                 <path
-                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3 c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768 C18.184,8.34,12,3,12,3z"
+                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
                                 />
                             </svg>
                             <span class="ml-3">Beranda</span>
@@ -492,7 +384,7 @@ function submit() {
                                 >Siswa</span
                             >
                             <svg
-                                inert
+                                aria-hidden="true"
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -515,6 +407,54 @@ function submit() {
                             </li>
                         </ul>
                     </li>
+
+                    <li>
+                        <button
+                            type="button"
+                            class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            aria-controls="dropdown-pages1"
+                            data-collapse-toggle="dropdown-pages1"
+                            aria-expanded="true"
+                        >
+                            <svg
+                                viewBox="0 0 640 512"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                            >
+                                <path
+                                    d="M208 352c-2.39 0-4.78.35-7.06 1.09C187.98 357.3 174.35 360 160 360c-14.35 0-27.98-2.7-40.95-6.91-2.28-.74-4.66-1.09-7.05-1.09C49.94 352-.33 402.48 0 464.62.14 490.88 21.73 512 48 512h224c26.27 0 47.86-21.12 48-47.38.33-62.14-49.94-112.62-112-112.62zm-48-32c53.02 0 96-42.98 96-96s-42.98-96-96-96-96 42.98-96 96 42.98 96 96 96zM592 0H208c-26.47 0-48 22.25-48 49.59V96c23.42 0 45.1 6.78 64 17.8V64h352v288h-64v-64H384v64h-76.24c19.1 16.69 33.12 38.73 39.69 64H592c26.47 0 48-22.25 48-49.59V49.59C640 22.25 618.47 0 592 0z"
+                                />
+                            </svg>
+
+                            <span
+                                class="flex-1 ml-3 text-left whitespace-nowrap"
+                                >Guru</span
+                            >
+                            <svg
+                                class="w-6 h-6"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd"
+                                ></path>
+                            </svg>
+                        </button>
+                        <ul id="dropdown-pages1" class="hidden py-2 space-y-2">
+                            <li>
+                                <a
+                                    href="teachers"
+                                    class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                                    >Data Induk Guru</a
+                                >
+                            </li>
+                        </ul>
+                    </li>
+
                     <li>
                         <button
                             type="button"
@@ -546,6 +486,7 @@ function submit() {
                                 >Kelas</span
                             >
                             <svg
+                                aria-hidden="true"
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -594,6 +535,7 @@ function submit() {
                                 >Mata Pelajaran</span
                             >
                             <svg
+                                aria-hidden="true"
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"

@@ -1,12 +1,10 @@
 <script setup>
-import { onMounted } from "vue";
 import { initFlowbite } from "flowbite";
-import { Head, Link, useForm } from "@inertiajs/vue3";
-import { watch, ref } from "vue";
-import axios from "axios";
+import { Link, useForm, router } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
 import InputError from "@/Components/InputError.vue";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import Swal from "sweetalert2";
 
 defineProps({
     classes_for_student: {
@@ -15,18 +13,6 @@ defineProps({
 });
 
 let sections = ref([]); // Pastikan sections adalah array untuk menyimpan data bagian
-
-const form = useForm({
-    name: "",
-    class_id: "",
-});
-
-watch(
-    () => form.class_id,
-    (newValue) => {
-        getSections(newValue);
-    }
-);
 
 const getSections = async (classId) => {
     try {
@@ -38,9 +24,44 @@ const getSections = async (classId) => {
     }
 };
 
-const createStudent = () => {
-    form.post(route("students.store"));
-};
+//const classes = ref(props.classes.data || []);
+const formData = useForm({
+    nama_kelas: "",
+    kode_kelas: "",
+});
+
+function submit() {
+    console.log("Submitting data:", formData);
+
+    formData.post(route("kelas.store"), {
+        onSuccess: () => {
+            console.log("Data successfully submitted");
+
+            // Menampilkan SweetAlert saat berhasil
+            Swal.fire({
+                title: "Berhasil!",
+                text: "Data kelas berhasil disimpan.",
+                icon: "success",
+                confirmButtonText: "Ok",
+            }).then(() => {
+                router.visit(route("kelas.index"), { replace: true });
+            });
+        },
+
+        onError: (errors) => {
+            console.error("Error:", errors);
+            formData.errors = errors; // Menyimpan error dalam formData.errors
+
+            // Menampilkan SweetAlert saat gagal
+            Swal.fire({
+                title: "Gagal!",
+                text: "Terjadi kesalahan saat menyimpan data kelas.",
+                icon: "error",
+                confirmButtonText: "Ok",
+            });
+        },
+    });
+}
 
 onMounted(() => {
     initFlowbite();
@@ -184,7 +205,6 @@ onMounted(() => {
             </div>
         </nav>
         <!-- start1 -->
- 
 
         <!--start2-->
 
@@ -193,7 +213,7 @@ onMounted(() => {
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12 mt-10">
-                        <form @submit.prevent="createStudent">
+                        <form @submit.prevent="submit">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -220,57 +240,78 @@ onMounted(() => {
                                                 >Nama Kelas</label
                                             >
                                             <input
-                                                v-model="form.name"
+                                                v-model="formData.nama_kelas"
                                                 type="text"
-                                                id="name"
+                                                id="kelas-name"
+                                                placeholder="Kelas X-1"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
+                                                        formData.errors
+                                                            .nama_kelas,
                                                 }"
                                             />
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.name"
+                                                :message="
+                                                    formData.errors.nama_kelas
+                                                "
+                                            />
+
+                                            <InputError
+                                                class="mt-2"
+                                                :message="formData.errors.name"
                                             />
                                         </div>
                                     </div>
                                     <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="name"
-                                                class="block text-sm font-medium text-gray-700"
-                                                >Kode Kelas</label
-                                            >
-                                            <input
-                                               
-                                                type="text"
-                                                id="name"
-                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300'
-                                                "
-                                            />
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.name"
-                                            />
-                                        </div>
+                                        <label
+                                            for="kode"
+                                            class="block text-sm font-medium text-gray-700"
+                                            >Kode Kelas</label
+                                        >
+                                        <input
+                                            v-model="formData.kode_kelas"
+                                            type="text"
+                                            id="kode-kelas"
+                                            placeholder="MK-XXXXXXXXX"
+                                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                            :class="{
+                                                'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                                                    formData.errors.kode_kelas,
+                                            }"
+                                        />
+                                        <InputError
+                                            class="mt-2"
+                                            :message="
+                                                formData.errors.kode_kelas
+                                            "
+                                        />
+
+                                        <InputError
+                                            class="mt-2"
+                                            :message="formData.errors.kode"
+                                        />
+                                    </div>
                                 </div>
                                 <div
-                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6"
+                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
                                 >
-                                    <Link
-                                        :href="route('kelas.index')"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
-                                    >
-                                        Batal
-                                    </Link>
-                                    <button
-                                        type="submit"
-                                        class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    >
-                                        Simpan
-                                    </button>
+                                    <div class="flex items-center space-x-4">
+                                        <Link
+                                            :href="route('kelas.index')"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Batal
+                                        </Link>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Simpan
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -451,7 +492,7 @@ onMounted(() => {
                             </li>
                         </ul>
                     </li>
-                    
+
                     <li>
                         <a
                             href="penilaian"

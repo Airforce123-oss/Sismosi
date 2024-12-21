@@ -15,5 +15,7 @@ class ClassesForStudent extends Model
     // Define which attributes can be mass assigned
     protected $fillable = ['nama_kelas', 'kode_kelas'];
 
+    protected $primaryKey = 'id_kelas';
+
     // Timestamps are enabled by default, so no need to specify them explicitly
 }

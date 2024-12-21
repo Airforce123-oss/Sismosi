@@ -7,82 +7,51 @@ import ApexCharts from "apexcharts";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import $ from "jquery";
 
-const entriesToShow = ref(10);
-const searchQuery = ref("");
-const currentPage = ref(1);
+// Data siswa
+const studentProfile = ref({
+    name: "John Doe",
+    studentId: "12345",
+    gender: "Laki-laki",
+    class: "10A",
+    parentName: "Mr. Doe",
+    address: "Jl. Pendidikan No. 1",
+});
 
-const entries = ref([
+// Data buku penghubung
+const books = ref([
     {
         id: 1,
-        dibuatOleh: "Guru: Basuki Dwicahyono, M.Pd.I",
-        informasi:
-            "Saya ingin menyampaikan tentang perkembangan akademik anak Anda...",
-        dibacaGuru: true,
-        dibacaWali: true,
+        createdBy: "Guru",
+        info: "Saya ingin menyampaikan tentang perkembangan akademik anak Anda...",
+        readByTeacher: "Y",
+        readByParent: "Y",
     },
     {
         id: 2,
-        dibuatOleh: "Guru: Basuki Dwicahyono, M.Pd.I",
-        informasi:
-            "Selamat siang, wali siswa! Anak Anda sangat antusias dalam kegiatan...",
-        dibacaGuru: true,
-        dibacaWali: true,
+        createdBy: "Guru",
+        info: "Selamat siang, wali siswa! Anak Anda sangat antusias dalam kegiatan...",
+        readByTeacher: "Y",
+        readByParent: "Y",
     },
     {
         id: 3,
-        dibuatOleh: "Guru: Basuki Dwicahyono, M.Pd.I",
-        informasi:
-            "Selamat liburan! Semoga Anda dan keluarga menikmati waktu bersama...",
-        dibacaGuru: true,
-        dibacaWali: true,
+        createdBy: "Guru",
+        info: "Selamat liburan! Semoga Anda dan keluarga menikmati waktu bersama...",
+        readByTeacher: "Y",
+        readByParent: "Y",
     },
-    {
-        id: 4,
-        dibuatOleh: "Wali: Hasyim",
-        informasi:
-            "Terima kasih atas apresiasi untuk partisipasi anak saya dalam kelompok...",
-        dibacaGuru: false,
-        dibacaWali: true,
-    },
-    // Add more entries as needed
 ]);
 
-const filteredEntries = computed(() => {
-    return entries.value.filter((entry) => {
-        return (
-            entry.dibuatOleh
-                .toLowerCase()
-                .includes(searchQuery.value.toLowerCase()) ||
-            entry.informasi
-                .toLowerCase()
-                .includes(searchQuery.value.toLowerCase())
-        );
-    });
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+
+// Pagination logic
+const paginatedBooks = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage.value;
+    const end = start + itemsPerPage.value;
+    return books.value.slice(start, end);
 });
-
-const markAsRead = (entry) => {
-    entry.dibacaWali = true;
-};
-
-const deleteEntry = (entry) => {
-    entries.value = entries.value.filter((e) => e.id !== entry.id);
-};
-
-const prevPage = () => {
-    if (currentPage.value > 1) {
-        currentPage.value--;
-    }
-};
-
-const nextPage = () => {
-    if (
-        currentPage.value * entriesToShow.value <
-        filteredEntries.value.length
-    ) {
-        currentPage.value++;
-    }
-};
-
 onMounted(() => {
     initFlowbite();
 });
@@ -233,151 +202,126 @@ onMounted(() => {
         <!-- Main -->
 
         <main class="p-7 md:ml-64 h-screen pt-20">
+            <!-- Identitas Siswa -->
             <div class="p-6 bg-white shadow rounded-lg mb-10">
-                <div class="mb-6">
-                    <h2 class="text-xl font-bold mb-4">Identitas Siswa</h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p><strong>Nama Siswa:</strong> </p>
-                            <p><strong>Nomor Induk Siswa:</strong> </p>
-                            <p><strong>Jenis Kelamin:</strong> </p>
-                        </div>
-                        <div>
-                            <p><strong>Kelas:</strong> </p>
-                            <p><strong>Nama Orang Tua:</strong> </p>
-                            <p><strong>Alamat:</strong> </p>
-                        </div>
+                <h2 class="text-xl font-bold mb-4">Identitas Siswa</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p>
+                            <strong>Nama Siswa:</strong>
+                            {{ studentProfile.name }}
+                        </p>
+                        <p>
+                            <strong>Nomor Induk Siswa:</strong>
+                            {{ studentProfile.studentId }}
+                        </p>
+                        <p>
+                            <strong>Jenis Kelamin:</strong>
+                            {{ studentProfile.gender }}
+                        </p>
+                    </div>
+                    <div>
+                        <p>
+                            <strong>Kelas:</strong> {{ studentProfile.class }}
+                        </p>
+                        <p>
+                            <strong>Nama Orang Tua:</strong>
+                            {{ studentProfile.parentName }}
+                        </p>
+                        <p>
+                            <strong>Alamat:</strong>
+                            {{ studentProfile.address }}
+                        </p>
                     </div>
                 </div>
             </div>
+
+            <!-- Data Buku Penghubung -->
             <div class="p-6 bg-white shadow rounded-lg">
-                <div class="mb-10 mt-20">
+                <h2 class="text-xl font-bold mb-4">Data Buku Penghubung</h2>
+                <div class="mb-4 flex justify-between items-center">
                     <div>
-                        <h2 class="text-xl font-bold mb-4">
-                            Data Buku Penghubung
-                        </h2>
-                        <div class="mb-4 flex justify-between items-center">
-                            <div>
-                                <label for="entries" class="mr-2">Show</label>
-                                <select id="entries" class="border rounded p-1">
-                                    <option>10</option>
-                                    <option>25</option>
-                                    <option>50</option>
-                                    <option>100</option>
-                                </select>
-                                <span class="ml-2">entries</span>
-                            </div>
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Search"
-                                    class="border rounded p-1"
-                                />
-                            </div>
-                        </div>
-                        <table class="min-w-full bg-white border">
-                            <thead>
-                                <tr>
-                                    <th class="border px-4 py-2">No</th>
-                                    <th class="border px-4 py-2">
-                                        Dibuat Oleh
-                                    </th>
-                                    <th class="border px-4 py-2">Informasi</th>
-                                    <th class="border px-4 py-2">
-                                        Dibaca Guru
-                                    </th>
-                                    <th class="border px-4 py-2">
-                                        Dibaca Wali
-                                    </th>
-                                    <th class="border px-4 py-2">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="border px-4 py-2">1</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
-                                    <td class="border px-4 py-2">
-                                        Saya ingin menyampaikan tentang
-                                        perkembangan akademik anak Anda...
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        <button
-                                            class="bg-green-500 text-white px-2 py-1 rounded"
-                                        >
-                                            Tandai Baca
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="border px-4 py-2">2</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
-                                    <td class="border px-4 py-2">
-                                        Selamat siang, wali siswa! Anak Anda
-                                        sangat antusias dalam kegiatan...
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        <button
-                                            class="bg-green-500 text-white px-2 py-1 rounded"
-                                        >
-                                            Tandai Baca
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="border px-4 py-2">3</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
-                                    <td class="border px-4 py-2">
-                                        Selamat liburan! Semoga Anda dan
-                                        keluarga menikmati waktu bersama...
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        Y
-                                    </td>
-                                    <td class="border px-4 py-2 text-center">
-                                        <button
-                                            class="bg-green-500 text-white px-2 py-1 rounded"
-                                        >
-                                            Tandai Baca
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="mt-4 flex justify-between items-center">
-                            <p>Showing 1 to 4 of 4 entries</p>
-                            <div class="flex items-center">
-                                <button class="border rounded px-2 py-1 mx-1">
-                                    Previous
-                                </button>
-                                <button class="border rounded px-2 py-1 mx-1">
-                                    1
-                                </button>
-                                <button class="border rounded px-2 py-1 mx-1">
-                                    Next
-                                </button>
-                            </div>
-                        </div>
+                        <label for="entries" class="mr-2">Show</label>
+                        <select
+                            id="entries"
+                            class="border rounded p-1"
+                            v-model="itemsPerPage"
+                        >
+                            <option :value="10">10</option>
+                            <option :value="25">25</option>
+                            <option :value="50">50</option>
+                            <option :value="100">100</option>
+                        </select>
+                        <span class="ml-2">entries</span>
+                    </div>
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            class="border rounded p-1"
+                        />
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <table class="min-w-full bg-white border">
+                    <thead>
+                        <tr>
+                            <th class="border px-4 py-2">No</th>
+                            <th class="border px-4 py-2">Dibuat Oleh</th>
+                            <th class="border px-4 py-2">Informasi</th>
+                            <th class="border px-4 py-2">Dibaca Guru</th>
+                            <th class="border px-4 py-2">Dibaca Wali</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="(book, index) in paginatedBooks"
+                            :key="book.id"
+                        >
+                            <td class="border px-4 py-2">{{ index + 1 }}</td>
+                            <td class="border px-4 py-2">
+                                {{ book.createdBy }}
+                            </td>
+                            <td class="border px-4 py-2">{{ book.info }}</td>
+                            <td class="border px-4 py-2 text-center">
+                                {{ book.readByTeacher }}
+                            </td>
+                            <td class="border px-4 py-2 text-center">
+                                {{ book.readByParent }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="mt-4 flex justify-between items-center">
+                    <p>
+                        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
+                        {{ currentPage * itemsPerPage }} of
+                        {{ books.length }} entries
+                    </p>
+                    <div class="flex items-center">
+                        <button
+                            class="border rounded px-2 py-1 mx-1"
+                            :disabled="currentPage === 1"
+                            @click="currentPage--"
+                        >
+                            Previous
+                        </button>
+                        <button class="border rounded px-2 py-1 mx-1" disabled>
+                            {{ currentPage }}
+                        </button>
+                        <button
+                            class="border rounded px-2 py-1 mx-1"
+                            :disabled="
+                                currentPage >=
+                                Math.ceil(books.length / itemsPerPage)
+                            "
+                            @click="currentPage++"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>
@@ -447,7 +391,7 @@ onMounted(() => {
 
                     <li>
                         <a
-                            href="students"
+                            href="absensiSiswa"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -461,10 +405,9 @@ onMounted(() => {
                                     d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Data Siswa</span>
+                            <span class="ml-3">Absensi Siswa</span>
                         </a>
                     </li>
-
 
                     <li>
                         <a

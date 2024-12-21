@@ -26,44 +26,124 @@ class AttendanceController extends Controller
         return view('try1');
     }
 
-public function absensiSiswaSatu(Request $request)
-{
-    // Log query SQL yang dieksekusi
-    DB::listen(function ($query) {
-        Log::info('Executed Query:', [
-            'sql' => $query->sql,
-            'bindings' => $query->bindings,
-            'time' => $query->time,
+    public function absensiSiswaSatu(Request $request)
+    {
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaSatu', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
         ]);
-    });
-
-    // Query data attendances
-    $attendances = Attendance::with('siswa')
-        ->when($request->has('student_id'), function ($query) use ($request) {
-            $query->where('student_id', $request->student_id);
-        })
-        ->get();
-
- // Format data attendances menjadi array yang lebih mudah dibaca
-$formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
-    return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray(); // Convert to array
-});
-
-
-    // Log formatted attendances sebelum mengirimkan response
-    Log::info('Returning formatted attendances:', ['formattedAttendances' => $formattedAttendances]);
-
-    //return response()->json(['attendances' => /$formattedAttendances]);
-
-    // Mengirimkan response dalam format JSON
-    //return response()->json([
-      //  'attendances' => $formattedAttendances
-    //]);
-    return inertia('Students/absensiSiswaSatu', [
-        'attendances' => $formattedAttendances
-    ]);
-}
-
+    }
+    
+    public function absensiSiswaDua(Request $request)
+    {
+        // Query attendance untuk absensi Siswa Dua
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaDua', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
+    }
+    
+    public function absensiSiswaTiga(Request $request)
+    {
+        // Query attendance untuk absensi Siswa Tiga
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaTiga', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
+    }
+    
+    public function absensiSiswaEmpat(Request $request)
+    {
+        // Query attendance untuk absensi Siswa Empat
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaEmpat', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
+    }
+    
+    public function absensiSiswaLima(Request $request)
+    {
+        // Query attendance untuk absensi Siswa Lima
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaLima', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
+    }
+    
+    public function absensiSiswaEnam(Request $request)
+    {
+        // Query attendance untuk absensi Siswa Enam
+        $attendances = Attendance::with('siswa')
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                $query->where('student_id', $request->student_id);
+            })
+            ->get();
+    
+        $formattedAttendances = $attendances->groupBy('student_id')->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+    
+        return inertia('Students/absensiSiswaEnam', [
+            'attendances' => $formattedAttendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
+    }
  
     public function absensiSiswa() {
         return inertia('Students/absensiSiswa');

@@ -4,8 +4,9 @@ import Pagination from "../../Components/Pagination.vue";
 import { Link, Head, useForm, usePage, router } from "@inertiajs/vue3";
 import { ref, watch, computed, onMounted } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-
+import MagnifyingGlass from "@/Components/Icons/MagnifyingGlass.vue";
 const { props } = usePage();
+import Swal from "sweetalert2";
 
 defineProps({
     classes: {
@@ -28,6 +29,63 @@ let searchTerm = ref(props.search ?? "");
 onMounted(() => {
     initFlowbite();
 });
+
+const teachersUrl = computed(() => {
+    const url = new URL(route("teachers.index"));
+    url.searchParams.set("page", pageNumber.value); // pastikan pageNumber ada
+    if (searchTerm.value) {
+        url.searchParams.set("search", searchTerm.value);
+    }
+    return url;
+});
+
+watch(
+    () => teachersUrl.value,
+    (updatedTeachersUrl) => {
+        console.log("Navigating to URL:", updatedTeachersUrl.toString());
+        router.visit(updatedTeachersUrl.toString(), {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    }
+);
+
+const deleteForm = useForm({});
+
+const deleteTeacher = (id) => {
+    Swal.fire({
+        title: "Apakah Anda yakin?",
+        text: "Data Guru ini akan dihapus dan tidak dapat dikembalikan!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Ya, hapus!",
+        cancelButtonText: "Batal",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            deleteForm.delete(route("teachers.destroy", id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    pageNumber.value = 1;
+                    router.visit(teachersUrl.value.toString(), {
+                        replace: true,
+                        preserveState: true,
+                        preserveScroll: true,
+                    });
+                },
+            });
+
+            Swal.fire(
+                "Terhapus!",
+                "Data guru telah berhasil dihapus.",
+                "success"
+            );
+        }
+    });
+};
+
 </script>
 
 <template>
@@ -152,7 +210,7 @@ onMounted(() => {
         <!-- start1 -->
 
         <main class="p-4 md:ml-64 h-auto pt-20">
-            <Head title="Students" />
+            <Head title="Teachers" />
 
             <div class="flex-1 p-6">
                 <div class="mx-auto max-w-7xl sm:items-center">
@@ -170,15 +228,16 @@ onMounted(() => {
                             </div>
 
                             <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                                <!-- Link untuk tambah guru -->
                                 <Link
                                     :href="route('teachers.create')"
-                                    class="inline-flex items-center justify-center rounded-md border border-transparent bg-[#8ec3b3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-                                    ><i class="fa fa-plus mr-2"></i>
-                                    Tambah Guru
+                                    class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    <i class="fa fa-plus mr-2"></i> Tambah Guru
                                 </Link>
                             </div>
                         </div>
-                        <!-- mt-8 flex flex-auto p-4 md:ml-14 h-auto pt-10 -->
+
                         <div
                             class="flex flex-col justify-between sm:flex-row mt-6"
                         >
@@ -201,96 +260,104 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="container mx-auto">
-                            <div class="mt-8 flex flex-col items-center">
+                        <div class="mt-8 flex flex-col mr-20">
+                            <div
+                                class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
+                            >
                                 <div
-                                    class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
+                                    class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
                                 >
                                     <div
-                                        class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
                                     >
-                                        <div
-                                            class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
-                                        >
-                                            <table class="min-w-full bg-white">
-                                                <thead class="bg-gray-50">
-                                                    <tr>
-                                                        <th
-                                                            scope="col"
-                                                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                        >
-                                                            ID
-                                                        </th>
-                                                        <th
-                                                            scope="col"
-                                                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                        >
-                                                            Nama
-                                                        </th>
-
-                                                        <th
-                                                            scope="col"
-                                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                        >
-                                                            Kelas
-                                                        </th>
-
-                                                        <th
-                                                            scope="col"
-                                                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                        >
-                                                            Action
-                                                        </th>
-                                                        <th
-                                                            scope="col"
-                                                            class="relative py-3.5 pl-3 pr-4 sm:pr-6"
-                                                        />
-                                                    </tr>
-                                                </thead>
-                                                <tbody
-                                                    class="divide-y divide-gray-200 bg-white"
-                                                >
-                                                    <tr
-                                                        v-for="teacher in waliKelas.data"
-                                                        :key="teacher.id"
+                                        <table class="min-w-full bg-white">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th
+                                                        scope="col"
+                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                                                     >
-                                                        <td
-                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                        >
-                                                            {{ teacher.id }}
-                                                        </td>
-                                                        <td
-                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                        >
-                                                            {{ teacher.name }}
-                                                        </td>
-                                                        <td
-                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                        >
-                                                            {{
-                                                                teacher.class
-                                                                    .name
-                                                            }}
-                                                        </td>
+                                                        ID
+                                                    </th>
+                                                    <th
+                                                        scope="col"
+                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                    >
+                                                        Nama
+                                                    </th>
 
-                                                        <td
-                                                            class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                    <th
+                                                        scope="col"
+                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                    >
+                                                        Kelas
+                                                    </th>
+
+                                                    <th
+                                                        scope="col"
+                                                        class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
+                                                    >
+                                                        Action
+                                                    </th>
+
+                                                    <th
+                                                        scope="col"
+                                                        class="relative py-3.5 pl-3 pr-4 sm:pr-6"
+                                                    />
+                                                </tr>
+                                            </thead>
+                                            <tbody
+                                                class="divide-y divide-gray-200 bg-white"
+                                            >
+                                                <tr
+                                                    v-for="teacher in waliKelas.data"
+                                                    :key="teacher.id"
+                                                >
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{ teacher.id }}
+                                                    </td>
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{ teacher.name }}
+                                                    </td>
+                                                    <td
+                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                                                    >
+                                                        {{ teacher.class.name }}
+                                                    </td>
+
+                                                    <td
+                                                        class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                    >
+                                                        <!-- Link untuk Edit -->
+                                                        <Link
+                                                            :href="
+                                                                route(
+                                                                    'teachers.edit',
+                                                                    teacher.id
+                                                                )
+                                                            "
+                                                            class="text-indigo-600 hover:text-indigo-900"
                                                         >
-                                                            <Link
-                                                                class="text-indigo-600 hover:text-indigo-900"
-                                                            >
-                                                                Edit
-                                                            </Link>
-                                                            <button
-                                                                class="ml-2 text-indigo-600 hover:text-indigo-900"
-                                                            >
-                                                                Hapus
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                            Edit
+                                                        </Link>
+                                                        <button
+                                                            @click="
+                                                                deleteTeacher(
+                                                                    teacher.id
+                                                                )
+                                                            "
+                                                            class="ml-2 text-indigo-600 hover:text-indigo-900"
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -302,9 +369,13 @@ onMounted(() => {
 
         <!-- end1-->
 
+        <!-- start2 -->
+
+        <!-- end2-->
+
         <!-- Sidebar -->
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""
@@ -312,7 +383,8 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
+                <!--
+                      <form action="#" method="GET" class="md:hidden mb-2">
                     <label for="sidebar-search" class="sr-only">Search</label>
                     <div class="relative">
                         <div
@@ -331,15 +403,10 @@ onMounted(() => {
                                 ></path>
                             </svg>
                         </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
+                  
                     </div>
                 </form>
+            -->
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -389,7 +456,7 @@ onMounted(() => {
                                 >Siswa</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -491,7 +558,7 @@ onMounted(() => {
                                 >Kelas</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -540,7 +607,7 @@ onMounted(() => {
                                 >Mata Pelajaran</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -566,45 +633,6 @@ onMounted(() => {
                                 >
                             </li>
                         </ul>
-                    </li>
-
-                    <li>
-                        <a
-                            href="penilaian"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                fill="none"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                width="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M6 6C6 5.44772 6.44772 5 7 5H17C17.5523 5 18 5.44772 18 6C18 6.55228 17.5523 7 17 7H7C6.44771 7 6 6.55228 6 6Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 10C6 9.44771 6.44772 9 7 9H17C17.5523 9 18 9.44771 18 10C18 10.5523 17.5523 11 17 11H7C6.44771 11 6 10.5523 6 10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M7 13C6.44772 13 6 13.4477 6 14C6 14.5523 6.44771 15 7 15H17C17.5523 15 18 14.5523 18 14C18 13.4477 17.5523 13 17 13H7Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 18C6 17.4477 6.44772 17 7 17H11C11.5523 17 12 17.4477 12 18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    clip-rule="evenodd"
-                                    d="M2 4C2 2.34315 3.34315 1 5 1H19C20.6569 1 22 2.34315 22 4V20C22 21.6569 20.6569 23 19 23H5C3.34315 23 2 21.6569 2 20V4ZM5 3H19C19.5523 3 20 3.44771 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44771 3 5 3Z"
-                                    fill="currentColor"
-                                    fill-rule="evenodd"
-                                />
-                            </svg>
-                            <span class="ml-3">Penilaian Siswa</span>
-                        </a>
                     </li>
                 </ul>
             </div>

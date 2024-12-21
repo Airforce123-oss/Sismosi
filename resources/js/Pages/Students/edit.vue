@@ -228,7 +228,7 @@ function submit() {
                                             Informasi Siswa
                                         </h3>
                                         <p class="mt-1 text-sm text-gray-500">
-                                            Gunakan Form ini untuk mengisi data
+                                            Gunakan Form ini untuk memperbarui data
                                             siswa
                                         </p>
                                     </div>
@@ -389,20 +389,23 @@ function submit() {
                                     </div>
                                 </div>
                                 <div
-                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6"
+                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
                                 >
-                                    <Link
-                                        :href="route('students.index')"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[#8ec3b3] bg-indigo-100 hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
-                                    >
-                                        Batal
-                                    </Link>
-                                    <button
-                                        type="submit"
-                                        class="bg-[#8ec3b3] border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-[#4d918f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    >
-                                        Perbarui
-                                    </button>
+                                    <div class="flex items-center space-x-4">
+                                        <Link
+                                            :href="route('students.index')"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Batal
+                                        </Link>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                        >
+                                            Perbarui
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </form>

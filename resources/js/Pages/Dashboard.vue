@@ -6,7 +6,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
-import { Link, useForm, usePage } from "@inertiajs/vue3";
+import { Link, useForm, usePage, Head } from "@inertiajs/vue3";
 import VueApexCharts from "vue-apexcharts";
 import ApexCharts from "apexcharts";
 import axios from "axios";
@@ -435,7 +435,7 @@ onMounted(() => {
         <!-- Sidebar -->
 
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""

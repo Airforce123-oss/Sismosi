@@ -42,9 +42,18 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
-        $user->addRole('todolistuser'); 
-        $user->addRole('teacher');
-        $user->addRole('student');
+        if (!$user->hasRole('todolistuser')) {
+            $user->addRole('todolistuser');
+        }
+        
+        if (!$user->hasRole('teacher')) {
+            $user->addRole('teacher');
+        }
+        
+        if (!$user->hasRole('student')) {
+            $user->addRole('student');
+        }
+        
         event(new Registered($user));
 
 
