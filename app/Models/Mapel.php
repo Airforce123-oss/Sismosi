@@ -11,7 +11,10 @@ class Mapel extends Model
 
     protected $table = 'master_mapel';
 
+    protected $primaryKey = 'id_mapel';
+
     protected $fillable = [
+        'id_mapel',
         'kode_mapel',
         'mapel',
     ];

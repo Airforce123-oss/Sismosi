@@ -16,15 +16,18 @@ defineProps({
 });
 
 const waliKelas = ref(props.wali_kelas || { data: [] });
-
-const form = useForm({
-    name: props.auth.user.name,
-    email: props.auth.user.email,
-    role_type: props.auth.user.role_type,
-});
-
 let pageNumber = ref(1);
 let searchTerm = ref(props.search ?? "");
+
+// Inisialisasi form dengan menambahkan properti role_type
+const form = useForm({
+    name: "",
+    no_induk_id: "",
+    gender_id: "",
+    class_id: "",
+    religion_id: "",
+    role_type: props.auth?.user?.role_type || "", // Menambahkan properti role_type
+});
 
 onMounted(() => {
     initFlowbite();
@@ -85,7 +88,6 @@ const deleteTeacher = (id) => {
         }
     });
 };
-
 </script>
 
 <template>

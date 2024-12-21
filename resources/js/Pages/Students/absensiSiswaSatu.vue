@@ -1621,13 +1621,13 @@ const getAttendanceClass = (studentId, tanggal_kehadiran) => {
 const getButtonClass = (status) => {
     switch (status) {
         case "P":
-            return "bg-info text-white fw-bold status-btn info-btn"; // Hadir
+            return "bg-info text-black fw-bold status-btn info-btn"; // Hadir
         case "A":
-            return "bg-danger text-white fw-bold status-btn danger-btn"; // Absen
+            return "bg-danger text-black fw-bold status-btn danger-btn"; // Absen
         case "S":
-            return "bg-warning text-white fw-bold status-btn warning-btn"; // Sakit
+            return "bg-warning text-black fw-bold status-btn warning-btn"; // Sakit
         case "I":
-            return "bg-primary text-white fw-bold status-btn primary-btn"; // Izin
+            return "bg-primary text-black fw-bold status-btn primary-btn"; // Izin
         default:
             return "bg-light text-dark status-btn light-btn"; // Status tidak ditemukan atau belum diabsen
     }

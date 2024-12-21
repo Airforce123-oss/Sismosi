@@ -7,6 +7,8 @@ use App\Models\Section;
 use App\Http\Resources\MapelResource;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreMapelRequest;
+use Illuminate\Support\Facades\Log;
+
 
 class MataPelajaranController extends Controller
 {
@@ -33,44 +35,41 @@ class MataPelajaranController extends Controller
             'kode_mapel' => $mapel,
         ]);
     }
-
-    /*
-     'id_mapel' => $this->id_mapel,
-            'kode_mapel' => $this->kode_mapel,
-            'mapel' => $this->mapel,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-    */
-
-    public function store(StoreMapelRequest $request)
+    public function store(Request $request)
     {
-        Mapel::create($request->validated());
-        return redirect()->route('matapelajaran.index');
-    }
-
-    public function getSections(Request $request)
-    {
-        $mapelId = $request->query('class_id');
-        if (!$mapelId) {
-            return response()->json(['error' => 'Class ID is required'], 400);
+        // Validasi data input
+        $validated = $request->validate([
+            'kode_mapel' => 'required|string|max:40',
+            'mapel' => 'required|string|max:60',
+        ]);
+    
+        // Cek apakah kode_mapel sudah ada
+        $existingMapel = Mapel::where('kode_mapel', $validated['kode_mapel'])->first();
+        if ($existingMapel) {
+            // Jika sudah ada, kembalikan dengan pesan error menggunakan Inertia
+            return redirect()->back()->withErrors(['kode_mapel' => 'Kode Mapel sudah ada.'])->withInput();
         }
-
-        $sections = Section::where('class_id', $mapelId)->get();
-
-        return response()->json($sections);
+    
+        // Jika belum ada, simpan data baru
+        Mapel::create($validated);
+    
+        // Kembalikan respons sukses dengan Inertia
+        return redirect()->route('matapelajaran.index')->with('success', 'Data berhasil disimpan!');
     }
+    
 
-    public function update(StoreMapelRequest $request, $id)
+    public function update(StoreMapelRequest $request, $id_mapel)
     {
-        $mapel = Mapel::findOrFail($id);
+        $mapel = Mapel::findOrFail(id: $id_mapel);
         $mapel->update($request->validated());
         return redirect()->route('matapelajaran.index');
     }
 
-    public function destroy($id)
+    public function destroy($id_mapel)
     {
-        $mapel = Mapel::findOrFail($id);
+        $mapel = Mapel::findOrFail($id_mapel);
         $mapel->delete();
         return redirect()->route('matapelajaran.index');
     }
 }
+

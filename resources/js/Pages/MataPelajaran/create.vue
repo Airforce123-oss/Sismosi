@@ -1,72 +1,67 @@
 <script setup>
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, Link, useForm, router } from "@inertiajs/vue3";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { watch, ref } from "vue";
+import { defineProps, ref, watch } from "vue";
+import { useForm, router, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import InputError from "@/Components/InputError.vue";
-import { error } from "jquery";
-import MagnifyingGlass from "@/Components/Icons/MagnifyingGlass.vue";
-
-//console.log(students);
-
-const props = defineProps({
-    classes: { type: Object },
-    genders: { type: Object, default: () => ({ data: [] }) },
-    religions: { type: Object, default: () => ({ data: [] }) },
-    students: { type: Object, default: () => ({ data: [] }) },
-});
-
-let sections = ref({});
-
-const classes = ref(props.classes.data || []);
-let genders = ref(props.genders.data || []);
-const religions = ref(props.religions.data || []);
+import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import Swal from "sweetalert2";
+// Form handling using Inertia
 const form = useForm({
-    name: "",
-    no_induk_id: "",
-    gender_id: "",
-    class_id: "",
-    religion_id: "",
+    kode_mapel: "",
+    mapel: "",
 });
 
+const sections = ref([]); // Store sections for the selected class
+
+// Watch for class_id change to load related sections
 watch(
     () => form.class_id,
-    (newValue) => {
-        getSections(newValue);
+    (newClassId) => {
+        if (newClassId) {
+            getSections(newClassId);
+        }
     }
 );
 
+// Fetch sections based on class_id
 const getSections = async (class_id) => {
     try {
-        const response = await axios.get("/api/sections?class_id=" + class_id);
+        const response = await axios.get(`/api/sections?class_id=${class_id}`);
         sections.value = response.data;
     } catch (error) {
         console.error("Error fetching sections:", error);
     }
 };
 
-const formData = {
-    name: "John Doe",
-    gender_id: 2,
-    class_id: 1,
-    religion_id: 3,
-    no_induk_id: 24,
-};
+// Submit form function
+function submitForm() {
+    console.log("Submitting form data:", form);
 
-function submit() {
-    console.log("Submitting data:", formData);
-
-    form.post(route("students.store"), {
+    form.post(route("matapelajaran.store"), {
         onSuccess: () => {
-            console.log("Data successfully submitted");
-            router.visit(route("students.index"), { replace: true });
+            console.log("Data berhasil disimpan");
+            Swal.fire({
+                title: "Berhasil!",
+                text: "Data mata pelajaran berhasil disimpan.",
+                icon: "success",
+                confirmButtonText: "Ok",
+            }).then(() => {
+                router.visit(route("matapelajaran.index"), { replace: true });
+            });
         },
         onError: (errors) => {
             console.error("Error:", errors);
+            Swal.fire({
+                title: "Gagal!",
+                text: "Terjadi kesalahan saat menyimpan data mata pelajaran.",
+                icon: "error",
+                confirmButtonText: "Ok",
+            });
         },
     });
 }
+
+
 </script>
 
 <template>
@@ -196,7 +191,7 @@ function submit() {
                 <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
                 <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
                     <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-                        <form @submit.prevent="submit">
+                        <form @submit.prevent="submitForm">
                             <div
                                 class="shadow sm:rounded-md sm:overflow-hidden"
                             >
@@ -207,186 +202,90 @@ function submit() {
                                         <h3
                                             class="text-lg leading-6 font-medium text-gray-900"
                                         >
-                                            Informasi Siswa
+                                            Informasi Mata Pelajaran
                                         </h3>
                                         <p class="mt-1 text-sm text-gray-500">
                                             Gunakan Form ini untuk mengisi data
-                                            siswa
+                                            mata pelajaran
                                         </p>
                                     </div>
+
                                     <div class="grid grid-cols-6 gap-6">
-                                        <!-- Nomor Induk -->
+                                        <!-- Kode Mata Pelajaran -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
-                                                for="nomorInduk"
+                                                for="kode_mapel"
                                                 class="block text-sm font-medium text-gray-700"
                                             >
-                                                Nomor Induk
+                                                Kode Mata Pelajaran
                                             </label>
                                             <input
-                                                v-model="form.no_induk_id"
+                                                v-model="form.kode_mapel"
                                                 type="text"
-                                                id="nomorInduk"
-                                                placeholder="Masukkan Nomor Induk"
+                                                placeholder="Masukkan Kode Mata Pelajaran"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.no_induk_id,
+                                                        form.errors.kode_mapel,
                                                 }"
                                             />
                                             <InputError
                                                 class="mt-2"
                                                 :message="
-                                                    form.errors.no_induk_id
+                                                    form.errors.kode_mapel
                                                 "
                                             />
                                         </div>
-                                        <!-- Nama -->
+
+                                        <!-- Nama Mata Pelajaran -->
                                         <div class="col-span-6 sm:col-span-3">
                                             <label
-                                                for="name"
+                                                for="mapel"
                                                 class="block text-sm font-medium text-gray-700"
                                             >
-                                                Nama
+                                                Nama Mata Pelajaran
                                             </label>
                                             <input
-                                                v-model="form.name"
+                                                v-model="form.mapel"
                                                 type="text"
-                                                id="name"
-                                                placeholder="Masukkan Nama"
+                                                placeholder="Masukkan Nama Mata Pelajaran"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                                 :class="{
                                                     'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.name,
+                                                        form.errors.mapel,
                                                 }"
                                             />
-
                                             <InputError
                                                 class="mt-2"
-                                                :message="form.errors.name"
-                                            />
-                                        </div>
-                                        <!-- Jenis Kelamin -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="gender_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Jenis Kelamin
-                                            </label>
-                                            <select
-                                                v-model="form.gender_id"
-                                                id="gender_id"
-                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.gender_id,
-                                                }"
-                                            >
-                                                <option value="">
-                                                    Pilih Jenis Kelamin
-                                                </option>
-                                                <option
-                                                    v-for="item in genders"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                >
-                                                    {{ item.name }}
-                                                </option>
-                                            </select>
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.gender_id"
-                                            />
-                                        </div>
-                                        <!-- Kelas -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="class_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Kelas
-                                            </label>
-                                            <select
-                                                v-model="form.class_id"
-                                                id="class_id"
-                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.class_id,
-                                                }"
-                                            >
-                                                <option value="">
-                                                    Pilih Kelas
-                                                </option>
-                                                <option
-                                                    v-for="item in classes"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                >
-                                                    {{ item.name }}
-                                                </option>
-                                            </select>
-                                            <InputError
-                                                class="mt-2"
-                                                :message="form.errors.class_id"
-                                            />
-                                        </div>
-
-                                        <!-- Agama -->
-                                        <div class="col-span-6 sm:col-span-3">
-                                            <label
-                                                for="religion_id"
-                                                class="block text-sm font-medium text-gray-700"
-                                            >
-                                                Agama
-                                            </label>
-                                            <select
-                                                v-model="form.religion_id"
-                                                id="religion_id"
-                                                class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        form.errors.religion_id,
-                                                }"
-                                            >
-                                                <option value="">
-                                                    Pilih Agama
-                                                </option>
-                                                <option
-                                                    v-for="item in religions"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                >
-                                                    {{ item.name }}
-                                                </option>
-                                            </select>
-                                            <InputError
-                                                class="mt-2"
-                                                :message="
-                                                    form.errors.religion_id
-                                                "
+                                                :message="form.errors.mapel"
                                             />
                                         </div>
                                     </div>
-                                </div>
-                                <div
-                                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
-                                >
-                                    <div class="flex items-center space-x-4">
-                                        <Link
-                                            :href="route('students.index')"
-                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                        >
-                                            Batal
-                                        </Link>
 
-                                        <button
-                                            type="submit"
-                                            class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                    <!-- Submit Button -->
+                                    <div class="col-span-6 sm:col-span-3"></div>
+                                    <div
+                                        class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
+                                    >
+                                        <div
+                                            class="flex items-center space-x-4"
                                         >
-                                            Simpan
-                                        </button>
+                                            <Link
+                                                :href="
+                                                    route('matapelajaran.index')
+                                                "
+                                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            >
+                                                Batal
+                                            </Link>
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            >
+                                                Simpan
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -454,7 +353,7 @@ function submit() {
                                 xmlns:xlink="http://www.w3.org/1999/xlink"
                             >
                                 <path
-                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3 c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768 C18.184,8.34,12,3,12,3z"
+                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
                                 />
                             </svg>
                             <span class="ml-3">Beranda</span>
@@ -508,6 +407,53 @@ function submit() {
                             </li>
                         </ul>
                     </li>
+
+                    <li>
+                        <button
+                            type="button"
+                            class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            aria-controls="dropdown-pages1"
+                            data-collapse-toggle="dropdown-pages1"
+                        >
+                            <svg
+                                viewBox="0 0 640 512"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                            >
+                                <path
+                                    d="M208 352c-2.39 0-4.78.35-7.06 1.09C187.98 357.3 174.35 360 160 360c-14.35 0-27.98-2.7-40.95-6.91-2.28-.74-4.66-1.09-7.05-1.09C49.94 352-.33 402.48 0 464.62.14 490.88 21.73 512 48 512h224c26.27 0 47.86-21.12 48-47.38.33-62.14-49.94-112.62-112-112.62zm-48-32c53.02 0 96-42.98 96-96s-42.98-96-96-96-96 42.98-96 96 42.98 96 96 96zM592 0H208c-26.47 0-48 22.25-48 49.59V96c23.42 0 45.1 6.78 64 17.8V64h352v288h-64v-64H384v64h-76.24c19.1 16.69 33.12 38.73 39.69 64H592c26.47 0 48-22.25 48-49.59V49.59C640 22.25 618.47 0 592 0z"
+                                />
+                            </svg>
+
+                            <span
+                                class="flex-1 ml-3 text-left whitespace-nowrap"
+                                >Guru</span
+                            >
+                            <svg
+                                class="w-6 h-6"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd"
+                                ></path>
+                            </svg>
+                        </button>
+                        <ul id="dropdown-pages1" class="hidden py-2 space-y-2">
+                            <li>
+                                <a
+                                    href="teachers"
+                                    class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                                    >Data Induk Guru</a
+                                >
+                            </li>
+                        </ul>
+                    </li>
+
                     <li>
                         <button
                             type="button"
@@ -539,6 +485,7 @@ function submit() {
                                 >Kelas</span
                             >
                             <svg
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -587,6 +534,7 @@ function submit() {
                                 >Mata Pelajaran</span
                             >
                             <svg
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -612,45 +560,6 @@ function submit() {
                                 >
                             </li>
                         </ul>
-                    </li>
-
-                    <li>
-                        <a
-                            href="penilaian"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                fill="none"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                width="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M6 6C6 5.44772 6.44772 5 7 5H17C17.5523 5 18 5.44772 18 6C18 6.55228 17.5523 7 17 7H7C6.44771 7 6 6.55228 6 6Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 10C6 9.44771 6.44772 9 7 9H17C17.5523 9 18 9.44771 18 10C18 10.5523 17.5523 11 17 11H7C6.44771 11 6 10.5523 6 10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M7 13C6.44772 13 6 13.4477 6 14C6 14.5523 6.44771 15 7 15H17C17.5523 15 18 14.5523 18 14C18 13.4477 17.5523 13 17 13H7Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 18C6 17.4477 6.44772 17 7 17H11C11.5523 17 12 17.4477 12 18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    clip-rule="evenodd"
-                                    d="M2 4C2 2.34315 3.34315 1 5 1H19C20.6569 1 22 2.34315 22 4V20C22 21.6569 20.6569 23 19 23H5C3.34315 23 2 21.6569 2 20V4ZM5 3H19C19.5523 3 20 3.44771 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44771 3 5 3Z"
-                                    fill="currentColor"
-                                    fill-rule="evenodd"
-                                />
-                            </svg>
-                            <span class="ml-3">Penilaian Siswa</span>
-                        </a>
                     </li>
                 </ul>
             </div>

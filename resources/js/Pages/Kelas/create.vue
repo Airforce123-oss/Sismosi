@@ -30,35 +30,50 @@ const formData = useForm({
     kode_kelas: "",
 });
 
+const isSubmitting = ref(false); // Menandakan status form
+
 function submit() {
-    console.log("Submitting data:", formData);
+    // Cegah pengiriman ganda jika form sedang diproses
+    if (isSubmitting.value) return;
 
-    formData.post(route("kelas.store"), {
+    // Tandai bahwa form sedang diproses
+    isSubmitting.value = true;
+
+    // Log data yang akan disubmit
+    console.log("Submitting form data:", formData);
+
+    formData.post(route("matapelajaran.store"), {
+        onStart: () => {
+            console.log("Form submission started");
+        },
         onSuccess: () => {
-            console.log("Data successfully submitted");
+            console.log("Data berhasil disimpan");
 
-            // Menampilkan SweetAlert saat berhasil
             Swal.fire({
                 title: "Berhasil!",
                 text: "Data kelas berhasil disimpan.",
                 icon: "success",
                 confirmButtonText: "Ok",
             }).then(() => {
-                router.visit(route("kelas.index"), { replace: true });
+                // Arahkan ke halaman lain setelah berhasil
+                router.visit(route("matapelajaran.index"), { replace: true });
             });
         },
-
         onError: (errors) => {
             console.error("Error:", errors);
-            formData.errors = errors; // Menyimpan error dalam formData.errors
+            // Menangani error dan mengupdate form data error secara reaktif
+            formData.errors = { ...errors }; // Pastikan error ter-update dengan benar
 
-            // Menampilkan SweetAlert saat gagal
             Swal.fire({
                 title: "Gagal!",
                 text: "Terjadi kesalahan saat menyimpan data kelas.",
                 icon: "error",
                 confirmButtonText: "Ok",
             });
+        },
+        finally: () => {
+            // Reset status form saat selesai
+            isSubmitting.value = false;
         },
     });
 }
@@ -308,6 +323,7 @@ onMounted(() => {
                                         <button
                                             type="submit"
                                             class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            :disabled="isSubmitting"
                                         >
                                             Simpan
                                         </button>

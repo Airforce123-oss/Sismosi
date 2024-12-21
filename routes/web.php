@@ -94,8 +94,14 @@ Route::middleware('auth')->group(function () {
     Route::resource('/Profile', ProfileController::class);
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::resource('/penilaian', PenilaianController::class);
-    Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('mataPelajaran');
-    Route::resource('master_mapel', MataPelajaranController::class);
+    Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');
+    Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
+    Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
+    Route::delete('/matapelajaran/{id_mapel}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
+
+
+
+
 });
 
 // Admin routes with middleware for redirection

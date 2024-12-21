@@ -7,7 +7,6 @@ import { onMounted, ref, watch, computed } from "vue";
 import Swal from "sweetalert2";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 
-// Deklarasikan state dengan ref
 const showModal = ref(false);
 const modalTitle = ref("");
 const modalButton = ref("");
@@ -16,6 +15,7 @@ const mapelForm = ref({
     kode_mapel: "",
     mapel: "",
 });
+
 const props = defineProps({
     master_mapel: {
         type: Object,
@@ -23,92 +23,89 @@ const props = defineProps({
     },
 });
 
+const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
+const itemsPerPage = ref(10);
+const searchTerm = ref("");
 
-/*
-const form = useForm({
-    id_mapel: "",
-    kode_mapel: "",
-    mapel: "",
+const kelasUrl = computed(() => {
+    const url = new URL(route("matapelajaran.index"));
+    url.searchParams.set("page", currentPage.value); // Gunakan currentPage
+    if (searchTerm.value) {
+        url.searchParams.set("search", searchTerm.value);
+    }
+    return url;
 });
 
-const openModal = (type, mapel = {}) => {
-    showModal.value = true;
-    if (type === "add") {
-        modalTitle.value = "Tambah Mata Pelajaran";
-        modalButton.value = "Simpan";
-    } else if (type === "edit") {
-        modalTitle.value = "Edit Mapel";
-        modalButton.value = "Edit";
-        mapelForm.value = { ...mapel };
-    }
-    form.reset(mapelForm.value);
-};
-
-const closeModal = () => {
-    showModal.value = false;
-};
-
-const saveMapel = () => {
-    if (modalButton.value === "Simpan") {
-        form.post(route("matapelajaran.store"), {
-            onSuccess: () => {
-                showModal.value = false;
-                router.reload();
-            },
-        });
-    } else if (modalButton.value === "Edit") {
-        form.put(route("master_mapel.update", mapelForm.value.id_mapel), {
-            onSuccess: () => {
-                showModal.value = false;
-                router.reload();
-            },
+watch(
+    () => kelasUrl.value,
+    (updatedKelasUrl) => {
+        console.log("Navigating to URL:", updatedKelasUrl.toString());
+        router.visit(updatedKelasUrl.toString(), {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
         });
     }
+);
+const deleteForm = useForm({}); // Deklarasi deleteForm
+
+const deleteMapel = (mapel) => {
+    Swal.fire({
+        title: "Apakah Anda yakin?",
+        text: "Data Mata Pelajaran ini akan dihapus dan tidak dapat dikembalikan!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Ya, hapus!",
+        cancelButtonText: "Batal",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Gunakan deleteForm untuk penghapusan
+            deleteForm.delete(
+                route("matapelajaran.destroy", { id: mapel.id_mapel }),
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire(
+                            "Terhapus!",
+                            "Data Mata Pelajaran telah berhasil dihapus.",
+                            "success"
+                        );
+                        currentPage.value = 1; // Reset halaman setelah penghapusan
+                        router.visit(kelasUrl.value.toString(), {
+                            replace: true,
+                            preserveState: true,
+                            preserveScroll: true,
+                        });
+                    },
+                    onError: (errors) => {
+                        console.error("Error deleting Mata Pelajaran:", errors);
+                        Swal.fire(
+                            "Gagal!",
+                            "Terjadi kesalahan saat menghapus data Mata Pelajaran.",
+                            "error"
+                        );
+                    },
+                }
+            );
+        }
+    });
 };
-
-*/
-
-const deleteForm = useForm({});
-
-const deleteMapel = (id) => {
-   Swal.fire({
-       title: "Apakah Anda yakin?",
-       text: "Data Mata Pelajaran ini akan dihapus dan tidak dapat dikembalikan!",
-       icon: "warning",
-       showCancelButton: true,
-       confirmButtonColor: "#3085d6",
-       cancelButtonColor: "#d33",
-       confirmButtonText: "Ya, hapus!",
-       cancelButtonText: "Batal",
-   }).then((result) => {
-       if (result.isConfirmed) {
-           deleteForm.delete(route("teachers.destroy", id), {
-               preserveScroll: true,
-               onSuccess: () => {
-                   pageNumber.value = 1;
-                   router.visit(studentsUrl.value.toString(), {
-                       replace: true,
-                       preserveState: true,
-                       preserveScroll: true,
-                   });
-               },
-           });
-
-           Swal.fire(
-               "Terhapus!",
-               "Data siswa telah berhasil dihapus.",
-               "success"
-           );
-       }
-   });
-};
-
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 
 const updatedPageNumber = (link) => {
-    const pageNumber = new URLSearchParams(link.url.split("?")[1]).get("page");
-    currentPage.value = parseInt(pageNumber, 10);
+    console.log("Form is submitting:", isSubmitting.value); // Debugging isSubmitting
+
+    if (isSubmitting.value) return; // Cek apakah form sedang disubmit
+
+    const url = new URL(link.url);
+    const pageNumber = url.searchParams.get("page");
+
+    if (pageNumber) {
+        currentPage.value = parseInt(pageNumber, 10);
+    } else {
+        console.error("Page number not found in the URL.");
+    }
 };
 
 onMounted(() => {
@@ -269,7 +266,7 @@ onMounted(() => {
 
                         <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
                             <Link
-                                :href="route('students.create')"
+                                :href="route('matapelajaran.create')"
                                 class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
                                 <i class="fa fa-plus"></i>
@@ -278,151 +275,112 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="page-inner">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table
-                                                class="table table-hover table-striped"
-                                            >
-                                                <thead>
-                                                    <tr>
-                                                        <th>ID</th>
-                                                        <th>Kode</th>
-                                                        <th>
-                                                            Nama Mata Pelajaran
-                                                        </th>
-                                                        <th>Opsi</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody
-                                                    class="divide-y divide-gray-200 bg-white"
-                                                >
-                                                    <tr
-                                                        v-for="mapel in props
-                                                            .master_mapel.data"
-                                                        :key="mapel.id_mapel"
-                                                    >
-                                                        <td
-                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                        >
-                                                            {{ mapel.id_mapel }}
-                                                        </td>
-                                                        <td
-                                                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                        >
-                                                            {{
-                                                                mapel.kode_mapel
-                                                            }}
-                                                        </td>
-                                                        <td
-                                                            class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                        >
-                                                            {{ mapel.mapel }}
-                                                        </td>
-                                                        <td
-                                                            class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                                                        >
-                                                            <Link
-                                                                href="#"
-                                                                @click.prevent="
-                                                                    openModal(
-                                                                        'edit',
-                                                                        mapel
-                                                                    )
-                                                                "
-                                                                class="text-indigo-600 hover:text-indigo-900"
-                                                            >
-                                                                Edit
-                                                            </Link>
-                                                            <button
-                                                                @click="
-                                                                    deleteMapel(
-                                                                        mapel.id_mapel
-                                                                    )
-                                                                "
-                                                                class="ml-2 text-indigo-600 hover:text-indigo-900"
-                                                            >
-                                                                Hapus
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <Pagination
-                                            :data="master_mapel"
-                                            :updatedPageNumber="
-                                                updatedPageNumber
-                                            "
-                                        />
-                                    </div>
-                                </div>
+                    <div class="flex flex-col justify-between sm:flex-row mt-6">
+                        <div class="relative text-sm text-gray-800 col-span-3">
+                            <div
+                                class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
+                            >
+                                <MagnifyingGlass />
                             </div>
-                        </div>
 
-                        <!-- Add/Edit Modal -->
+                            <input
+                                type="text"
+                                v-model="searchTerm"
+                                placeholder="Cari Data Mata Pelajaran.."
+                                id="search"
+                                class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            />
+                        </div>
+                    </div>
+                    <div class="mt-8 flex flex-col mr-20">
                         <div
-                            v-if="showModal"
-                            class="modal fade show"
-                            style="display: block"
-                            tabindex="-1"
-                            role="dialog"
+                            class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
                         >
-                            <div class="modal-dialog h-screen mt-20">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h4 class="modal-title">
-                                            {{ modalTitle }}
-                                        </h4>
-                                        <button
-                                            type="button"
-                                            class="close"
-                                            @click="closeModal"
-                                            aria-label="Close"
+                            <div
+                                class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                            >
+                                <div
+                                    class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
+                                >
+                                    <table class="min-w-full bg-white">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th
+                                                    scope="col"
+                                                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                >
+                                                    ID
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                >
+                                                    Kode Mata Pelajaran
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                >
+                                                    Nama Mata Pelajaran
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
+                                                >
+                                                    Action
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody
+                                            class="divide-y divide-gray-200 bg-white"
                                         >
-                                            <span inert>×</span>
-                                        </button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <form @submit.prevent="saveMapel">
-                                            <div class="form-group">
-                                                <label
-                                                    >Kode Mata Pelajaran</label
+                                            <tr
+                                                v-for="mapel in props
+                                                    .master_mapel.data"
+                                                :key="mapel.id_mapel"
+                                            >
+                                                <td
+                                                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                 >
-                                                <input
-                                                    v-model="
-                                                        mapelForm.kode_mapel
-                                                    "
-                                                    type="text"
-                                                    class="form-control"
-                                                    placeholder="Kode Mata Pelajaran"
-                                                />
-                                                <!-- readable before-->
-                                            </div>
-                                            <div class="form-group">
-                                                <label
-                                                    >Nama Mata Pelajaran</label
+                                                    {{ mapel.id_mapel }}
+                                                </td>
+                                                <td
+                                                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                 >
-                                                <input
-                                                    v-model="mapelForm.mapel"
-                                                    type="text"
-                                                    class="form-control"
-                                                    placeholder="Nama Mata Pelajaran .."
-                                                />
-                                            </div>
-                                            <div class="form-group">
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-primary bg-[#8ec3b3]"
+                                                    {{ mapel.kode_mapel }}
+                                                </td>
+                                                <td
+                                                    class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
                                                 >
-                                                    {{ modalButton }}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+                                                    {{ mapel.mapel }}
+                                                </td>
+                                                <td
+                                                    class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                >
+                                                    <Link
+                                                        href="#"
+                                                        @click.prevent="
+                                                            openModal(
+                                                                'edit',
+                                                                mapel
+                                                            )
+                                                        "
+                                                        class="text-indigo-600 hover:text-indigo-900"
+                                                    >
+                                                        Edit
+                                                    </Link>
+                                                    <button
+                                                    @click="
+                                                            deleteMapel(mapel)
+                                                        "
+                                                        class="ml-2 text-indigo-600 hover:text-indigo-900"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>

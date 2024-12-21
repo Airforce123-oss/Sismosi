@@ -22,8 +22,8 @@ class StoreMapelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kode_mapel' => ['required', 'varchar', 'max:40'],
-            'mapel' => ['required', 'varchar', 'max:60'],
+            'kode_mapel' => ['required', 'string', 'max:40'],  // Ganti 'varchar' dengan 'string'
+            'mapel' => ['required', 'string', 'max:60'],        // Ganti 'varchar' dengan 'string'
         ];
     }
 
