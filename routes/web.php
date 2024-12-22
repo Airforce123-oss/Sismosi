@@ -98,6 +98,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id_mapel}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
+    Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
+
 
 
 

@@ -1,104 +1,84 @@
 <script setup>
-import { initFlowbite } from "flowbite";
-import Pagination from "../../Components/Pagination.vue";
-import MagnifyingGlass from "../../Components/Icons/MagnifyingGlass.vue";
-import { Link, Head, useForm, usePage, router } from "@inertiajs/vue3";
-import { onMounted, ref, watch, computed } from "vue";
+import { defineProps, ref, watch } from "vue";
+import { useForm, router, Link } from "@inertiajs/vue3";
+import axios from "axios";
+import InputError from "@/Components/InputError.vue";
+import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue"; // Mengembalikan ResponsiveNavLink
 import Swal from "sweetalert2";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+
 const props = defineProps({
-    master_mapel: {
+    mapel: {
         type: Object,
-        required: true,
+        required: false, // Atur apakah properti ini wajib ada
     },
 });
-const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
-const searchTerm = ref("");
+console.log("Props Mapel:", props.mapel);
 
-const kelasUrl = computed(() => {
-    const url = new URL(route("matapelajaran.index"));
-    url.searchParams.set("page", currentPage.value); // Gunakan currentPage
-    if (searchTerm.value) {
-        url.searchParams.set("search", searchTerm.value);
-    }
-    return url;
+// Form handling using Inertia
+const form = useForm({
+    id_mapel: props.mapel?.id_mapel || "", // Harus ada nilai jika dalam mode edit
+    kode_mapel: props.mapel?.kode_mapel || "",
+    mapel: props.mapel?.mapel || "",
 });
 
+console.log("Form Data Initialized:", form);
+
+const sections = ref([]); // Store sections for the selected class
+
+// Watch for class_id change to load related sections
 watch(
-    () => kelasUrl.value,
-    (updatedKelasUrl) => {
-        console.log("Navigating to URL:", updatedKelasUrl.toString());
-        router.visit(updatedKelasUrl.toString(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+    () => form.class_id,
+    (newClassId) => {
+        if (newClassId) {
+            getSections(newClassId);
+        }
     }
 );
-const deleteForm = useForm({}); // Deklarasi deleteForm
 
-const deleteMapel = (mapel) => {
-    Swal.fire({
-        title: "Apakah Anda yakin?",
-        text: "Data Mata Pelajaran ini akan dihapus dan tidak dapat dikembalikan!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Ya, hapus!",
-        cancelButtonText: "Batal",
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Gunakan deleteForm untuk penghapusan
-            deleteForm.delete(
-                route("matapelajaran.destroy", { id: mapel.id_mapel }),
-                {
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        Swal.fire(
-                            "Terhapus!",
-                            "Data Mata Pelajaran telah berhasil dihapus.",
-                            "success"
-                        );
-                        currentPage.value = 1; // Reset halaman setelah penghapusan
-                        router.visit(kelasUrl.value.toString(), {
-                            replace: true,
-                            preserveState: true,
-                            preserveScroll: true,
-                        });
-                    },
-                    onError: (errors) => {
-                        console.error("Error deleting Mata Pelajaran:", errors);
-                        Swal.fire(
-                            "Gagal!",
-                            "Terjadi kesalahan saat menghapus data Mata Pelajaran.",
-                            "error"
-                        );
-                    },
-                }
-            );
-        }
-    });
-};
-
-const updatedPageNumber = (link) => {
-    console.log("Form is submitting:", isSubmitting.value); // Debugging isSubmitting
-
-    if (isSubmitting.value) return; // Cek apakah form sedang disubmit
-
-    const url = new URL(link.url);
-    const pageNumber = url.searchParams.get("page");
-
-    if (pageNumber) {
-        currentPage.value = parseInt(pageNumber, 10);
-    } else {
-        console.error("Page number not found in the URL.");
+// Fetch sections based on class_id
+const getSections = async (class_id) => {
+    try {
+        const response = await axios.get(`/api/sections?class_id=${class_id}`);
+        sections.value = response.data;
+    } catch (error) {
+        console.error("Error fetching sections:", error);
     }
 };
 
-onMounted(() => {
-    initFlowbite();
-});
+// Submit form function
+function submitForm() {
+    console.log("Submitting form data:", form);
+    console.log("ID Mapel:", form.id_mapel);
+
+    // Tentukan metode berdasarkan ada atau tidaknya ID
+    const method = form.id_mapel ? "put" : "post";
+    const routeName = form.id_mapel
+        ? route("matapelajaran.update", { id: form.id_mapel }) // Gunakan route update jika id_mapel ada
+        : route("matapelajaran.store"); // Gunakan route store jika tidak ada id_mapel
+
+    form[method](routeName, {
+        onSuccess: () => {
+            console.log("Data berhasil disimpan");
+            Swal.fire({
+                title: "Berhasil!",
+                text: "Data mata pelajaran berhasil diperbarui.",
+                icon: "success",
+                confirmButtonText: "Ok",
+            }).then(() => {
+                router.visit(route("matapelajaran.index"), { replace: true });
+            });
+        },
+        onError: (errors) => {
+            console.error("Error:", errors);
+            Swal.fire({
+                title: "Gagal!",
+                text: "Terjadi kesalahan saat menyimpan data mata pelajaran.",
+                icon: "error",
+                confirmButtonText: "Ok",
+            });
+        },
+    });
+}
 </script>
 
 <template>
@@ -150,38 +130,14 @@ onMounted(() => {
                         />
                         <span
                             class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
                     <button
                         type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            inert
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
-                    <!-- Apps -->
-
-                    <button
-                        type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -210,15 +166,24 @@ onMounted(() => {
                         class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
-                        <div class="py-3 px-4">
-                            <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                >Haikal Hanis (Admin)</span
+                        <div class="py-3 px-3">
+                            <div
+                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
                             >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >admin@gmail.com</span
-                            >
+                                <span
+                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
+                                    >{{ $page.props.auth.user.email }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                >
+                                    {{ $page.props.auth.user.name }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                    >{{ form.role_type }}</span
+                                >
+                            </div>
                         </div>
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
@@ -238,141 +203,110 @@ onMounted(() => {
         </nav>
 
         <!-- start1 -->
-
         <main class="p-4 md:ml-64 h-auto pt-20">
-            <div class="container mx-auto p-4">
-                <div class="px-4 py-4 sm:px-6 lg:px-8">
-                    <div class="sm:flex sm:items-center mb-10">
-                        <div class="sm:flex-auto">
-                            <h1 class="text-3xl font-semibold text-gray-900">
-                                Mata Pelajaran
-                            </h1>
-                            <p class="mt-2 text-sm text-gray-700">
-                                Daftar Mata Pelajaran
-                            </p>
-                        </div>
-
-                        <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                            <Link
-                                :href="route('matapelajaran.create')"
-                                class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            >
-                                <i class="fa fa-plus"></i>
-                                <span>Tambah Mata Pelajaran</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col justify-between sm:flex-row mt-6">
-                        <div class="relative text-sm text-gray-800 col-span-3">
+            <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
+                <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
+                <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
+                    <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
+                        <form @submit.prevent="submitForm">
                             <div
-                                class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
-                            >
-                                <MagnifyingGlass />
-                            </div>
-
-                            <input
-                                type="text"
-                                v-model="searchTerm"
-                                placeholder="Cari Data Mata Pelajaran.."
-                                id="search"
-                                class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                            />
-                        </div>
-                    </div>
-                    <div class="mt-8 flex flex-col mr-20">
-                        <div
-                            class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
-                        >
-                            <div
-                                class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                                class="shadow sm:rounded-md sm:overflow-hidden"
                             >
                                 <div
-                                    class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
+                                    class="bg-white py-6 px-4 space-y-6 sm:p-6"
                                 >
-                                    <table class="min-w-full bg-white">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th
-                                                    scope="col"
-                                                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                >
-                                                    ID
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                >
-                                                    Kode Mata Pelajaran
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                                                >
-                                                    Nama Mata Pelajaran
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
-                                                >
-                                                    Action
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody
-                                            class="divide-y divide-gray-200 bg-white"
+                                    <div>
+                                        <h3
+                                            class="text-lg leading-6 font-medium text-gray-900"
                                         >
-                                            <tr
-                                                v-for="mapel in props
-                                                    .master_mapel.data"
-                                                :key="mapel.id_mapel"
+                                            Informasi Mata Pelajaran
+                                        </h3>
+                                        <p class="mt-1 text-sm text-gray-500">
+                                            Gunakan Form ini untuk memperbarui
+                                            data mata pelajaran
+                                        </p>
+                                    </div>
+
+                                    <div class="grid grid-cols-6 gap-6">
+                                        <!-- Kode Mata Pelajaran -->
+                                        <div class="col-span-6 sm:col-span-3">
+                                            <label
+                                                for="kode_mapel"
+                                                class="block text-sm font-medium text-gray-700"
                                             >
-                                                <td
-                                                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                >
-                                                    {{ mapel.id_mapel }}
-                                                </td>
-                                                <td
-                                                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                >
-                                                    {{ mapel.kode_mapel }}
-                                                </td>
-                                                <td
-                                                    class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
-                                                >
-                                                    {{ mapel.mapel }}
-                                                </td>
-                                                <td
-                                                    class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                                                >
-                                                    <Link
-                                                        :href="
-                                                            route(
-                                                                'matapelajaran.edit',
-                                                                {
-                                                                    mapel: mapel.id_mapel,
-                                                                }
-                                                            )
-                                                        "
-                                                        class="text-indigo-600 hover:text-indigo-900"
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                    <button
-                                                        @click="
-                                                            deleteMapel(mapel)
-                                                        "
-                                                        class="ml-2 text-indigo-600 hover:text-indigo-900"
-                                                    >
-                                                        Hapus
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                                Kode Mata Pelajaran
+                                            </label>
+                                            <input
+                                                v-model="form.kode_mapel"
+                                                type="text"
+                                                placeholder="Masukkan Kode Mata Pelajaran"
+                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                :class="{
+                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                                                        form.errors.kode_mapel,
+                                                }"
+                                            />
+                                            <InputError
+                                                class="mt-2"
+                                                :message="
+                                                    form.errors.kode_mapel
+                                                "
+                                            />
+                                        </div>
+
+                                        <!-- Nama Mata Pelajaran -->
+                                        <div class="col-span-6 sm:col-span-3">
+                                            <label
+                                                for="mapel"
+                                                class="block text-sm font-medium text-gray-700"
+                                            >
+                                                Nama Mata Pelajaran
+                                            </label>
+                                            <input
+                                                v-model="form.mapel"
+                                                type="text"
+                                                placeholder="Masukkan Nama Mata Pelajaran"
+                                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                :class="{
+                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                                                        form.errors.mapel,
+                                                }"
+                                            />
+                                            <InputError
+                                                class="mt-2"
+                                                :message="form.errors.mapel"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <!-- Update Button -->
+                                    <div class="col-span-6 sm:col-span-3"></div>
+                                    <div
+                                        class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
+                                    >
+                                        <div
+                                            class="flex items-center space-x-4"
+                                        >
+                                            <Link
+                                                :href="
+                                                    route('matapelajaran.index')
+                                                "
+                                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            >
+                                                Batal
+                                            </Link>
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            >
+                                                Perbarui
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
