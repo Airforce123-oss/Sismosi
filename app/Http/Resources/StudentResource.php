@@ -26,6 +26,7 @@ class StudentResource extends JsonResource
             'religion' => new ReligionResource($this->whenLoaded('religion')),
             'class' => ClassesResource::make($this->whenLoaded('class')), // Using whenLoaded for optimization
             'created_at' => $this->created_at->toFormattedDateString(),
+            'attendance' =>  AttendancesResource::make($this->whenLoaded('attendances'))
         ];
     }
 }

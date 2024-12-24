@@ -57,7 +57,7 @@ class ProfileController extends Controller
                     'total' => $totalStudents, // Mengirimkan total siswa ke Vue
                 ]);
             default:
-                return redirect()->route('home');
+                return redirect()->route('dashboard');
         }
     }
     

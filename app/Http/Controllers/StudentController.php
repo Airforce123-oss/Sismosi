@@ -33,7 +33,7 @@ class StudentController extends Controller
     public function index(Request $request)
     {
         // Ambil data siswa dengan relasi
-        $studentQuery = Student::query()->with('noInduk', 'religion', 'gender', 'class');
+        $studentQuery = Student::query()->with(['noInduk', 'religion', 'gender', 'class','attendances']);
     
         // Terapkan filter pencarian jika ada
         $this->applySearch($studentQuery, $request->search);

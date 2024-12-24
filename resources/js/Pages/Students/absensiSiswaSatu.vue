@@ -135,7 +135,7 @@ totalDaysInMonth.forEach((dayIndex) => {
     console.log(getFormattedDate(dayIndex)); // Memanggil fungsi dengan dayIndex yang valid
 });
 
-console.log(totalDaysInMonth);
+console.log("totalDaysInMonth " + totalDaysInMonth);
 
 const isSunday = (day) => {
     const dateObj = new Date(currentYear, currentMonth, day);
@@ -429,7 +429,7 @@ const saveStatusToLocalStorage = () => {
                 `Status untuk siswa ID ${studentId} pada ${date}:`,
                 status
             );
-            if (!["P", "A", "S", "I"].includes(status)) {
+            if (!["P", "A", "S", "I", "Belum diabsen"].includes(status)) {
                 console.warn(`Data tidak valid untuk siswa ID: ${studentId}`, {
                     status,
                 });
@@ -1109,7 +1109,6 @@ const updateAttendanceStatus = (studentId, date, status) => {
 const submitAttendance = async () => {
     try {
         if (!tanggal_kehadiran.value) {
-            alert("Tanggal kehadiran harus dipilih!");
             return;
         }
 
@@ -1375,16 +1374,16 @@ const initializeStatuses = () => {
             // Validasi student.id
             if (student.id !== undefined && student.id !== null) {
                 // Jika status absensi belum ada untuk tanggal tertentu, set status default
-                if (!selectedStudentStatuses.value[student.id]) {
-                    selectedStudentStatuses.value[student.id] = {}; // Inisialisasi objek kosong jika belum ada
-                }
+                // if (!selectedStudentStatuses.value[student.id]) {
+                //     selectedStudentStatuses.value[student.id] = {}; // Inisialisasi objek kosong jika belum ada
+                // }
 
-                if (!selectedStudentStatuses.value[student.id][date]) {
-                    selectedStudentStatuses.value[student.id][date] = {
-                        status_kehadiran: "Belum diabsen",
-                        tanggal_kehadiran: date,
-                    };
-                }
+                // if (!selectedStudentStatuses.value[student.id][date]) {
+                //     selectedStudentStatuses.value[student.id][date] = {
+                //         status_kehadiran: "Belum diabsen",
+                //         tanggal_kehadiran: date,
+                //     };
+                // }
 
                 // Jika status untuk tanggal tertentu belum ada, set status default
                 if (
@@ -1576,10 +1575,10 @@ const getAttendanceStatus = (studentId, date) => {
     const studentStatuses = selectedStudentStatuses.value[studentId];
 
     // Cek jika ada status untuk studentId dan tanggal tertentu
-    if (studentStatuses) {
+    if (studentStatuses && studentStatuses[date]) {
         // Pastikan ada status absensi untuk tanggal tertentu
         const statusObj = studentStatuses[date];
-        return statusObj ? statusObj.status_kehadiran : "Belum diabsen"; // Mengembalikan status atau 'Belum diabsen'
+        return statusObj.status_kehadiran; // Mengembalikan status
     }
 
     return "Belum diabsen"; // Jika tidak ada status absensi untuk studentId
@@ -2056,8 +2055,8 @@ onMounted(async () => {
                                 -->
                             </div>
                         </div>
-                        
-                                 <div>
+
+                        <div>
                             <button
                                 class="btn btn-primary modal-title fs-5 block sm:inline-block w-full sm:w-auto"
                                 @click="showAddModal"
@@ -2065,7 +2064,6 @@ onMounted(async () => {
                                 <i class="fa fa-plus mr-2"></i> Tambah Absensi
                             </button>
                         </div>
-                        
                     </div>
 
                     <div class="g-responsive overflow-x-auto max-w-full">
@@ -2112,28 +2110,53 @@ onMounted(async () => {
                                             'attendance-' +
                                             student.id +
                                             '-' +
-                                            formattedDate(date)
+                                            formattedDate(
+                                                new Date(
+                                                    currentYear,
+                                                    currentMonth,
+                                                    date
+                                                )
+                                            )
                                         "
                                         :class="
                                             getAttendanceClass(
                                                 student.id,
-                                                formattedDate(date)
+                                                formattedDate(
+                                                    new Date(
+                                                        currentYear,
+                                                        currentMonth,
+                                                        date
+                                                    )
+                                                )
                                             )
                                         "
                                         @click="
                                             handleStatusChange(
                                                 student.id,
-                                                formattedDate(date)
+                                                formattedDate(
+                                                    new Date(
+                                                        currentYear,
+                                                        currentMonth,
+                                                        date
+                                                    )
+                                                )
                                             )
                                         "
                                     >
                                         <span class="spanan">
                                             {{
-                                                getAttendanceStatusOnClick(
+                                                getAttendanceStatus(
                                                     student.id,
-                                                    formattedDate(date)
+                                                    formattedDate(
+                                                        new Date(
+                                                            currentYear,
+                                                            currentMonth,
+                                                            date
+                                                        )
+                                                    )
                                                 )
                                             }}
+                                            <!-- {{ date }} -->
                                         </span>
                                     </td>
                                 </tr>
@@ -2394,7 +2417,7 @@ onMounted(async () => {
                         <!-- <p>{{ student.name }}</p> -->
                         <!--  <p>Tanggal: {{ date }}</p> -->
                         <button @click="handleStatusChange(student.id, date)">
-                           <!-- Ubah Status Kehadiran-->
+                            <!-- Ubah Status Kehadiran-->
                         </button>
                     </div>
 
