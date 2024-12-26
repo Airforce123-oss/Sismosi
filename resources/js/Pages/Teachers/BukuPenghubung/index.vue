@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, Head } from "vue";
 import { initFlowbite } from "flowbite";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import VueApexCharts from "vue-apexcharts";
@@ -89,8 +89,7 @@ onMounted(() => {
 </script>
 
 <template>
-
-<div class="antialiased bg-gray-50 dark:bg-gray-900">
+    <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
             class="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50"
         >
@@ -235,19 +234,20 @@ onMounted(() => {
         <!-- Main -->
 
         <main class="p-7 md:ml-64 h-screen pt-20">
+            <Head title="Buku Penghubung" />
             <div class="p-6 bg-white shadow rounded-lg mb-10">
                 <div class="mb-6">
                     <h2 class="text-xl font-bold mb-4">Identitas Siswa</h2>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <p><strong>Nama Siswa:</strong> </p>
-                            <p><strong>Nomor Induk Siswa:</strong> </p>
-                            <p><strong>Jenis Kelamin:</strong> </p>
+                            <p><strong>Nama Siswa:</strong></p>
+                            <p><strong>Nomor Induk Siswa:</strong></p>
+                            <p><strong>Jenis Kelamin:</strong></p>
                         </div>
                         <div>
-                            <p><strong>Kelas:</strong> </p>
-                            <p><strong>Nama Orang Tua:</strong> </p>
-                            <p><strong>Alamat:</strong> </p>
+                            <p><strong>Kelas:</strong></p>
+                            <p><strong>Nama Orang Tua:</strong></p>
+                            <p><strong>Alamat:</strong></p>
                         </div>
                     </div>
                 </div>
@@ -297,9 +297,7 @@ onMounted(() => {
                             <tbody>
                                 <tr>
                                     <td class="border px-4 py-2">1</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
+                                    <td class="border px-4 py-2">Guru:</td>
                                     <td class="border px-4 py-2">
                                         Saya ingin menyampaikan tentang
                                         perkembangan akademik anak Anda...
@@ -320,9 +318,7 @@ onMounted(() => {
                                 </tr>
                                 <tr>
                                     <td class="border px-4 py-2">2</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
+                                    <td class="border px-4 py-2">Guru:</td>
                                     <td class="border px-4 py-2">
                                         Selamat siang, wali siswa! Anak Anda
                                         sangat antusias dalam kegiatan...
@@ -343,9 +339,7 @@ onMounted(() => {
                                 </tr>
                                 <tr>
                                     <td class="border px-4 py-2">3</td>
-                                    <td class="border px-4 py-2">
-                                        Guru: 
-                                    </td>
+                                    <td class="border px-4 py-2">Guru:</td>
                                     <td class="border px-4 py-2">
                                         Selamat liburan! Semoga Anda dan
                                         keluarga menikmati waktu bersama...
@@ -425,7 +419,7 @@ onMounted(() => {
                 <ul class="space-y-2">
                     <li>
                         <a
-                            href="teachersDashboard"
+                            href="dashboard"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -449,7 +443,7 @@ onMounted(() => {
 
                     <li>
                         <a
-                            href="students"
+                            href="absensiSiswa"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -463,11 +457,9 @@ onMounted(() => {
                                     d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Data Siswa</span>
+                            <span class="ml-3">Absensi Siswa</span>
                         </a>
                     </li>
-
-
                     <li>
                         <a
                             href="#"
@@ -484,7 +476,26 @@ onMounted(() => {
                                     d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
                                 />
                             </svg>
-                            <span class="ml-3">Tugas Siswa</span>
+                            <span class="ml-3">Enrollment</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="membuatTugasSiswa"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 256 256"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                            >
+                                <rect fill="none" height="256" width="256" />
+                                <path
+                                    d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
+                                />
+                            </svg>
+                            <span class="ml-3"> Tugas Siswa</span>
                         </a>
                     </li>
                     <li>
@@ -509,60 +520,81 @@ onMounted(() => {
         </aside>
     </div>
 
-
-<!-- index1-->
-<div class="p-6 bg-gray-100 min-h-screen">
-    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-      <h1 class="text-2xl font-bold mb-4">Dashboard Wali Murid</h1>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Informasi/Catatan Saya -->
-        <div class="p-4 bg-green-100 border border-green-300 rounded-lg flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">Informasi/Catatan Saya</h2>
-            <p class="text-sm text-gray-600">0 Catatan</p>
-          </div>
-          <div class="text-green-600">
-            <i class="fas fa-check-circle text-3xl"></i>
-          </div>
+    <!-- index1-->
+    <div class="p-6 bg-gray-100 min-h-screen">
+        <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+            <h1 class="text-2xl font-bold mb-4">Dashboard Wali Murid</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Informasi/Catatan Saya -->
+                <div
+                    class="p-4 bg-green-100 border border-green-300 rounded-lg flex items-center justify-between"
+                >
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            Informasi/Catatan Saya
+                        </h2>
+                        <p class="text-sm text-gray-600">0 Catatan</p>
+                    </div>
+                    <div class="text-green-600">
+                        <i class="fas fa-check-circle text-3xl"></i>
+                    </div>
+                </div>
+                <!-- Belum Saya Baca -->
+                <div
+                    class="p-4 bg-red-100 border border-red-300 rounded-lg flex items-center justify-between"
+                >
+                    <div>
+                        <h2 class="text-lg font-semibold">Belum Saya Baca</h2>
+                        <p class="text-sm text-gray-600">0 Catatan</p>
+                    </div>
+                    <div class="text-red-600">
+                        <i class="fas fa-times-circle text-3xl"></i>
+                    </div>
+                </div>
+                <!-- Informasi/Catatan Guru -->
+                <div
+                    class="p-4 bg-teal-100 border border-teal-300 rounded-lg flex items-center justify-between"
+                >
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            Informasi/Catatan Guru
+                        </h2>
+                        <p class="text-sm text-gray-600">0 Catatan</p>
+                    </div>
+                    <div class="text-teal-600">
+                        <i class="fas fa-info-circle text-3xl"></i>
+                    </div>
+                </div>
+                <!-- Semua Informasi/Catatan -->
+                <div
+                    class="p-4 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between"
+                >
+                    <div>
+                        <h2 class="text-lg font-semibold">
+                            Semua Informasi/Catatan
+                        </h2>
+                        <p class="text-sm text-gray-600">0 Catatan</p>
+                    </div>
+                    <div class="text-blue-600">
+                        <i class="fas fa-check-double text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">
+                    BubungON (Buku Penghubung Online)
+                </h2>
+                <p class="text-gray-700">
+                    BubungON (Buku Penghubung Online) adalah sistem yang
+                    menghubungkan antara orang tua dengan guru (wali kelas) di
+                    sekolah. BubungON (Buku Penghubung Online) merupakan sebuah
+                    administrasi yang dibuat sebagai media komunikasi tidak
+                    langsung dalam rangka menyampaikan atau memberitahukan
+                    hal-hal penting yang menyangkut perkembangan anak di sekolah
+                    dan di rumah.
+                </p>
+            </div>
         </div>
-        <!-- Belum Saya Baca -->
-        <div class="p-4 bg-red-100 border border-red-300 rounded-lg flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">Belum Saya Baca</h2>
-            <p class="text-sm text-gray-600">0 Catatan</p>
-          </div>
-          <div class="text-red-600">
-            <i class="fas fa-times-circle text-3xl"></i>
-          </div>
-        </div>
-        <!-- Informasi/Catatan Guru -->
-        <div class="p-4 bg-teal-100 border border-teal-300 rounded-lg flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">Informasi/Catatan Guru</h2>
-            <p class="text-sm text-gray-600">0 Catatan</p>
-          </div>
-          <div class="text-teal-600">
-            <i class="fas fa-info-circle text-3xl"></i>
-          </div>
-        </div>
-        <!-- Semua Informasi/Catatan -->
-        <div class="p-4 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">Semua Informasi/Catatan</h2>
-            <p class="text-sm text-gray-600">0 Catatan</p>
-          </div>
-          <div class="text-blue-600">
-            <i class="fas fa-check-double text-3xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h2 class="text-xl font-semibold mb-2">BubungON (Buku Penghubung Online)</h2>
-        <p class="text-gray-700">
-          BubungON (Buku Penghubung Online) adalah sistem yang menghubungkan antara orang tua dengan guru (wali kelas) di sekolah. BubungON (Buku Penghubung Online) merupakan sebuah administrasi yang dibuat sebagai media komunikasi tidak langsung dalam rangka menyampaikan atau memberitahukan hal-hal penting yang menyangkut perkembangan anak di sekolah dan di rumah.
-        </p>
-      </div>
     </div>
-  </div>
-  <!-- endindex1-->
+    <!-- endindex1-->
 </template>

@@ -17,12 +17,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
-{
-    public function absensiSiswa()
-    {
-        return inertia('Teachers/TugasSiswa/membuatTugasSiswa');
-    }
-    
+{  
     public function bukuPenghubung()
     {
         return inertia('Teachers/BukuPenghubung/bukuPenghubung');
@@ -30,7 +25,7 @@ class TeacherController extends Controller
 
     public function membuatTugasSiswa()
     {
-        return inertia('Teachers/absensiSiswa');
+        return inertia('Teachers/TugasSiswa/membuatTugasSiswa');
     }
 
     public function index(Request $request)

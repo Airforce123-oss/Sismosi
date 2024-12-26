@@ -29,6 +29,8 @@ const newStatus = ref("");
 const date = ref(new Date());
 ///const date = new Date();
 const userInputDate = ref("");
+// Mendapatkan tanggal saat ini (tanggal hari ini)
+const currentDay = new Date().getDate();
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth();
 const currentMonthYear = computed(() => {
@@ -49,9 +51,6 @@ const currentMonthYear = computed(() => {
     const monthName = months[currentMonth]; // Mendapatkan nama bulan berdasarkan currentMonth
     return `${monthName} ${currentYear}`; // Format "Bulan YYYY", misalnya "Desember 2024"
 });
-
-// Mendapatkan tanggal saat ini (tanggal hari ini)
-const currentDay = new Date().getDate();
 
 // Mendapatkan tanggal pertama bulan ini
 const defaultDay = new Date(currentYear, currentMonth, 1).getDate();
@@ -98,22 +97,26 @@ const getFormattedDate = (dayIndex) => {
         return "Tanggal tidak valid";
     }
 
-    const currentDate = new Date();
+    //const currentDate = new Date();
+    const currentDate = ref(new Date());
 
-    // Untuk memastikan jika dayIndex = 0, tidak mengubah tanggal menjadi epoch Unix
+    console.log("currentDate sebelum setDate:", currentDate.value);
     if (dayIndex !== 0) {
-        currentDate.setDate(currentDate.getDate() + dayIndex); // Menambahkan dayIndex ke tanggal saat ini
+        currentDate.value.setDate(currentDate.value.getDate() + dayIndex); // Gunakan .value
     }
-
+    console.log("currentDate setelah setDate:", currentDate.value);
     // Validasi jika tanggal valid
-    if (isNaN(currentDate.getTime())) {
+    if (isNaN(currentDate.value.getTime())) {
+        // Gunakan .value
         console.error("Tanggal tidak valid untuk dayIndex:", dayIndex);
         return "Tanggal tidak valid";
     }
 
-    const day = currentDate.getDate().toString().padStart(2, "0"); // Format 2 digit
-    const month = (currentDate.getMonth() + 1).toString().padStart(2, "0"); // Bulan dalam format 2 digit
-    const year = currentDate.getFullYear();
+    const day = currentDate.value.getDate().toString().padStart(2, "0"); // Format 2 digit
+    const month = (currentDate.value.getMonth() + 1)
+        .toString()
+        .padStart(2, "0"); // Bulan dalam format 2 digit
+    const year = currentDate.value.getFullYear();
     const dayName = getDayName(dayIndex); // Mendapatkan nama hari
     return `${dayName}, ${day}-${month}-${year}`; // Format: "Senin, 07-12-2024"
 };
@@ -168,12 +171,6 @@ const getCurrentMonthYear = () => {
         month: "long",
         year: "numeric",
     });
-};
-
-// Date related updates
-const updateDate = (event) => {
-    date.value = new Date(event.target.value); // Memperbarui objek Date
-    console.log("Updated date:", date.value);
 };
 
 // Modal handling functions
@@ -1363,7 +1360,6 @@ const fetchStudents = async (page = 1) => {
 console.log("Data siswa sebelum pemeriksaan:", studentId.value);
 
 // Inisialisasi selectedStudentStatuses dengan status default jika belum ada
-// Inisialisasi selectedStudentStatuses dengan status default jika belum ada
 const initializeStatuses = () => {
     if (Array.isArray(paginatedStudents.value)) {
         paginatedStudents.value.forEach((student) => {
@@ -1373,18 +1369,6 @@ const initializeStatuses = () => {
 
             // Validasi student.id
             if (student.id !== undefined && student.id !== null) {
-                // Jika status absensi belum ada untuk tanggal tertentu, set status default
-                // if (!selectedStudentStatuses.value[student.id]) {
-                //     selectedStudentStatuses.value[student.id] = {}; // Inisialisasi objek kosong jika belum ada
-                // }
-
-                // if (!selectedStudentStatuses.value[student.id][date]) {
-                //     selectedStudentStatuses.value[student.id][date] = {
-                //         status_kehadiran: "Belum diabsen",
-                //         tanggal_kehadiran: date,
-                //     };
-                // }
-
                 // Jika status untuk tanggal tertentu belum ada, set status default
                 if (
                     !selectedStudentStatuses.value[student.id][
@@ -2280,7 +2264,7 @@ onMounted(async () => {
                         </div>
                     </div>
                     <!-- Tampilkan "Loading..." jika sedang memuat data -->
-                    <div v-if="loading">
+                    <!--           <div v-if="loading">
                         <p>Loading data siswa...</p>
                     </div>
                     <div
@@ -2288,8 +2272,8 @@ onMounted(async () => {
                             paginatedStudents && paginatedStudents.length > 0
                         "
                     >
-                        <!-- Tabel siswa -->
-                    </div>
+                        <!-- Tabel siswa
+                    </div> -->
 
                     <!--
                                      <div>
@@ -2416,9 +2400,9 @@ onMounted(async () => {
                     <div v-for="student in students" :key="student.id">
                         <!-- <p>{{ student.name }}</p> -->
                         <!--  <p>Tanggal: {{ date }}</p> -->
-                        <button @click="handleStatusChange(student.id, date)">
-                            <!-- Ubah Status Kehadiran-->
-                        </button>
+                        <!-- <button @click="handleStatusChange(student.id, date)"> -->
+                        <!-- Ubah Status Kehadiran-->
+                        <!--     </button> -->
                     </div>
 
                     <!-- Modal untuk memilih status kehadiran -->
@@ -2556,6 +2540,63 @@ onMounted(async () => {
                                 />
                             </svg>
                             <span class="ml-3">Absensi Siswa</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 512 512"
+                                width="24"
+                                height="24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <g id="E-learning_notification">
+                                    <path
+                                        d="M243.0771,299.7515V251.3271a12.5756,12.5756,0,0,0-12.5615-12.5615H212.44a5,5,0,0,0,0,10h18.0752a2.5646,2.5646,0,0,1,2.5615,2.5615v48.4244a2.5645,2.5645,0,0,1-2.5615,2.5615H102.127a2.5645,2.5645,0,0,1-2.5616-2.5615V251.3271a2.5646,2.5646,0,0,1,2.5616-2.5615h83.8183a5,5,0,1,0,0-10H102.127a12.5757,12.5757,0,0,0-12.5616,12.5615v48.4244A12.5757,12.5757,0,0,0,102.127,312.313H230.5156A12.5756,12.5756,0,0,0,243.0771,299.7515Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M305.1309,238.7656H270.8574a10.4457,10.4457,0,0,0-10.4336,10.4336v52.68a10.4458,10.4458,0,0,0,10.4336,10.4341h34.2735a10.4458,10.4458,0,0,0,10.4336-10.4341v-52.68A10.4457,10.4457,0,0,0,305.1309,238.7656Zm.4336,63.1133a.4343.4343,0,0,1-.4336.4341H270.8574a.4343.4343,0,0,1-.4336-.4341v-52.68a.4339.4339,0,0,1,.4336-.4336h34.2735a.4339.4339,0,0,1,.4336.4336Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M309.1992,360.7461H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M309.1992,335.2017H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M467.8184,122.0205a109.7113,109.7113,0,0,0-219.3941-2.4991H145.1484V119.15a12.48,12.48,0,0,0-12.4658-12.4658H102.0312A12.48,12.48,0,0,0,89.5654,119.15v1.07a54.0392,54.0392,0,0,0-45.3833,53.2611V459.8264l0,.0193a39.83,39.83,0,0,0,39.8467,39.8467H355.6045a5.0406,5.0406,0,0,0,5-5.0474V459.8457a5,5,0,0,0-10,0v29.0819a29.8445,29.8445,0,0,1,5.24-58.8871,5.01,5.01,0,0,0,4.3484-3.0642c.0051-.0115.0122-.0215.0171-.0329a5.0159,5.0159,0,0,0,.2688-.8653c.0059-.0254.0168-.0483.022-.0738A5.0241,5.0241,0,0,0,360.6045,425l-.0022-.0217V231.7017A109.84,109.84,0,0,0,467.8184,122.0205ZM358.1055,22.3076a99.7129,99.7129,0,1,1-99.7129,99.7129A99.8261,99.8261,0,0,1,358.1055,22.3076ZM99.5654,119.15a2.4687,2.4687,0,0,1,2.4658-2.4658h30.6514a2.4686,2.4686,0,0,1,2.4658,2.4658l-.0019,61.2065-6.9883-9.3046a12.7468,12.7468,0,0,0-10.0557-5.1226c-.0693-.0015-.1386-.002-.2089-.002a12.7429,12.7429,0,0,0-10.003,4.8038L99.5654,181.11Zm217.91,340.6958a39.6352,39.6352,0,0,0,11.6631,28.1777l.0039.0035q.8613.8621,1.7695,1.6655H84.0283A29.8521,29.8521,0,0,1,55.084,467.1733H238.0771a5,5,0,1,0,0-10H54.3074A29.8832,29.8832,0,0,1,84.0283,430H330.8867A39.77,39.77,0,0,0,317.4756,459.8457ZM84.0283,420a39.7524,39.7524,0,0,0-29.8476,13.4894l.0014-.0276v-259.98A44.0226,44.0226,0,0,1,89.5654,130.37v51.1742a9.7374,9.7374,0,0,0,6.583,9.2915,10.007,10.007,0,0,0,3.3233.5733,9.7314,9.7314,0,0,0,7.624-3.7036l8.5957-10.7188a2.827,2.827,0,0,1,2.2529-1.0591,2.7824,2.7824,0,0,1,2.2178,1.13l7.2647,9.6709a9.8479,9.8479,0,0,0,17.7216-5.915V129.5214H248.6541a109.8717,109.8717,0,0,0,101.9482,101.95V420Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M309.2578,171.2344h21.2686a25.572,25.572,0,0,0,50.65-5,5,5,0,0,0-5-5h-66.919a4.84,4.84,0,0,1-4.8349-4.835V145.6577a23.5977,23.5977,0,0,0,18.5556-21.7641c1.1221-19.8521,8.1309-43.5943,35.127-44.0254,26.9961.4311,34.0049,24.1733,35.1269,44.0254a23.6,23.6,0,0,0,18.5557,21.7641v10.7417a4.84,4.84,0,0,1-4.834,4.835h-9.5557a5,5,0,0,0,0,10h9.5557a14.8511,14.8511,0,0,0,14.834-14.835V141.1709a5,5,0,0,0-5-5h-.1192a13.5457,13.5457,0,0,1-13.4521-12.8418c-1.4985-26.5106-11.5112-43.8823-28.6445-50.4795V65.6013a16.4352,16.4352,0,0,0-16.41-16.42h-1.04a16.4439,16.4439,0,0,0-16.42,16.42v7.6323c-16.5585,6.8655-26.237,24.0745-27.708,50.096a13.5441,13.5441,0,0,1-13.4511,12.8413h-.12a5,5,0,0,0-5,5v15.2285A14.8518,14.8518,0,0,0,309.2578,171.2344Zm46.3467,10.5718a15.5882,15.5882,0,0,1-14.7337-10.5718h29.4673A15.588,15.588,0,0,1,355.6045,181.8062ZM350.7021,65.6013a6.4274,6.4274,0,0,1,6.42-6.42h1.04a6.4188,6.4188,0,0,1,6.41,6.42v4.7431a53.7425,53.7425,0,0,0-6.3946-.4762c-.0488-.001-.0957-.001-.1445,0a53.2611,53.2611,0,0,0-7.3311.597Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M300.7432,101.8721c.122.0088.2431.0127.3632.0127a5.0007,5.0007,0,0,0,4.9825-4.6416c1.1465-15.9453,11.3965-21.0577,11.9209-21.3086A5,5,0,0,0,313.874,66.83c-.6592.2959-16.164,7.5039-17.76,29.6963A5,5,0,0,0,300.7432,101.8721Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                    <path
+                                        d="M397.9336,75.9316c.4394.2085,10.7773,5.295,11.9277,21.3116a5.0007,5.0007,0,0,0,4.9825,4.6416c.12,0,.2412-.0039.3632-.0127a5.0012,5.0012,0,0,0,4.6289-5.3457c-1.5947-22.1924-17.1-29.4-17.76-29.6963a5,5,0,1,0-4.1426,9.1015Z"
+                                        stroke="black"
+                                        stroke-width="4"
+                                    />
+                                </g>
+                            </svg>
+                            <span class="ml-3">Enrollment</span>
                         </a>
                     </li>
                     <li>
