@@ -2228,29 +2228,29 @@ onMounted(async () => {
 
                     <div class="row mt-3 me-3">
                         <div class="col-12">
-                            <p class="fw-bold">Keterangan Status Kehadiran:</p>
+                            <p class="fw-bold">Status Kehadiran:</p>
                             <div class="d-flex">
                                 <div class="me-3">
                                     <span
-                                        class="badge bg-info text-white fw-bold"
+                                        class="badge bg-info text-black fw-bold"
                                         >Hadir (P)</span
                                     >
                                 </div>
                                 <div class="me-3">
                                     <span
-                                        class="badge bg-danger text-white fw-bold"
+                                        class="badge bg-danger text-black fw-bold"
                                         >Absen (A)</span
                                     >
                                 </div>
                                 <div class="me-3">
                                     <span
-                                        class="badge bg-warning text-white fw-bold"
+                                        class="badge bg-warning text-black fw-bold"
                                         >Sakit (S)</span
                                     >
                                 </div>
                                 <div class="me-3">
                                     <span
-                                        class="badge bg-primary text-white fw-bold"
+                                        class="badge bg-primary text-black fw-bold"
                                         >Izin (I)</span
                                     >
                                 </div>
@@ -2263,27 +2263,6 @@ onMounted(async () => {
                             </div>
                         </div>
                     </div>
-                    <!-- Tampilkan "Loading..." jika sedang memuat data -->
-                    <!--           <div v-if="loading">
-                        <p>Loading data siswa...</p>
-                    </div>
-                    <div
-                        v-else-if="
-                            paginatedStudents && paginatedStudents.length > 0
-                        "
-                    >
-                        <!-- Tabel siswa
-                    </div> -->
-
-                    <!--
-                                     <div>
-                        <p>{{ getFormattedDate(0) }}</p>
-                        <!-- Hari ini -->
-                    <!--  <p>{{ getFormattedDate(1) }}</p>-->
-                    <!-- Besok -->
-                    <!--<p>{{ getFormattedDate(2) }}</p>-->
-                    <!-- Lusa -->
-                    <!-- </div>-->
 
                     <!-- Modal Tambah Absen -->
                     <div
@@ -2471,34 +2450,6 @@ onMounted(async () => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -2544,7 +2495,7 @@ onMounted(async () => {
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="membuat-enrollment"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -2596,7 +2547,7 @@ onMounted(async () => {
                                     />
                                 </g>
                             </svg>
-                            <span class="ml-3">Enrollment</span>
+                            <span class="ml-3">Enrollment Tugas</span>
                         </a>
                     </li>
                     <li>

@@ -1,61 +1,196 @@
 <script setup>
-import { onMounted, ref, computed } from "vue";
-import { initFlowbite } from "flowbite";
+import { ref, computed, onMounted } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import VueApexCharts from "vue-apexcharts";
-import ApexCharts from "apexcharts";
+import axios from "axios";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
-import $ from "jquery";
 
-// Data siswa
-const studentProfile = ref({
-    name: "John Doe",
-    studentId: "12345",
-    gender: "Laki-laki",
-    class: "10A",
-    parentName: "Mr. Doe",
-    address: "Jl. Pendidikan No. 1",
-});
+const students = ref([]);
+const courses = ref([]);
 
-// Data buku penghubung
-const books = ref([
+// Data dummy untuk debugging
+const enrollments = ref([
     {
         id: 1,
-        createdBy: "Guru",
-        info: "Saya ingin menyampaikan tentang perkembangan akademik anak Anda...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        student: { name: "John Doe" },
+        course: { name: "Mathematics" },
+        enrollment_date: "2024-12-27T00:00:00Z",
+        status: "active",
+        mark: 90,
     },
     {
         id: 2,
-        createdBy: "Guru",
-        info: "Selamat siang, wali siswa! Anak Anda sangat antusias dalam kegiatan...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        student: { name: "Jane Smith" },
+        course: { name: "Physics" },
+        enrollment_date: "2024-11-15T00:00:00Z",
+        status: "inactive",
+        mark: 85,
     },
     {
         id: 3,
-        createdBy: "Guru",
-        info: "Selamat liburan! Semoga Anda dan keluarga menikmati waktu bersama...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        student: { name: "Alice Johnson" },
+        course: { name: "Chemistry" },
+        enrollment_date: "2024-10-05T00:00:00Z",
+        status: "active",
+        mark: 88,
+    },
+    {
+        id: 4,
+        student: { name: "Bob Brown" },
+        course: { name: "Biology" },
+        enrollment_date: "2024-09-22T00:00:00Z",
+        status: "inactive",
+        mark: 92,
+    },
+    {
+        id: 5,
+        student: { name: "Charlie Green" },
+        course: { name: "History" },
+        enrollment_date: "2024-08-12T00:00:00Z",
+        status: "active",
+        mark: 85,
+    },
+    {
+        id: 6,
+        student: { name: "David White" },
+        course: { name: "Geography" },
+        enrollment_date: "2024-07-25T00:00:00Z",
+        status: "inactive",
+        mark: 80,
+    },
+    {
+        id: 7,
+        student: { name: "David Green Screen" },
+        course: { name: "Bio" },
+        enrollment_date: "2024-07-25T00:00:00Z",
+        status: "inactive",
+        mark: 80,
     },
 ]);
 
-// Pagination state
 const currentPage = ref(1);
-const itemsPerPage = ref(10);
+const perPage = 5;
 
-// Pagination logic
-const paginatedBooks = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return books.value.slice(start, end);
+const totalPages = computed(() =>
+    Math.ceil(enrollments.value.length / perPage)
+);
+
+const paginatedEnrollments = computed(() => {
+    const start = (currentPage.value - 1) * perPage;
+    const end = start + perPage;
+    return enrollments.value.slice(start, end);
 });
+
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const formatDate = (date) => {
+    if (!date) return "N/A";
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(date).toLocaleDateString("en-US", options);
+};
+
+const totalEnrollments = ref(0);
+const activeEnrollments = ref(0);
+const inactiveEnrollments = ref(0);
+
+const isModalVisible = ref(false);
+const newEnrollment = ref({
+    studentId: null,
+    courseId: null,
+    enrollmentDate: "",
+    status: "active",
+});
+
+const showAddModal = () => {
+    isModalVisible.value = true;
+};
+
+const hideAddModal = () => {
+    isModalVisible.value = false;
+};
+
+const addEnrollment = () => {
+    if (newEnrollment.value.studentId && newEnrollment.value.courseId) {
+        enrollments.value.push({
+            id: enrollments.value.length + 1,
+            student: {
+                name: students.value.find(
+                    (s) => s.id === newEnrollment.value.studentId
+                )?.name,
+            },
+            course: {
+                name: courses.value.find(
+                    (c) => c.id === newEnrollment.value.courseId
+                )?.name,
+            },
+            enrollment_date: newEnrollment.value.enrollmentDate,
+            status: newEnrollment.value.status,
+            mark: 0,
+        });
+        hideAddModal();
+    } else {
+        alert("Silakan pilih siswa dan mata pelajaran.");
+    }
+};
+
 onMounted(() => {
-    initFlowbite();
+    fetchStudents();
+    fetchCourses();
 });
+
+computed(() => {
+    totalEnrollments.value = students.value.length;
+    activeEnrollments.value = students.value.filter(
+        (student) => student.isActive
+    ).length;
+    inactiveEnrollments.value = students.value.filter(
+        (student) => !student.isActive
+    ).length;
+});
+
+const fetchStudents = async () => {
+    try {
+        const response = await axios.get("/api/students");
+        students.value = response.data.data;
+    } catch (error) {
+        console.error("Error fetching students:", error);
+    }
+};
+
+const fetchCourses = async () => {
+    try {
+        const response = await axios.get("/api/courses");
+        courses.value = response.data;
+    } catch (error) {
+        console.error("Error fetching courses:", error);
+    }
+};
 </script>
+<style scoped>
+/* Add any custom styles for your table here */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td,
+th {
+    padding: 12px 16px;
+    text-align: left;
+}
+
+button {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+</style>
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -198,134 +333,189 @@ onMounted(() => {
                 </div>
             </div>
         </nav>
+        <!-- Main content -->
+        <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20">
+            <h2
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center"
+            >
+                Enrollment List
+            </h2>
 
-        <!-- Main -->
-
-        <main class="p-7 md:ml-64 h-screen pt-20">
-            <!-- Identitas Siswa -->
-            <div class="p-6 bg-white shadow rounded-lg mb-10">
-                <h2 class="text-xl font-bold mb-4">Identitas Siswa</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p>
-                            <strong>Nama Siswa:</strong>
-                            {{ studentProfile.name }}
-                        </p>
-                        <p>
-                            <strong>Nomor Induk Siswa:</strong>
-                            {{ studentProfile.studentId }}
-                        </p>
-                        <p>
-                            <strong>Jenis Kelamin:</strong>
-                            {{ studentProfile.gender }}
-                        </p>
-                    </div>
-                    <div>
-                        <p>
-                            <strong>Kelas:</strong> {{ studentProfile.class }}
-                        </p>
-                        <p>
-                            <strong>Nama Orang Tua:</strong>
-                            {{ studentProfile.parentName }}
-                        </p>
-                        <p>
-                            <strong>Alamat:</strong>
-                            {{ studentProfile.address }}
-                        </p>
-                    </div>
+            <div class="container mx-auto px-4 py-6">
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4"
+                >
+                    <!-- Search filter -->
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Cari Enrollment..."
+                        class="w-full sm:w-auto px-4 py-2 border rounded-md"
+                    />
+                    <button
+                        class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
+                        @click="showAddModal"
+                    >
+                        <i class="fa fa-plus mr-2"></i> Tambah New Enrollment
+                    </button>
                 </div>
             </div>
 
-            <!-- Data Buku Penghubung -->
-            <div class="p-6 bg-white shadow rounded-lg">
-                <h2 class="text-xl font-bold mb-4">Data Buku Penghubung</h2>
-                <div class="mb-4 flex justify-between items-center">
-                    <div>
-                        <label for="entries" class="mr-2">Show</label>
-                        <select
-                            id="entries"
-                            class="border rounded p-1"
-                            v-model="itemsPerPage"
-                        >
-                            <option :value="10">10</option>
-                            <option :value="25">25</option>
-                            <option :value="50">50</option>
-                            <option :value="100">100</option>
-                        </select>
-                        <span class="ml-2">entries</span>
-                    </div>
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            class="border rounded p-1"
-                        />
-                    </div>
+            <!-- Stats Cards -->
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <p
+                        class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600"
+                    >
+                        Total Enrollments: {{ totalEnrollments }}
+                    </p>
                 </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <p
+                        class="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600"
+                    >
+                        Active Enrollments: {{ activeEnrollments }}
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <p
+                        class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600"
+                    >
+                        Inactive Enrollments: {{ inactiveEnrollments }}
+                    </p>
+                </div>
+            </div>
 
-                <!-- Table -->
-                <table class="min-w-full bg-white border">
+            <!-- Enrollments Table -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
+                <table class="min-w-full table-auto">
                     <thead>
-                        <tr>
-                            <th class="border px-4 py-2">No</th>
-                            <th class="border px-4 py-2">Dibuat Oleh</th>
-                            <th class="border px-4 py-2">Informasi</th>
-                            <th class="border px-4 py-2">Dibaca Guru</th>
-                            <th class="border px-4 py-2">Dibaca Wali</th>
+                        <tr class="bg-gray-100">
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                ID
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Student Name
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Course
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Enrollment Date
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Status
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Mark
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="(book, index) in paginatedBooks"
-                            :key="book.id"
+                            v-for="enrollment in paginatedEnrollments"
+                            :key="enrollment.id"
+                            class="border-t"
                         >
-                            <td class="border px-4 py-2">{{ index + 1 }}</td>
-                            <td class="border px-4 py-2">
-                                {{ book.createdBy }}
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                {{ enrollment.id }}
                             </td>
-                            <td class="border px-4 py-2">{{ book.info }}</td>
-                            <td class="border px-4 py-2 text-center">
-                                {{ book.readByTeacher }}
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                {{ enrollment.student.name }}
                             </td>
-                            <td class="border px-4 py-2 text-center">
-                                {{ book.readByParent }}
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                {{ enrollment.course.name }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                {{ formatDate(enrollment.enrollment_date) }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                <span
+                                    :class="{
+                                        'text-green-500':
+                                            enrollment.status === 'active',
+                                        'text-red-500':
+                                            enrollment.status === 'inactive',
+                                    }"
+                                    >{{ enrollment.status }}</span
+                                >
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                {{ enrollment.mark }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                <div class="flex space-x-2">
+                                    <button
+                                        @click="editEnrollment(enrollment.id)"
+                                        class="bg-blue-500 text-white py-1 px-4 rounded-lg hover:bg-blue-700"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        @click="deleteEnrollment(enrollment.id)"
+                                        class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
+                                    >
+                                        Delete
+                                    </button>
+                                    <button
+                                        @click="markEnrollment(enrollment.id)"
+                                        class="bg-green-500 text-white py-1 px-4 rounded-lg hover:bg-green-700"
+                                    >
+                                        Mark
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
 
-                <!-- Pagination -->
-                <div class="mt-4 flex justify-between items-center">
-                    <p>
-                        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-                        {{ currentPage * itemsPerPage }} of
-                        {{ books.length }} entries
-                    </p>
-                    <div class="flex items-center">
-                        <button
-                            class="border rounded px-2 py-1 mx-1"
-                            :disabled="currentPage === 1"
-                            @click="currentPage--"
-                        >
-                            Previous
-                        </button>
-                        <button class="border rounded px-2 py-1 mx-1" disabled>
-                            {{ currentPage }}
-                        </button>
-                        <button
-                            class="border rounded px-2 py-1 mx-1"
-                            :disabled="
-                                currentPage >=
-                                Math.ceil(books.length / itemsPerPage)
-                            "
-                            @click="currentPage++"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+            <!-- Pagination -->
+            <div class="flex justify-between items-center">
+                <button
+                    @click="goToPage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                >
+                    Previous
+                </button>
+                <span class="text-gray-700"
+                    >Page {{ currentPage }} of {{ totalPages }}</span
+                >
+                <button
+                    @click="goToPage(currentPage + 1)"
+                    :disabled="currentPage === totalPages"
+                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                >
+                    Next
+                </button>
             </div>
         </main>
+
+        <div v-if="students && students.length > 0">
+            <!-- Menampilkan ID siswa pertama jika ada -->
+            ID: {{ students[0]?.id }}
+        </div>
+
         <!-- Sidebar -->
         <aside
             class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
@@ -381,7 +571,7 @@ onMounted(() => {
                     </li>
                     <li>
                         <a
-                            href="membuat-enrollment"
+                            href="#"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

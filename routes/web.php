@@ -7,6 +7,7 @@ use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\AttendanceController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Foundation\Application;
 use App\Http\Controllers\ProfileController;
@@ -52,9 +53,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('/penilaian', PenilaianController::class);
 
     // Custom Routes for Teachers and Attendance
+    Route::get('/enrollments/create', [EnrollmentController::class, 'membuatEnrollment'])->name('enrollments.create');
+
+
+
+
+    
     Route::get('/membuatTugasSiswa', [TeacherController::class, 'membuatTugasSiswa'])->name('membuatTugasSiswa');
     Route::get('/bukuPenghubung', [TeacherController::class, 'bukuPenghubung'])->name('bukuPenghubung');
     Route::get('/bukuPenghubungDashboard', [TeacherController::class, 'bukuPenghubungDashboard'])->name('teacherbukuPenghubung');
+    Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollment'])->name('teachermembuatEnrollment');
+
+
 
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
@@ -79,7 +89,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id_mapel}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
     Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
+
 });
+
+
 
 // Admin Routes (with middleware for redirection)
 Route::group(['prefix' => 'admin', 'middleware' => 'redirectAdmin'], function () {

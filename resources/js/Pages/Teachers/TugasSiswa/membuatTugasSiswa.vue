@@ -193,25 +193,27 @@ onMounted(() => {
     initFlowbite();
 });
 </script>
-
 <style scoped>
 @import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
 
+/* Responsif untuk tabel */
 .table {
     width: 100%;
     margin-bottom: 1rem;
     border-collapse: collapse;
 }
 
+/* Responsif untuk pagination */
 .pagination {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     margin-top: 1rem;
 }
 
 .pagination button {
-    padding: 5px 10px;
-    margin: 0 5px;
+    padding: 8px 12px;
+    margin: 5px;
     cursor: pointer;
 }
 
@@ -220,19 +222,26 @@ onMounted(() => {
     background-color: #f0f0f0;
 }
 
+/* Responsif untuk card */
 .card {
     background-color: #fff;
-    padding: 16px;
-    border-radius: 8px;
+    padding: 1rem;
+    border-radius: 0.5rem;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: scale(1.05);
 }
 
 .card h3 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
 }
 </style>
+
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -365,66 +374,70 @@ onMounted(() => {
             <h1 class="text-center text-3xl font-semibold mb-10">
                 TUGAS SISWA
             </h1>
+            <!-- Stats Cards -->
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+            >
+                <!-- Card Total Tugas -->
+                <div class="card">
+                    <h3>Total Tugas</h3>
+                    <p class="text-lg md:text-xl">{{ totalCourses }}</p>
+                </div>
+
+                <!-- Card Total Jam Tugas -->
+                <div class="card">
+                    <h3>Total Jam Tugas</h3>
+                    <p class="text-lg md:text-xl">{{ totalCourseHours }}</p>
+                </div>
+            </div>
+
             <div class="container mx-auto px-4 py-6">
-                <!-- Add Course Button -->
-                <div class="flex justify-between mb-6">
+                <div
+                    class="flex flex-wrap sm:flex-nowrap justify-between items-center mb-6 space-y-4 sm:space-y-0"
+                >
                     <!-- Search filter -->
                     <input
                         v-model="searchQuery"
                         type="text"
-                        placeholder="Search courses..."
-                        class="px-4 py-2 border rounded-md"
+                        placeholder="Cari Tugas..."
+                        class="w-full sm:w-auto px-4 py-2 border rounded-md"
                     />
-                    <div>
-                        <button
-                            class="btn btn-primary modal-title fs-5 block sm:inline-block w-full sm:w-auto"
-                            @click="showAddModal"
-                        >
-                            <i class="fa fa-plus mr-2"></i> Tambah Course
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <!-- Total Courses -->
-                    <div class="card">
-                        <h3>Total Courses</h3>
-                        <p class="text-xl">{{ totalCourses }}</p>
-                    </div>
-
-                    <!-- Total Course Hours -->
-                    <div class="card">
-                        <h3>Total Course Hours</h3>
-                        <p class="text-xl">{{ totalCourseHours }}</p>
-                    </div>
-
-                    <!-- Popular Course -->
-                    <div class="card">
-                        <h3>Popular Course</h3>
-                        <p class="text-xl">{{ popularCourse.name }}</p>
-                        <p>{{ popularCourse.enrolledStudents }} Enrolled</p>
-                    </div>
-                </div>
-                <div class="g-responsive overflow-x-auto max-w-full">
-                    <table
-                        class="min-w-full table-auto border-collapse border border-gray-300"
+                    <button
+                        class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
+                        @click="showAddModal"
                     >
+                        <i class="fa fa-plus mr-2"></i> Tambah Tugas
+                    </button>
+                </div>
+
+                <div class="g-responsive overflow-x-auto max-w-full">
+                    <table class="min-w-full table-auto">
                         <thead>
-                            <tr class="bg-blue-600 text-white">
-                                <th class="px-4 py-2 text-left">ID</th>
-                                <th class="px-4 py-2 text-left">Name</th>
-                                <th class="px-4 py-2 text-left">Description</th>
-                                <th class="px-4 py-2 text-left">
-                                    Duration (H)
+                            <tr
+                                class="bg-blue-600 text-white text-sm md:text-base"
+                            >
+                                <th class="px-2 md:px-4 py-2 text-left">ID</th>
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Nama
                                 </th>
-                                <th class="px-4 py-2 text-left">Instruction</th>
-                                <th class="px-4 py-2 text-left">Level</th>
-                                <th class="px-4 py-2 text-left">Fee ($)</th>
-                                <th class="px-4 py-2 text-left">
-                                    Enrolled Students
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Deskripsi
                                 </th>
-                                <th class="px-4 py-2 text-center">Action</th>
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Durasi (H)
+                                </th>
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Guru
+                                </th>
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Level
+                                </th>
+                                <th class="px-2 md:px-4 py-2 text-left">
+                                    Siswa Terdaftar
+                                </th>
+                                <th class="px-2 md:px-4 py-2 text-center">
+                                    Aksi
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -433,35 +446,40 @@ onMounted(() => {
                                 :key="course.id"
                                 class="border-t"
                             >
-                                <td class="px-4 py-2">{{ course.id }}</td>
-                                <td class="px-4 py-2">{{ course.name }}</td>
-                                <td class="px-4 py-2">
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
+                                    {{ course.id }}
+                                </td>
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
+                                    {{ course.name }}
+                                </td>
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
                                     {{ course.description }}
                                 </td>
-                                <td class="px-4 py-2">{{ course.duration }}</td>
-                                <td class="px-4 py-2">
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
+                                    {{ course.duration }}
+                                </td>
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
                                     {{ course.instruction }}
                                 </td>
-                                <td class="px-4 py-2">{{ course.level }}</td>
-                                <td class="px-4 py-2">{{ course.fee }}</td>
-                                <td class="px-4 py-2">
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
+                                    {{ course.level }}
+                                </td>
+                                <td class="px-2 md:px-4 py-2 text-gray-800">
                                     {{ course.enrolledStudents }}
                                 </td>
-                                <td class="px-4 py-2 text-center">
-                                    <div class="flex justify-center space-x-2">
-                                        <button
-                                            @click="editCourse(course.id)"
-                                            class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            @click="deleteCourse(course.id)"
-                                            class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 ml-2"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
+                                <td class="px-2 md:px-4 py-2 text-center">
+                                    <button
+                                        @click="editCourse(course.id)"
+                                        class="text-blue-500 hover:underline"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        @click="deleteCourse(course.id)"
+                                        class="text-red-500 hover:underline ml-2"
+                                    >
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
@@ -473,17 +491,17 @@ onMounted(() => {
                     <button
                         @click="changePage(currentPage - 1)"
                         :disabled="currentPage <= 1"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-400"
+                        class="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                     >
                         Previous
                     </button>
-                    <span class="text-lg font-semibold"
+                    <span class="text-sm md:text-lg font-semibold"
                         >Page {{ currentPage }} of {{ totalPages }}</span
                     >
                     <button
                         @click="changePage(currentPage + 1)"
                         :disabled="currentPage >= totalPages"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-400"
+                        class="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                     >
                         Next
                     </button>
@@ -500,34 +518,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -573,7 +563,7 @@ onMounted(() => {
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="membuat-enrollment"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -625,7 +615,7 @@ onMounted(() => {
                                     />
                                 </g>
                             </svg>
-                            <span class="ml-3">Enrollment</span>
+                            <span class="ml-3">Enrollment Tugas</span>
                         </a>
                     </li>
                     <li>

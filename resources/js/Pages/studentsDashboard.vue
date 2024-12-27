@@ -398,7 +398,7 @@ onMounted(() => {
                 <div class="page-sub-header">
                     <div>
                         <h3 class="page-title">
-                            Selamat Datang {{ $page.props.auth.user.name }}!
+                        Selamat Datang {{ $page.props.auth.user.name }}!
                         </h3>
                     </div>
                 </div>

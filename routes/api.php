@@ -11,13 +11,11 @@ use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MataPelajaranController; // Pastikan controller ini diimport
 
 // Authentication routes for API
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/auth/refresh-token', [AuthController::class, 'refreshToken']);
-
-
-
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->get('/attendance', [AttendanceController::class, 'indexApi1']);
 Route::middleware('auth:sanctum')->put('/attendance/{studentId}', [AttendanceController::class, 'update']);
@@ -46,3 +44,6 @@ Route::get('/session-name', function () {
 });
 
 Route::middleware('auth:sanctum')->get('/user', [UserController::class, 'getUser']);
+
+// Tambahkan rute ini untuk courses
+Route::get('/courses', [MataPelajaranController::class, 'apiCourses']);

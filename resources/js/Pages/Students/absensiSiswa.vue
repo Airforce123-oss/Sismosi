@@ -226,17 +226,14 @@ onMounted(() => {
                 </div>
             </div>
             <!-- {{ $page.props.auth.user.name }}  --->
-
             <section class="content py-6">
                 <!-- Card Body -->
                 <div class="p-4">
-                    <div
-                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
-                    >
+                    <div class="flex flex-wrap gap-4">
                         <!-- Month Cards -->
                         <a
                             href="AbsensiSiswaSatu"
-                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
+                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -247,9 +244,10 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+                        <!-- Month Cards -->
                         <a
                             href="/AbsensiSiswaDua"
-                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition"
+                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -260,9 +258,10 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+                        <!-- Month Cards -->
                         <a
                             href="/AbsensiSiswaTiga"
-                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition"
+                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -273,9 +272,10 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+                        <!-- Month Cards -->
                         <a
                             href="/AbsensiSiswaEmpat"
-                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition"
+                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -286,9 +286,10 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+                        <!-- Month Cards -->
                         <a
                             href="/AbsensiSiswaLima"
-                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition"
+                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -299,9 +300,10 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+                        <!-- Month Cards -->
                         <a
                             href="/AbsensiSiswaEnam"
-                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition"
+                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -329,34 +331,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -402,7 +376,7 @@ onMounted(() => {
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="membuat-enrollment"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -452,9 +426,9 @@ onMounted(() => {
                                         stroke="black"
                                         stroke-width="4"
                                     />
+                                    <span class="ml-3">Enrollment Tugas</span>
                                 </g>
                             </svg>
-                            <span class="ml-3">Enrollment</span>
                         </a>
                     </li>
                     <li>
