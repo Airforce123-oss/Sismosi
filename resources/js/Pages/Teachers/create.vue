@@ -3,15 +3,22 @@ import { initFlowbite } from "flowbite";
 import { Link, useForm, router } from "@inertiajs/vue3";
 import { ref, onMounted } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import InputError from "@/Components/InputError.vue"; // Pastikan komponen InputError ada
+import InputError from "@/Components/InputError.vue";
 import Swal from "sweetalert2";
 
 const props = defineProps({
+    auth: { type: Object },
     classes: { type: Object },
     teachers: { type: Object, default: () => ({ data: [] }) },
 });
 
-const classes = ref(props.classes.data || []);
+const form = useForm({
+    name: props.auth?.user?.name || "",
+    email: props.auth?.user?.email || "",
+    role_type: props.auth?.user?.role_type || "",
+});
+
+const classes = ref(props.classes?.data || []);
 
 const formData = useForm({
     name: "",
@@ -44,6 +51,7 @@ function submit() {
         },
     });
 }
+
 onMounted(() => {
     initFlowbite();
 });
@@ -63,7 +71,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            inert
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -76,7 +83,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            inert
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -97,39 +103,21 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
                             >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            inert
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
                     <!-- Apps -->
+                    <button
+                        type="button"
+                        class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                    ></button>
 
                     <button
                         type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -152,10 +140,9 @@ onMounted(() => {
                             />
                         </svg>
                     </button>
-
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
                         <div class="py-3 px-3">
@@ -173,7 +160,8 @@ onMounted(() => {
                                 </span>
                                 <span
                                     class="block text-sm text-gray-900 truncate dark:text-white"
-                                ></span>
+                                    >{{ form.role_type }}</span
+                                >
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
@@ -313,6 +301,7 @@ onMounted(() => {
         <!-- end1-->
 
         <!-- Sidebar -->
+
         <aside
             class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
@@ -322,34 +311,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -381,6 +342,7 @@ onMounted(() => {
                             class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                             aria-controls="dropdown-pages"
                             data-collapse-toggle="dropdown-pages"
+                            aria-expanded="true"
                         >
                             <svg
                                 viewBox="0 0 256 256"
@@ -399,7 +361,6 @@ onMounted(() => {
                                 >Siswa</span
                             >
                             <svg
-                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -429,7 +390,6 @@ onMounted(() => {
                             class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                             aria-controls="dropdown-pages1"
                             data-collapse-toggle="dropdown-pages1"
-                            aria-expanded="true"
                         >
                             <svg
                                 viewBox="0 0 640 512"
@@ -501,7 +461,6 @@ onMounted(() => {
                                 >Kelas</span
                             >
                             <svg
-                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -550,7 +509,6 @@ onMounted(() => {
                                 >Mata Pelajaran</span
                             >
                             <svg
-                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -576,45 +534,6 @@ onMounted(() => {
                                 >
                             </li>
                         </ul>
-                    </li>
-
-                    <li>
-                        <a
-                            href="penilaian"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                fill="none"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                width="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M6 6C6 5.44772 6.44772 5 7 5H17C17.5523 5 18 5.44772 18 6C18 6.55228 17.5523 7 17 7H7C6.44771 7 6 6.55228 6 6Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 10C6 9.44771 6.44772 9 7 9H17C17.5523 9 18 9.44771 18 10C18 10.5523 17.5523 11 17 11H7C6.44771 11 6 10.5523 6 10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M7 13C6.44772 13 6 13.4477 6 14C6 14.5523 6.44771 15 7 15H17C17.5523 15 18 14.5523 18 14C18 13.4477 17.5523 13 17 13H7Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 18C6 17.4477 6.44772 17 7 17H11C11.5523 17 12 17.4477 12 18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    clip-rule="evenodd"
-                                    d="M2 4C2 2.34315 3.34315 1 5 1H19C20.6569 1 22 2.34315 22 4V20C22 21.6569 20.6569 23 19 23H5C3.34315 23 2 21.6569 2 20V4ZM5 3H19C19.5523 3 20 3.44771 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44771 3 5 3Z"
-                                    fill="currentColor"
-                                    fill-rule="evenodd"
-                                />
-                            </svg>
-                            <span class="ml-3">Penilaian Siswa</span>
-                        </a>
                     </li>
                 </ul>
             </div>

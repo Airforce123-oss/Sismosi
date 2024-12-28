@@ -1,6 +1,4 @@
 <?php
-
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SectionController;
 use App\Models\Student;
@@ -11,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\MataPelajaranController; // Pastikan controller ini diimport
 
 // Authentication routes for API
@@ -47,3 +46,12 @@ Route::middleware('auth:sanctum')->get('/user', [UserController::class, 'getUser
 
 // Tambahkan rute ini untuk courses
 Route::get('/courses', [MataPelajaranController::class, 'apiCourses']);
+
+// Dengan autentikasi
+//Route::middleware('auth:api')->get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
+
+// Tanpa autentikasi
+Route::get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
+
+// routes/api.php
+Route::post('/enrollments', [EnrollmentController::class, 'store']);

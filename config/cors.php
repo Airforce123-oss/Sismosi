@@ -2,7 +2,28 @@
 
 return [
 
-    /*
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE'], // Batasi metode HTTP
+
+    'allowed_origins' => ['http://localhost:5173'], // Tentukan domain frontend
+
+    'allowed_origins_patterns' => [],
+
+    'allowed_headers' => ['Content-Type', 'Authorization'], // Tentukan header yang diizinkan
+
+    'exposed_headers' => [],
+
+    'max_age' => 0,
+
+    'supports_credentials' => true, // Jika menggunakan autentikasi berbasis session/cookies
+
+];
+
+
+/*
+return [
+
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
@@ -13,7 +34,7 @@ return [
     |
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
-    */
+    
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
@@ -32,3 +53,4 @@ return [
     'supports_credentials' => false,
 
 ];
+*/

@@ -6,10 +6,24 @@ import InputError from "@/Components/InputError.vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import Swal from "sweetalert2";
 
+/*
 defineProps({
     classes_for_student: {
         type: Object,
     },
+});
+*/
+
+const props = defineProps({
+    auth: { type: Object },
+    classes_for_student: { type: Object },
+    teachers: { type: Object, default: () => ({ data: [] }) },
+});
+
+const form = useForm({
+    name: props.auth?.user?.name || "",
+    email: props.auth?.user?.email || "",
+    role_type: props.auth?.user?.role_type || "",
 });
 
 let sections = ref([]); // Pastikan sections adalah array untuk menyimpan data bagian
@@ -28,7 +42,10 @@ const getSections = async (classId) => {
 const formData = useForm({
     nama_kelas: "",
     kode_kelas: "",
+    kode_mapel: "",
+    mapel: "",
 });
+console.log("Submitting form data:", formData);
 
 const isSubmitting = ref(false); // Menandakan status form
 
@@ -56,7 +73,7 @@ function submit() {
                 confirmButtonText: "Ok",
             }).then(() => {
                 // Arahkan ke halaman lain setelah berhasil
-                router.visit(route("matapelajaran.index"), { replace: true });
+                router.visit(route("kelas.index"), { replace: true });
             });
         },
         onError: (errors) => {
@@ -98,7 +115,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -111,7 +127,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -132,39 +147,21 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            aria-hidden="true"
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-
                     <!-- Apps -->
+                    <button
+                        type="button"
+                        class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                    ></button>
 
                     <button
                         type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -187,21 +184,29 @@ onMounted(() => {
                             />
                         </svg>
                     </button>
-
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
-                        <div class="py-3 px-4">
-                            <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                >Haikal Hanis (Admin)</span
+                        <div class="py-3 px-3">
+                            <div
+                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
                             >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >admin@gmail.com</span
-                            >
+                                <span
+                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
+                                    >{{ $page.props.auth.user.email }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                >
+                                    {{ $page.props.auth.user.name }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                    >{{ form.role_type }}</span
+                                >
+                            </div>
                         </div>
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
@@ -255,16 +260,11 @@ onMounted(() => {
                                                 >Nama Kelas</label
                                             >
                                             <input
-                                                v-model="formData.nama_kelas"
+                                                v-model="formData.kode_mapel"
                                                 type="text"
-                                                id="kelas-name"
-                                                placeholder="Kelas X-1"
+                                                id="kode-mapel"
+                                                placeholder="Kode Mapel"
                                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                :class="{
-                                                    'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                        formData.errors
-                                                            .nama_kelas,
-                                                }"
                                             />
                                             <InputError
                                                 class="mt-2"
@@ -286,15 +286,11 @@ onMounted(() => {
                                             >Kode Kelas</label
                                         >
                                         <input
-                                            v-model="formData.kode_kelas"
+                                            v-model="formData.mapel"
                                             type="text"
-                                            id="kode-kelas"
-                                            placeholder="MK-XXXXXXXXX"
+                                            id="mapel"
+                                            placeholder="Mata Pelajaran"
                                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                            :class="{
-                                                'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                                                    formData.errors.kode_kelas,
-                                            }"
                                         />
                                         <InputError
                                             class="mt-2"
@@ -340,7 +336,7 @@ onMounted(() => {
 
         <!-- Sidebar -->
         <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+            class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
             aria-label="Sidenav"
             id="drawer-navigation"
             style=""
@@ -348,34 +344,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a
@@ -400,6 +368,7 @@ onMounted(() => {
                             <span class="ml-3">Beranda</span>
                         </a>
                     </li>
+
                     <li>
                         <button
                             type="button"
@@ -424,7 +393,7 @@ onMounted(() => {
                                 >Siswa</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -445,15 +414,55 @@ onMounted(() => {
                                     >Data Induk Siswa</a
                                 >
                             </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <button
+                            type="button"
+                            class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            aria-controls="dropdown-pages1"
+                            data-collapse-toggle="dropdown-pages1"
+                        >
+                            <svg
+                                viewBox="0 0 640 512"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                            >
+                                <path
+                                    d="M208 352c-2.39 0-4.78.35-7.06 1.09C187.98 357.3 174.35 360 160 360c-14.35 0-27.98-2.7-40.95-6.91-2.28-.74-4.66-1.09-7.05-1.09C49.94 352-.33 402.48 0 464.62.14 490.88 21.73 512 48 512h224c26.27 0 47.86-21.12 48-47.38.33-62.14-49.94-112.62-112-112.62zm-48-32c53.02 0 96-42.98 96-96s-42.98-96-96-96-96 42.98-96 96 42.98 96 96 96zM592 0H208c-26.47 0-48 22.25-48 49.59V96c23.42 0 45.1 6.78 64 17.8V64h352v288h-64v-64H384v64h-76.24c19.1 16.69 33.12 38.73 39.69 64H592c26.47 0 48-22.25 48-49.59V49.59C640 22.25 618.47 0 592 0z"
+                                />
+                            </svg>
+
+                            <span
+                                class="flex-1 ml-3 text-left whitespace-nowrap"
+                                >Guru</span
+                            >
+                            <svg
+                                class="w-6 h-6"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd"
+                                ></path>
+                            </svg>
+                        </button>
+                        <ul id="dropdown-pages1" class="hidden py-2 space-y-2">
                             <li>
                                 <a
-                                    href="#"
+                                    href="teachers"
                                     class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                                    >Absensi Siswa</a
+                                    >Data Induk Guru</a
                                 >
                             </li>
                         </ul>
                     </li>
+
                     <li>
                         <button
                             type="button"
@@ -485,7 +494,7 @@ onMounted(() => {
                                 >Kelas</span
                             >
                             <svg
-                                aria-hidden="true"
+                                inert
                                 class="w-6 h-6"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
@@ -510,47 +519,11 @@ onMounted(() => {
                     </li>
 
                     <li>
-                        <a
-                            href="penilaian"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                fill="none"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                width="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M6 6C6 5.44772 6.44772 5 7 5H17C17.5523 5 18 5.44772 18 6C18 6.55228 17.5523 7 17 7H7C6.44771 7 6 6.55228 6 6Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 10C6 9.44771 6.44772 9 7 9H17C17.5523 9 18 9.44771 18 10C18 10.5523 17.5523 11 17 11H7C6.44771 11 6 10.5523 6 10Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M7 13C6.44772 13 6 13.4477 6 14C6 14.5523 6.44771 15 7 15H17C17.5523 15 18 14.5523 18 14C18 13.4477 17.5523 13 17 13H7Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M6 18C6 17.4477 6.44772 17 7 17H11C11.5523 17 12 17.4477 12 18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18Z"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    clip-rule="evenodd"
-                                    d="M2 4C2 2.34315 3.34315 1 5 1H19C20.6569 1 22 2.34315 22 4V20C22 21.6569 20.6569 23 19 23H5C3.34315 23 2 21.6569 2 20V4ZM5 3H19C19.5523 3 20 3.44771 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44771 3 5 3Z"
-                                    fill="currentColor"
-                                    fill-rule="evenodd"
-                                />
-                            </svg>
-                            <span class="ml-3">Penilaian Siswa</span>
-                        </a>
-                    </li>
-                    <li>
                         <button
                             type="button"
                             class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            aria-controls="dropdown-authentication"
+                            data-collapse-toggle="dropdown-authentication1"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -567,9 +540,35 @@ onMounted(() => {
 
                             <span
                                 class="flex-1 ml-3 text-left whitespace-nowrap"
-                                >Buku Penghubung</span
+                                >Mata Pelajaran</span
                             >
+                            <svg
+                                inert
+                                class="w-6 h-6"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd"
+                                ></path>
+                            </svg>
                         </button>
+
+                        <ul
+                            id="dropdown-authentication1"
+                            class="hidden py-2 space-y-2"
+                        >
+                            <li>
+                                <a
+                                    href="mataPelajaran"
+                                    class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                                    >Tambah Mata Pelajaran</a
+                                >
+                            </li>
+                        </ul>
                     </li>
                 </ul>
             </div>

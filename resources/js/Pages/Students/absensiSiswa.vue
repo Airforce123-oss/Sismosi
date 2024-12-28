@@ -190,11 +190,15 @@ onMounted(() => {
 
         <!-- Main -->
 
-        <main class="p-7 md:ml-64 h-screen pt-20">
+        <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20">
             <Head title="Absensi Siswa" />
             <!-- section -->
             <div class="col-sm-6 mb-2">
-                <h4 class="fw-bold poppins m-0">Absensi Siswa</h4>
+                <h4
+                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+                >
+                    Absensi Siswa
+                </h4>
             </div>
 
             <!-- Card Header -->

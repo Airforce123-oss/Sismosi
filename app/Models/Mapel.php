@@ -13,7 +13,8 @@ class Mapel extends Model
     protected $primaryKey = 'id_mapel'; // Primary key yang benar
 
     protected $fillable = [
-        'kode_mapel', 'mapel', // Kolom yang dapat diisi
+        'kode_mapel', // Kolom kode mata pelajaran
+        'mapel',      // Nama mata pelajaran
     ];
 
     public function section()

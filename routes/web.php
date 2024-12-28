@@ -50,21 +50,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('teachers', TeacherController::class);
     Route::resource('kelas', ClassController::class);
     Route::resource('/Profile', ProfileController::class);
-    Route::resource('/penilaian', PenilaianController::class);
-
-    // Custom Routes for Teachers and Attendance
-    Route::get('/enrollments/create', [EnrollmentController::class, 'membuatEnrollment'])->name('enrollments.create');
-
-
-
-
-    
+    Route::resource('/penilaian', PenilaianController::class);    
     Route::get('/membuatTugasSiswa', [TeacherController::class, 'membuatTugasSiswa'])->name('membuatTugasSiswa');
     Route::get('/bukuPenghubung', [TeacherController::class, 'bukuPenghubung'])->name('bukuPenghubung');
     Route::get('/bukuPenghubungDashboard', [TeacherController::class, 'bukuPenghubungDashboard'])->name('teacherbukuPenghubung');
+    
+    // Enrollment Routes
+    Route::get('/enrollments/create', [EnrollmentController::class, 'membuatEnrollment'])->name('enrollments.create');
     Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollment'])->name('teachermembuatEnrollment');
-
-
 
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
@@ -91,8 +84,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
 
 });
-
-
 
 // Admin Routes (with middleware for redirection)
 Route::group(['prefix' => 'admin', 'middleware' => 'redirectAdmin'], function () {

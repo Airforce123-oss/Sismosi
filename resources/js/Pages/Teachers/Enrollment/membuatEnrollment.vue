@@ -1,71 +1,30 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, toRaw, nextTick } from "vue";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import axios from "axios";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 
-const students = ref([]);
-const courses = ref([]);
+//defineProps({
+//  students: Array,
+//  courses: Array,
+//   enrollments: Array,
+//});
+
+const { students, courses } = usePage().props;
+console.log("Courses:", courses);
+console.log("Students:", toRaw(students));
+
+const newEnrollment = ref({
+    studentId: null,
+    courseId: null,
+    enrollmentDate: "",
+    status: "active",
+});
+
+const searchQuery = ref("");
 
 // Data dummy untuk debugging
-const enrollments = ref([
-    {
-        id: 1,
-        student: { name: "John Doe" },
-        course: { name: "Mathematics" },
-        enrollment_date: "2024-12-27T00:00:00Z",
-        status: "active",
-        mark: 90,
-    },
-    {
-        id: 2,
-        student: { name: "Jane Smith" },
-        course: { name: "Physics" },
-        enrollment_date: "2024-11-15T00:00:00Z",
-        status: "inactive",
-        mark: 85,
-    },
-    {
-        id: 3,
-        student: { name: "Alice Johnson" },
-        course: { name: "Chemistry" },
-        enrollment_date: "2024-10-05T00:00:00Z",
-        status: "active",
-        mark: 88,
-    },
-    {
-        id: 4,
-        student: { name: "Bob Brown" },
-        course: { name: "Biology" },
-        enrollment_date: "2024-09-22T00:00:00Z",
-        status: "inactive",
-        mark: 92,
-    },
-    {
-        id: 5,
-        student: { name: "Charlie Green" },
-        course: { name: "History" },
-        enrollment_date: "2024-08-12T00:00:00Z",
-        status: "active",
-        mark: 85,
-    },
-    {
-        id: 6,
-        student: { name: "David White" },
-        course: { name: "Geography" },
-        enrollment_date: "2024-07-25T00:00:00Z",
-        status: "inactive",
-        mark: 80,
-    },
-    {
-        id: 7,
-        student: { name: "David Green Screen" },
-        course: { name: "Bio" },
-        enrollment_date: "2024-07-25T00:00:00Z",
-        status: "inactive",
-        mark: 80,
-    },
-]);
+const enrollments = ref([]);
 
 const currentPage = ref(1);
 const perPage = 5;
@@ -83,6 +42,17 @@ const paginatedEnrollments = computed(() => {
 const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
         currentPage.value = page;
+        fetchDataForPage(page); // Memastikan data diperbarui saat halaman berganti
+    }
+};
+
+const fetchDataForPage = async (page) => {
+    try {
+        // Mengambil data berdasarkan halaman
+        const response = await axios.get(`/api/enrollments?page=${page}`);
+        enrollments.value = response.data;
+    } catch (error) {
+        console.error("Error fetching data:", error);
     }
 };
 
@@ -92,83 +62,161 @@ const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-US", options);
 };
 
-const totalEnrollments = ref(0);
-const activeEnrollments = ref(0);
-const inactiveEnrollments = ref(0);
-
-const isModalVisible = ref(false);
-const newEnrollment = ref({
-    studentId: null,
-    courseId: null,
-    enrollmentDate: "",
-    status: "active",
-});
-
-const showAddModal = () => {
-    isModalVisible.value = true;
-};
-
-const hideAddModal = () => {
-    isModalVisible.value = false;
-};
-
-const addEnrollment = () => {
-    if (newEnrollment.value.studentId && newEnrollment.value.courseId) {
-        enrollments.value.push({
-            id: enrollments.value.length + 1,
-            student: {
-                name: students.value.find(
-                    (s) => s.id === newEnrollment.value.studentId
-                )?.name,
-            },
-            course: {
-                name: courses.value.find(
-                    (c) => c.id === newEnrollment.value.courseId
-                )?.name,
-            },
-            enrollment_date: newEnrollment.value.enrollmentDate,
-            status: newEnrollment.value.status,
-            mark: 0,
-        });
-        hideAddModal();
-    } else {
-        alert("Silakan pilih siswa dan mata pelajaran.");
-    }
-};
-
-onMounted(() => {
-    fetchStudents();
-    fetchCourses();
-});
-
-computed(() => {
-    totalEnrollments.value = students.value.length;
-    activeEnrollments.value = students.value.filter(
-        (student) => student.isActive
-    ).length;
-    inactiveEnrollments.value = students.value.filter(
-        (student) => !student.isActive
-    ).length;
-});
+const isLoading = ref(false);
 
 const fetchStudents = async () => {
+    isLoading.value = true;
     try {
-        const response = await axios.get("/api/students");
-        students.value = response.data.data;
+        const response = await axios.get("/api/students"); // API untuk mengambil data siswa
+        students.value = response.data; // Harus tetap menggunakan .value
     } catch (error) {
         console.error("Error fetching students:", error);
     }
 };
 
 const fetchCourses = async () => {
+    isLoading.value = true;
     try {
         const response = await axios.get("/api/courses");
-        courses.value = response.data;
+        console.log("Courses data received:", response.data); // Debugging response
+        courses.value = response.data.data; // Update courses with API data
     } catch (error) {
         console.error("Error fetching courses:", error);
     }
 };
+
+const fetchEnrollments = async () => {
+    const token = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content");
+    if (!token) {
+        console.error("Token tidak ditemukan!");
+        return;
+    }
+
+    try {
+        const response = await axios.get("/api/enrollments", {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "X-CSRF-TOKEN": token,
+            },
+        });
+
+        if (response.status === 200) {
+            const dummyEnrollments = [];
+
+            // Gabungkan data API dengan data dummy
+            enrollments.value = [...response.data, ...dummyEnrollments];
+            console.log("Enrollments (API + Dummy):", enrollments.value);
+        } else {
+            console.error("Failed to fetch enrollments:", response.status);
+        }
+    } catch (error) {
+        console.error("Error fetching enrollments:", error);
+    }
+};
+
+const totalEnrollments = computed(() => enrollments.value.length);
+const activeEnrollments = computed(
+    () =>
+        enrollments.value.filter(
+            (enrollment) => enrollment?.status === "active"
+        ).length
+);
+
+const inactiveEnrollments = computed(
+    () =>
+        enrollments.value.filter(
+            (enrollment) => enrollment?.status === "inactive"
+        ).length
+);
+
+const isModalVisible = ref(false);
+const showAddModal = () => {
+    isModalVisible.value = true;
+};
+const hideAddModal = () => {
+    isModalVisible.value = false;
+};
+
+const addEnrollmentToDatabase = async (enrollmentData) => {
+    try {
+        const response = await axios.post("/api/enrollments", enrollmentData);
+        console.log("Response from server:", response);
+
+        if (response.data && response.data.student && response.data.course) {
+            enrollments.value.push(response.data);
+            await nextTick(); // Menunggu render ulang
+            console.log("Data setelah render ulang:", enrollments.value);
+        } else {
+            console.error("Data tidak lengkap:", response.data);
+            alert("Data yang diterima tidak lengkap.");
+        }
+
+        return response; // Pastikan respons dikembalikan
+    } catch (error) {
+        console.error("Error adding enrollment:", error);
+        alert("Terjadi kesalahan, coba lagi.");
+        throw error; // Lemparkan ulang error jika ada
+    }
+};
+
+const addEnrollment = async () => {
+    console.log("Sebelum perubahan:", students);
+
+    if (newEnrollment.value.studentId && newEnrollment.value.courseId) {
+        if (Array.isArray(students)) {
+            students.push({ ...newEnrollment.value });
+        } else {
+            console.error("students bukan array");
+        }
+    } else {
+        console.error("Data enrollment tidak lengkap");
+        return;
+    }
+
+    console.log("Setelah perubahan:", students);
+
+    try {
+        const response = await addEnrollmentToDatabase({
+            student_id: newEnrollment.value.studentId,
+            course_id: newEnrollment.value.courseId,
+            enrollment_date: newEnrollment.value.enrollmentDate,
+            status: newEnrollment.value.status,
+        });
+
+        console.log("Respons dari API:", response); // Sekarang respons akan terlihat
+
+        // Reset form setelah berhasil
+        newEnrollment.value = {
+            studentId: null,
+            courseId: null,
+            enrollmentDate: "",
+            status: "active",
+        };
+    } catch (error) {
+        console.error("Error adding enrollment:", error);
+    }
+};
+
+console.log("Enrollments:", enrollments.value);
+console.log("New Enrollment Status:", newEnrollment.value.status);
+
+onMounted(async () => {
+    try {
+        await fetchStudents();
+        await fetchCourses();
+        await fetchEnrollments();
+        console.log(students.value);
+        console.log(courses.value);
+        console.log(enrollments.value);
+        console.log(paginatedEnrollments.value);
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+});
 </script>
+
 <style scoped>
 /* Add any custom styles for your table here */
 table {
@@ -336,10 +384,12 @@ button:hover {
         <!-- Main content -->
         <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20">
             <h2
-                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center"
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
             >
                 Enrollment List
             </h2>
+
+            <div v-if="isLoading" class="spinner"></div>
 
             <div class="container mx-auto px-4 py-6">
                 <div
@@ -356,8 +406,116 @@ button:hover {
                         class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
                         @click="showAddModal"
                     >
-                        <i class="fa fa-plus mr-2"></i> Tambah New Enrollment
+                        <i class="fa fa-plus mr-2"></i> Tambah Enrollment Baru
                     </button>
+                </div>
+            </div>
+
+            <!-- Modal -->
+            <div
+                v-if="isModalVisible"
+                class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <h3 class="text-lg font-bold text-center">
+                        Tambah Enrollment Baru
+                    </h3>
+                    <form @submit.prevent="addEnrollment">
+                        <!-- Pilih Siswa -->
+                        <div class="mb-4">
+                            <label
+                                for="student"
+                                class="block text-sm font-medium text-gray-700"
+                                >Siswa</label
+                            >
+                            <select
+                                v-model="newEnrollment.studentId"
+                                id="student"
+                                required
+                                class="w-full px-4 py-2 border rounded-md"
+                            >
+                                <option
+                                    v-for="student in students"
+                                    :key="student.id"
+                                    :value="student.id"
+                                >
+                                    {{ student.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Pilih Mata Pelajaran -->
+                        <div class="mb-4">
+                            <label
+                                for="course"
+                                class="block text-sm font-medium text-gray-700"
+                                >Mata Pelajaran</label
+                            >
+                            <select
+                                v-model="newEnrollment.courseId"
+                                id="course"
+                                required
+                                class="w-full px-4 py-2 border rounded-md"
+                            >
+                                <option
+                                    v-for="course in courses"
+                                    :key="course.id_mapel"
+                                    :value="course.id_mapel"
+                                >
+                                    {{ course.mapel }}
+                                    <!-- Menampilkan nama mata pelajaran -->
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Tanggal Enrollment -->
+                        <div class="mb-4">
+                            <label
+                                for="enrollmentDate"
+                                class="block text-sm font-medium text-gray-700"
+                                >Tanggal Enrollment</label
+                            >
+                            <input
+                                type="date"
+                                v-model="newEnrollment.enrollmentDate"
+                                id="enrollmentDate"
+                                required
+                                class="w-full px-4 py-2 border rounded-md"
+                            />
+                        </div>
+
+                        <!-- Status -->
+                        <div class="mb-4">
+                            <label
+                                for="status"
+                                class="block text-sm font-medium text-gray-700"
+                                >Status</label
+                            >
+                            <select
+                                v-model="newEnrollment.status"
+                                id="status"
+                                required
+                                class="w-full px-4 py-2 border rounded-md"
+                            >
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Tidak Aktif</option>
+                            </select>
+                        </div>
+
+                        <!-- Tombol Submit -->
+                        <div class="flex justify-end">
+                            <button
+                                type="button"
+                                @click="hideAddModal"
+                                class="btn btn-secondary mr-3"
+                            >
+                                Batal
+                            </button>
+                            <button type="submit" class="btn btn-primary mr-2">
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -440,10 +598,18 @@ button:hover {
                                 {{ enrollment.id }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-800">
-                                {{ enrollment.student.name }}
+                                {{
+                                    enrollment.student
+                                        ? enrollment.student.name
+                                        : "Nama tidak tersedia"
+                                }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-800">
-                                {{ enrollment.course.name }}
+                                {{
+                                    enrollment.course
+                                        ? enrollment.course.mapel
+                                        : "Mapel tidak tersedia"
+                                }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-800">
                                 {{ formatDate(enrollment.enrollment_date) }}
@@ -452,9 +618,9 @@ button:hover {
                                 <span
                                     :class="{
                                         'text-green-500':
-                                            enrollment.status === 'active',
+                                            enrollment.status === 'Aktif',
                                         'text-red-500':
-                                            enrollment.status === 'inactive',
+                                            enrollment.status === 'Tidak Aktif',
                                     }"
                                     >{{ enrollment.status }}</span
                                 >
@@ -508,13 +674,8 @@ button:hover {
                 >
                     Next
                 </button>
-            </div>
+            </div>            
         </main>
-
-        <div v-if="students && students.length > 0">
-            <!-- Menampilkan ID siswa pertama jika ada -->
-            ID: {{ students[0]?.id }}
-        </div>
 
         <!-- Sidebar -->
         <aside
