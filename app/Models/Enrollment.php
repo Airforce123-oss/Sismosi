@@ -13,7 +13,7 @@ class Enrollment extends Model
         'mapel_id',
         'enrollment_date',
         'status',
-        'mark', // Pastikan 'mark' ada di sini
+        'mark',
     ];
 
        // Relasi ke model Student

@@ -36,7 +36,7 @@ class TeacherController extends Controller
         $this->applySearch($teacherQuery, $request->search);
 
         // Pagination
-        $wali_kelas = $teacherQuery->paginate(60)->appends($request->only('search'));
+        $wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
 
         // Pastikan 'classes' diteruskan ke komponen Vue
         $classes = Classes::all();  // Ambil data classes yang relevan
@@ -48,6 +48,8 @@ class TeacherController extends Controller
         ]);
     }
 
+
+
     public function indexApi(Request $request)
     {
         $teacherQuery = Teacher::query()->with('class');
@@ -58,7 +60,7 @@ class TeacherController extends Controller
         $teacherQuery->orderBy('id');
 
         // Pagination
-        $teachers = $teacherQuery->paginate(5)->appends($request->only('search'));
+        $teachers = $teacherQuery->paginate(20)->appends($request->only('search'));
 
         return response()->json($teachers);
     }

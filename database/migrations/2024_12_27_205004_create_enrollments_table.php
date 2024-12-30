@@ -14,13 +14,15 @@ class CreateEnrollmentsTable extends Migration
             $table->foreignId('mapel_id')->constrained('master_mapel', 'id_mapel')->onDelete('cascade'); // Relasi ke tabel master_mapel
             $table->date('enrollment_date'); // Tanggal pendaftaran
             $table->enum('status', ['active', 'inactive']); // Status enrollment
-            $table->string('mark')->nullable(); // Kolom untuk mark (nilai)
+
             $table->timestamps(); // Kolom created_at dan updated_at
         });
     }
 
     public function down()
     {
-        Schema::dropIfExists('enrollments');
+        Schema::table('enrollments', function (Blueprint $table) {
+            $table->integer('mark')->nullable(); // Menambahkan kolom mark kembali jika rollback
+        });
     }
 }

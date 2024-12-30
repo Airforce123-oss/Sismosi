@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SectionController;
 use App\Models\Student;
@@ -11,6 +12,9 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\MataPelajaranController; // Pastikan controller ini diimport
+use App\Http\Controllers\TugasController;
+use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\MarkController; // Import MarkController
 
 // Authentication routes for API
 Route::post('/login', [AuthController::class, 'login']);
@@ -47,11 +51,19 @@ Route::middleware('auth:sanctum')->get('/user', [UserController::class, 'getUser
 // Tambahkan rute ini untuk courses
 Route::get('/courses', [MataPelajaranController::class, 'apiCourses']);
 
-// Dengan autentikasi
-//Route::middleware('auth:api')->get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
-
 // Tanpa autentikasi
-Route::get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
+//Route::get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
 
-// routes/api.php
+Route::get('/enrollments', [EnrollmentController::class, 'getPaginatedEnrollments']);
+
+Route::get('/enrollments/{enrollment}', [EnrollmentController::class, 'show']); // Rute untuk mendapatkan detail enrollment
+
+// Menambahkan rute untuk menyimpan enrollment
 Route::post('/enrollments', [EnrollmentController::class, 'store']);
+
+
+// Menambahkan rute untuk menyimpan marks
+Route::post('/marks', [MarkController::class, 'store']);
+Route::post('/tugas', [TugasController::class, 'store']);
+
+Route::get('/teachers', [TeacherController::class, 'indexApi']);

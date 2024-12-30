@@ -6,20 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            if (!Schema::hasColumn('enrollments', 'mark')) {
-                $table->integer('mark')->nullable()->default(0); // Menambahkan kolom mark dengan default 0
-            }
+            //
         });
     }
-    
-    public function down()
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            $table->dropColumn('mark'); // Menghapus kolom mark jika rollback
+            //
         });
     }
-    
 };

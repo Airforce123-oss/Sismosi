@@ -12,7 +12,7 @@ class MataPelajaranController extends Controller
     // Endpoint untuk mengambil mata pelajaran dengan pagination
     public function apiCourses(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 10);
+        $itemsPerPage = $request->input('itemsPerPage', 20);
         $currentPage = $request->input('currentPage', 1);
         $search = $request->input('search', '');
     
@@ -31,7 +31,7 @@ class MataPelajaranController extends Controller
     // Menampilkan daftar mata pelajaran
     public function mataPelajaran(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 10); // Default ke 10 item per halaman
+        $itemsPerPage = $request->input('itemsPerPage', 20); // Default ke 10 item per halaman
         $currentPage = $request->input('currentPage', 1); // Default ke halaman pertama
 
         $mapelQuery = Mapel::query(); // Menggunakan model Mapel
@@ -61,6 +61,16 @@ class MataPelajaranController extends Controller
             'kode_mapel' => $mapel,
         ]);
     }
+
+    public function show($id_mapel)
+{
+    $mapel = Mapel::find($id_mapel);  // Mengambil data berdasarkan id_mapel
+    if (!$mapel) {
+        return response()->json(['message' => 'Mata Pelajaran tidak ditemukan'], 404);
+    }
+    return response()->json(new MapelResource($mapel));
+}
+
 
     // Menyimpan mata pelajaran baru
     public function store(Request $request)
@@ -94,7 +104,7 @@ class MataPelajaranController extends Controller
     public function update(Request $request, $id_mapel)
     {
         $validated = $request->validate([
-            'kode_mapel' => 'required|string|max:40|unique:master_mapel,kode_mapel,' . $id_mapel . ',id_mapel', // Pastikan validasi unik
+            'kode_mapel' => 'required|string|max:40|unique:master_mapel,kode_mapel,' . $id_mapel . ',id_mapel', // Validasi unik
             'mapel' => 'required|string|max:60',
         ]);
     
@@ -109,33 +119,35 @@ class MataPelajaranController extends Controller
         return redirect()->route('matapelajaran.index')->with('success', 'Data berhasil diperbarui!');
     }
     
+    
     // Menampilkan form untuk edit mata pelajaran
-    public function edit(Mapel $mapel) // Menggunakan model Mapel
+    public function edit($id_mapel)
     {
-        Log::info('Fetching data for mata pelajaran edit', [
-            'id_mapel' => $mapel->id_mapel,
-            'kode_mapel' => $mapel->kode_mapel,
-            'mapel' => $mapel->mapel,
-        ]);
-
+        $mapel = Mapel::find($id_mapel); // Mengambil data berdasarkan id_mapel
+        if (!$mapel) {
+            return redirect()->route('matapelajaran.index')->withErrors(['message' => 'Mata Pelajaran tidak ditemukan']);
+        }
+    
         return inertia('MataPelajaran/edit', [
             'mapel' => new MapelResource($mapel),
         ]);
     }
+    
 
     // Menghapus mata pelajaran
     public function destroy($id_mapel)
     {
-        $mapel = Mapel::findOrFail($id_mapel); // Menggunakan model Mapel
-
+        $mapel = Mapel::findOrFail($id_mapel); // Mengambil data berdasarkan id_mapel
+    
         Log::info('Deleting mata pelajaran', [
             'id_mapel' => $id_mapel,
             'kode_mapel' => $mapel->kode_mapel,
             'mapel' => $mapel->mapel,
         ]);
-
+    
         $mapel->delete();
-
+    
         return redirect()->route('matapelajaran.index');
     }
+    
 }
