@@ -266,7 +266,7 @@ onMounted(() => {
                                     class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                 >
                                     <i class="fa fa-plus"></i>
-                                    <span>Tambah Absensi</span>
+                                    <span>Tambah Siswa</span>
                                 </Link>
                             </div>
                         </div>

@@ -16,6 +16,7 @@
         <link rel="stylesheet" href="{{ URL::to('assets/plugins/feather/feather.css') }}">
         <link rel="stylesheet" href="{{ URL::to('assets/plugins/icons/flags/flags.css') }}">
         <link rel="stylesheet" href="{{ URL::to('assets/plugins/fontawesome/css/fontawesome.min.css') }}">
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
         <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/1.9.2/tailwind.min.css"> -->
         <link rel="stylesheet" href="{{ URL::to('assets/plugins/fontawesome/css/all.min.css') }}">
         <link rel="stylesheet" href="{{ URL::to('assets/plugins/select2/css/select2.min.css') }}">

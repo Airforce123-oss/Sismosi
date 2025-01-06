@@ -23,14 +23,12 @@ class LaratrustSeeder extends Seeder
         if ($config === null) {
             $this->command->error("The configuration has not been published. Did you run `php artisan vendor:publish --tag=\"laratrust-seeder\"`");
             $this->command->line('');
-            //return false;
             return null;
         }
 
         $mapPermission = collect(config('laratrust_seeder.permissions_map'));
 
         foreach ($config as $key => $modules) {
-
             // Create a new role
             $role = \App\Models\Role::firstOrCreate([
                 'name' => $key,
@@ -43,9 +41,7 @@ class LaratrustSeeder extends Seeder
 
             // Reading role permission modules
             foreach ($modules as $module => $value) {
-
                 foreach (explode(',', $value) as $perm) {
-
                     $permissionValue = $mapPermission->get($perm);
 
                     $permissions[] = \App\Models\Permission::firstOrCreate([
@@ -67,18 +63,18 @@ class LaratrustSeeder extends Seeder
                 $user = \App\Models\User::create([
                     'name' => ucwords(str_replace('_', ' ', $key)),
                     'email' => $key.'@app.com',
-                    'password' => bcrypt('password')
+                    'password' => bcrypt('password'),
+                    'role_name' => $role->name, // Simpan nama role
                 ]);
                 $user->addRole($role);
             }
-
         }
     }
 
     /**
      * Truncates all the laratrust tables and the users table
      *
-     * @return  void
+     * @return void
      */
     public function truncateLaratrustTables()
     {

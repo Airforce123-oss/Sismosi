@@ -42,6 +42,38 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function absensiSiswaById(Request $request, $id)
+{
+    // Daftar nama view berdasarkan ID
+    $viewNames = [
+        '1' => 'Students/absensiSiswaSatu',
+        '2' => 'Students/absensiSiswaDua',
+        '3' => 'Students/absensiSiswaTiga',
+        '4' => 'Students/absensiSiswaEmpat',
+        '5' => 'Students/absensiSiswaLima',
+        '6' => 'Students/absensiSiswaEnam',
+    ];
+
+    // Validasi apakah ID valid
+    if (!array_key_exists($id, $viewNames)) {
+        abort(404, 'Halaman tidak ditemukan.');
+    }
+
+    // Dapatkan nama view berdasarkan ID
+    $viewName = $viewNames[$id];
+
+    // Data absensi
+    $attendances = $this->getAttendanceData($request);
+
+    // Render view dengan data yang sesuai
+    return inertia($viewName, [
+        'attendances' => $attendances,
+        'studentCount' => $attendances->count(),
+        'filterParams' => $request->all(),
+    ]);
+}
+
+
     public function absensiSiswaSatu(Request $request)
     {
         return $this->renderAttendanceView($request, 'Students/absensiSiswaSatu');

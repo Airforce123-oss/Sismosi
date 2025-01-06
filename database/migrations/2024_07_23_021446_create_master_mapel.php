@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('master_mapel', function (Blueprint $table) {
-            $table->id('id_mapel'); // Primary key column
+            $table->id('id'); // Primary key column
             $table->string('kode_mapel', 40);
             $table->string('mapel', 60);
             $table->timestamps();
@@ -21,14 +21,14 @@ return new class extends Migration
 
         // Insert default data
         DB::table('master_mapel')->insert([
-            ['id_mapel' => 1, 'kode_mapel' => 'MP-1561560093', 'mapel' => 'Bahasa Indonesia'],
-            ['id_mapel' => 2, 'kode_mapel' => 'MP-1561560129', 'mapel' => 'Matematika'],
-            ['id_mapel' => 3, 'kode_mapel' => 'MP-1561871991', 'mapel' => 'Biologi'],
-            ['id_mapel' => 4, 'kode_mapel' => 'MP-1561872004', 'mapel' => 'Sejarah'],
-            ['id_mapel' => 5, 'kode_mapel' => 'MP-1561872013', 'mapel' => 'Teknologi Informasi'],
-            ['id_mapel' => 6, 'kode_mapel' => 'MP-1561872026', 'mapel' => 'Seni Budaya'],
-            ['id_mapel' => 7, 'kode_mapel' => 'MP-1561872043', 'mapel' => 'Bahasa Inggris'],
-            ['id_mapel' => 8, 'kode_mapel' => 'MP-1615002340', 'mapel' => 'Ilmu Pengetahuan Alam'],
+            ['id' => 1, 'kode_mapel' => 'MP-1561560093', 'mapel' => 'Bahasa Indonesia'],
+            ['id' => 2, 'kode_mapel' => 'MP-1561560129', 'mapel' => 'Matematika'],
+            ['id' => 3, 'kode_mapel' => 'MP-1561871991', 'mapel' => 'Biologi'],
+            ['id' => 4, 'kode_mapel' => 'MP-1561872004', 'mapel' => 'Sejarah'],
+            ['id' => 5, 'kode_mapel' => 'MP-1561872013', 'mapel' => 'Teknologi Informasi'],
+            ['id' => 6, 'kode_mapel' => 'MP-1561872026', 'mapel' => 'Seni Budaya'],
+            ['id' => 7, 'kode_mapel' => 'MP-1561872043', 'mapel' => 'Bahasa Inggris'],
+            ['id' => 8, 'kode_mapel' => 'MP-1615002340', 'mapel' => 'Ilmu Pengetahuan Alam'],
         ]);
     }
 

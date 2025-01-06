@@ -10,6 +10,7 @@ import "@assets/plugins/simple-calendar/simple-calendar.css";
 
 const userName = ref("");
 const { props } = usePage();
+const teacherClass = ref("");
 const form = useForm({
     name: props.auth.user.name,
     email: props.auth.user.email,
@@ -27,7 +28,31 @@ const fetchSessionData = async () => {
     }
 };
 
+const fetchClassByTeacher = async () => {
+    try {
+        console.log(`Fetching class for User ID: ${props.auth.user?.id}`);
+
+        const response = await axios.get("/api/class-by-teacher", {
+            params: { name: props.auth.user?.name || "" },
+        });
+
+        teacherClass.value = response.data.class || "Tidak ada kelas terkait";
+        console.log(
+            `User ID: ${props.auth.user?.id} - Kelas: ${teacherClass.value}`
+        );
+    } catch (error) {
+        console.error("Error fetching class by teacher:", error.message);
+        teacherClass.value = "Error";
+    }
+};
+
 onMounted(() => {
+    // Log informasi tentang pengguna yang login
+    console.log(`User ID: ${props.auth.user?.id}`);
+    console.log(`User Name: ${props.auth.user?.name}`);
+    console.log(`User Role: ${props.auth.user?.role_type}`);
+
+    fetchClassByTeacher();
     initFlowbite();
 
     // Fetch session data
@@ -193,16 +218,14 @@ onMounted(() => {
         <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20">
             <Head title="Absensi Siswa" />
             <!-- section -->
-            <div class="col-sm-6 mb-2">
-                <h4
-                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
-                >
-                    Absensi Siswa
-                </h4>
-            </div>
+            <h2
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+            >
+                Absensi Siswa
+            </h2>
 
             <!-- Card Header -->
-            <div class="content bg-yellow-100 p-4 py-6">
+            <div class="content bg-yellow-100 p-4 py-6 mb-10">
                 <div class="grid grid-cols-1 gap-2">
                     <div>
                         <table class="table-auto w-full">
@@ -210,14 +233,12 @@ onMounted(() => {
                                 <tr>
                                     <td class="font-bold">Kelas</td>
                                     <td class="px-2">:</td>
-                                    <td>X-1</td>
+                                    <td>{{ teacherClass }}</td>
                                 </tr>
                                 <tr>
                                     <td class="font-bold">Wali Kelas</td>
                                     <td class="px-2">:</td>
-                                    <td>
-                                        {{ $page.props.auth.user.name }}
-                                    </td>
+                                    <td>{{ $page.props.auth.user.name }}</td>
                                 </tr>
                                 <tr>
                                     <td class="font-bold">Tahun Pelajaran</td>
@@ -229,29 +250,33 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <!-- {{ $page.props.auth.user.name }}  --->
+
+            <div class="content p-4 py-6 mb-4">
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <p>Overview Absensi</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content bg-gray-100 p-4 py-6">
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <p>All || In Progress || Future</p>
+                    </div>
+                </div>
+            </div>
+
             <section class="content py-6">
                 <!-- Card Body -->
                 <div class="p-4">
-                    <div class="flex flex-wrap gap-4">
+                    <div
+                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                    >
                         <!-- Month Cards -->
                         <a
                             href="AbsensiSiswaSatu"
-                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
-                        >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Desember 2024</span
-                                >
-                            </div>
-                        </a>
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaDua"
-                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
+                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -262,10 +287,11 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+
                         <!-- Month Cards -->
                         <a
-                            href="/AbsensiSiswaTiga"
-                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
+                            href="/AbsensiSiswaDua"
+                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -276,10 +302,11 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+
                         <!-- Month Cards -->
                         <a
-                            href="/AbsensiSiswaEmpat"
-                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
+                            href="/AbsensiSiswaTiga"
+                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -290,10 +317,11 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+
                         <!-- Month Cards -->
                         <a
-                            href="/AbsensiSiswaLima"
-                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
+                            href="/AbsensiSiswaEmpat"
+                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -304,10 +332,11 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+
                         <!-- Month Cards -->
                         <a
-                            href="/AbsensiSiswaEnam"
-                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5"
+                            href="/AbsensiSiswaLima"
+                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition"
                         >
                             <span class="text-2xl mr-4">
                                 <i class="fas fa-calendar"></i>
@@ -318,11 +347,24 @@ onMounted(() => {
                                 >
                             </div>
                         </a>
+
+                        <!-- Month Cards -->
+                        <a
+                            href="/AbsensiSiswaEnam"
+                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition"
+                        >
+                            <span class="text-2xl mr-4">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <div>
+                                <span class="block text-lg font-bold"
+                                    >Juni 2025</span
+                                >
+                            </div>
+                        </a>
                     </div>
                 </div>
             </section>
-
-            <!-- end section-->
         </main>
 
         <!-- Sidebar -->
@@ -430,9 +472,9 @@ onMounted(() => {
                                         stroke="black"
                                         stroke-width="4"
                                     />
-                                    <span class="ml-3">Enrollment Tugas</span>
                                 </g>
                             </svg>
+                            <span class="ml-3">Enrollment Tugas</span>
                         </a>
                     </li>
                     <li>
@@ -458,6 +500,24 @@ onMounted(() => {
                     <li>
                         <a
                             href="bukuPenghubung"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 576 512"
+                                class="w-6 h-6"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                                />
+                            </svg>
+                            <span class="ml-3">Identitas Siswa</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="bukuPenghubung1"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

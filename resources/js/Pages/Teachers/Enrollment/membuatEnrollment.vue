@@ -40,6 +40,7 @@ const getEnrollment = async () => {
         const response = await axios.get(
             `/enrollments/${selectedEnrollmentId.value}`
         );
+        console.log("Response data getenrollment:", response.data);
         newEnrollment.value.status = response.data.status;
         newEnrollment.value.studentId = response.data.student_id;
         newEnrollment.value.courseId = response.data.course_id;
@@ -92,7 +93,7 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
             (student) => student.id === enrollmentData.student_id
         );
         const selectedCourse = courses.find(
-            (course) => course.id_mapel === enrollmentData.mapel_id
+            (course) => course.id === enrollmentData.mapel_id
         );
 
         // Debugging found data
@@ -100,9 +101,7 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
         console.log("Selected Course:", selectedCourse);
 
         // Memastikan bahwa courseId diperbarui
-        newMark.value.courseId = selectedCourse
-            ? selectedCourse.id_mapel
-            : mapelId;
+        newMark.value.courseId = selectedCourse ? selectedCourse.id : mapelId;
         newMark.value.mapelId = enrollmentData.mapel_id; // Set mapelId dari API jika ada
 
         // Log tambahan untuk memastikan newMark terupdate
@@ -133,29 +132,11 @@ const closeModal = () => {
 };
 
 const searchQuery = ref("");
-
-// Data dummy untuk debugging
-
-/*
-const paginatedEnrollments = computed(() => {
-    const start = (currentPage.value - 1) * perPage;
-    const end = start + perPage;
-    return enrollments.value.slice(start, end);
-});
-*/
-
-/*
-const paginatedEnrollments = computed(() => {
-    const start = (currentPage.value - 1) * perPage.value;
-    const end = start + perPage.value;
-    return enrollments.value.slice(start, end); // Computed hanya membaca, tidak menulis
-});
-*/
 const enrollments = ref([]);
 const paginatedEnrollments = ref([]);
 const currentPage = ref(1); // Halaman aktif
 const totalPages = ref(1);
-const perPage = ref(5); // Jumlah per halaman
+const perPage = ref(10); // Jumlah per halaman
 
 console.log("Current Page:", currentPage.value);
 console.log("Enrollments Data:", enrollments.value);
@@ -165,23 +146,19 @@ console.log("Per Page:", perPage.value);
 
 const fetchDataForPage = async (page) => {
     try {
-        const response = await axios.get(`/api/enrollments?page=${page}`);
+        const response = await axios.get(
+            `/api/enrollments?page=${page}&per_page=${perPage.value}`
+        );
         console.log("API Response:", response.data);
 
         if (response.data && Array.isArray(response.data.data)) {
             enrollments.value = response.data.data;
             console.log("Updated Enrollments:", enrollments.value);
 
-            // Perbarui total halaman
-            totalPages.value = Math.ceil(response.data.total / perPage.value);
+            // Perbarui total halaman dan total items berdasarkan data yang diterima
+            totalPages.value = response.data.pagination.total_pages;
+            currentPage.value = response.data.pagination.current_page;
             console.log("Calculated Total Pages:", totalPages.value);
-
-            if (response.data.data.length === 0) {
-                console.log("Page is empty, staying on the current page.");
-                enrollments.value = [];
-            } else {
-                updatePaginatedEnrollments(); // Perbarui data berdasarkan halaman yang benar
-            }
         }
     } catch (error) {
         console.error("Error fetching data:", error);
@@ -304,28 +281,11 @@ const fetchEnrollments = async () => {
 };
 
 const totalEnrollments = computed(() => enrollments.value.length);
-/*
-const activeEnrollments = computed(
-    () =>
-        enrollments.value.filter(
-            (enrollment) => enrollment?.status === "active"
-        ).length
-);
-*/
 
 const activeEnrollments = computed(
     () => enrollments.value.filter((e) => e.status === "active").length
 );
 
-/*
-const inactiveEnrollments = computed(
-    () =>
-        enrollments.value.filter(
-            (enrollment) => enrollment?.status === "inactive"
-        ).length
-);
-
-*/
 const inactiveEnrollments = computed(
     () => enrollments.value.filter((e) => e.status === "inactive").length
 );
@@ -424,6 +384,7 @@ const addMark = async () => {
         if (!numericEnrollmentId || isNaN(numericEnrollmentId)) {
             throw new Error("Invalid enrollment ID: Expected a numeric value");
         }
+
         console.log("Mark before conversion:", newMark.value.mark);
         const markValue = Number(newMark.value.mark);
         console.log("Mark after conversion:", markValue);
@@ -433,13 +394,35 @@ const addMark = async () => {
 
         console.log("Mark value:", markValue);
 
+        if (!newMark.value.remark || newMark.value.remark.trim() === "") {
+            throw new Error("Description (remark) is required.");
+        }
+
+        // Menambahkan log untuk memastikan teacher_id
+        console.log("Teacher ID:", newMark.value.teacher_id);
+
         // Kirim data ke API
         const response = await axios.post("/api/marks", {
             enrollment_id: numericEnrollmentId,
             mark: markValue,
+            status: newMark.value.status,
+            remark: newMark.value.remark,
+            teacher_id: newMark.value.teacher_id ?? null, // Kirimkan null jika tidak ada teacher_id
         });
 
         console.log("API Response:", response.data);
+
+        if (response.status === 200) {
+            // Reset atau tindak lanjut lainnya
+            newMark.value = {
+                studentId: null,
+                mapelId: null,
+                mark: "",
+                status: "active",
+                remark: "",
+                teacher_id: null,
+            };
+        }
 
         const updatedEnrollment = response.data;
 
@@ -522,6 +505,22 @@ button {
 
 button:hover {
     opacity: 0.8;
+}
+
+.grid div p {
+    font-family: "Poppins", sans-serif;
+    letter-spacing: 1px;
+    line-height: 1.4;
+}
+
+.grid div p span:first-child {
+    font-size: 1.25rem; /* Ukuran untuk judul */
+    color: black; /* Hijau untuk "Pendaftaran Aktif" */
+}
+
+.grid div p span:last-child {
+    font-size: 2rem; /* Ukuran untuk angka */
+    font-weight: 700;
 }
 </style>
 <template>
@@ -671,7 +670,7 @@ button:hover {
             <h2
                 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
             >
-                Enrollment List
+                List Enrollment Siswa
             </h2>
 
             <div v-if="isLoading" class="spinner"></div>
@@ -752,8 +751,8 @@ button:hover {
                             >
                                 <option
                                     v-for="course in courses"
-                                    :key="course.id_mapel"
-                                    :value="course.id_mapel"
+                                    :key="course.id"
+                                    :value="course.id"
                                 >
                                     {{ course.mapel }}
                                 </option>
@@ -883,7 +882,7 @@ button:hover {
                                 :value="
                                     courses.find(
                                         (course) =>
-                                            course.id_mapel === newMark.courseId
+                                            course.id === newMark.courseId
                                     )?.mapel || 'Mata pelajaran tidak ditemukan'
                                 "
                                 id="courseName"
@@ -968,21 +967,41 @@ button:hover {
                     <p
                         class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600"
                     >
-                        Total Enrollments: {{ totalEnrollments }}
+                        <span
+                            class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
+                            >TOTAL PENDAFTARAN</span
+                        >
+                        <span class="flex items-center justify-center gap-2">
+                            <i class="fas fa-users"></i>{{ totalEnrollments }}
+                        </span>
                     </p>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg text-center">
                     <p
                         class="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600"
                     >
-                        Active Enrollments: {{ activeEnrollments }}
+                        <span
+                            class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
+                            >PENDAFTARAN AKTIF</span
+                        >
+                        <span class="flex items-center justify-center gap-2">
+                            <i class="fas fa-user-check"></i>
+                            {{ activeEnrollments }}
+                        </span>
                     </p>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-lg text-center">
                     <p
                         class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600"
                     >
-                        Inactive Enrollments: {{ inactiveEnrollments }}
+                        <span
+                            class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
+                            >PENDAFTARAN TIDAK AKTIF</span
+                        >
+                        <span class="flex items-center justify-center gap-2">
+                            <i class="fas fa-user-times"></i>
+                            {{ inactiveEnrollments }}
+                        </span>
                     </p>
                 </div>
             </div>
@@ -1000,17 +1019,17 @@ button:hover {
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
                             >
-                                Student Name
+                                Nama Siswa
                             </th>
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
                             >
-                                Course
+                                Mata Pelajaran
                             </th>
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
                             >
-                                Enrollment Date
+                                Tanggal Enrollment
                             </th>
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
@@ -1020,7 +1039,7 @@ button:hover {
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
                             >
-                                Mark
+                                Nilai
                             </th>
                             <th
                                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
@@ -1185,7 +1204,7 @@ button:hover {
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="membuat-enrollment"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg
@@ -1263,6 +1282,24 @@ button:hover {
                     <li>
                         <a
                             href="bukuPenghubung"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 576 512"
+                                class="w-6 h-6"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                                />
+                            </svg>
+                            <span class="ml-3">Identitas Siswa</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="bukuPenghubung1"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

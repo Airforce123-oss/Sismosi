@@ -11,7 +11,7 @@ class CreateEnrollmentsTable extends Migration
         Schema::create('enrollments', function (Blueprint $table) {
             $table->id(); // Kolom ID utama
             $table->foreignId('student_id')->constrained()->onDelete('cascade'); // Relasi ke tabel students
-            $table->foreignId('mapel_id')->constrained('master_mapel', 'id_mapel')->onDelete('cascade'); // Relasi ke tabel master_mapel
+            $table->foreignId('mapel_id')->constrained('master_mapel', 'id')->onDelete('cascade'); // Relasi ke tabel master_mapel
             $table->date('enrollment_date'); // Tanggal pendaftaran
             $table->enum('status', ['active', 'inactive']); // Status enrollment
 

@@ -10,7 +10,7 @@ class CreateTugasTable extends Migration
     {
         Schema::create('tugas', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('mapel_id')->constrained('master_mapel', 'id_mapel')->onDelete('cascade'); // Menyesuaikan dengan kolom id_mapel
+            $table->foreignId('mapel_id')->constrained('master_mapel', 'id')->onDelete('cascade'); // Menyesuaikan dengan kolom id
             $table->foreignId('teacher_id')->constrained('wali_kelas')->onDelete('cascade');
             $table->text('description');
             $table->timestamps();

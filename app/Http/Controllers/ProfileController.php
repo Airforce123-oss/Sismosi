@@ -41,59 +41,32 @@ class ProfileController extends Controller
         Log::info('User roles on dashboard access:', ['roles' => $roles]);
 
         $totalStudents = Student::count();
+
+        // Tentukan role_type untuk frontend
+        $roleType = $roles->first() ?? 'guest';
     
         // Cek berdasarkan peran dengan switch
         switch (true) {
             case $roles->contains('admin'):
                 return Inertia::render('dashboard', [
                     'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'role_type' => $roleType,
                 ]);
             case $roles->contains('teacher'):
                 return Inertia::render('teachersDashboard', [
                     'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'role_type' => $roleType,
                 ]);
             case $roles->contains('student'):
                 return Inertia::render('studentsDashboard', [
                     'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'role_type' => $roleType,
                 ]);
             default:
                 return redirect()->route('dashboard');
         }
     }
     
-    
-    
-    
-
-    /*
-        if ($user->hasRole('admin')) {
-            return Inertia::render('dashboard');
-        } elseif ($user->hasRole('teacher')) {
-            return Inertia::render('teachersDashboard');
-        } elseif ($user->hasRole('student')) {
-            return Inertia::render('studentsDashboard');
-        } else {
-            return redirect()->route('home'); 
-        }
-    */
-    
-    
-
-      /*
-
-
-            if(auth()->user()->hasRole('admin')){
-            return Inertia::render('dashboard');
-        }elseif(auth()->user()->hasRole('teacher')){
-            return Inertia::render('teachersDashboard');
-        }elseif(auth()->user()->hasRole('student')){
-            return Inertia::render('studentsDashboard');
-        }
-      */
-
-
-    
-
     /**
      * Update the user's profile information.
      */

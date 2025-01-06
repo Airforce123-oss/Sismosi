@@ -8,7 +8,6 @@ use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
-
 class AuthController extends Controller
 {
     // Metode untuk menangani login
@@ -17,11 +16,21 @@ class AuthController extends Controller
         // Validasi input
         $credentials = $request->only('email', 'password');
 
+        // Cek kredensial dan autentikasi
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-            //$token = $user->createToken('YourAppName')->plainTextToken; // Membuat token untuk user
 
-            //return response()->json(['token' => $token]);
+            // Menentukan pengalihan berdasarkan role
+            if ($user->hasRole('student')) {
+                // Jika user adalah student, redirect ke student dashboard
+                return redirect()->route('student.dashboard');
+            } elseif ($user->hasRole('teacher')) {
+                // Jika user adalah teacher, redirect ke teacher dashboard
+                return redirect()->route('teacher.dashboard');
+            }
+            
+            // Pengalihan default, jika tidak ada role yang cocok
+            return redirect()->route('default.dashboard'); 
         }
 
         // Jika login gagal
@@ -72,6 +81,4 @@ class AuthController extends Controller
             'data' => $newToken,
         ]);
     }
-    
-
 }

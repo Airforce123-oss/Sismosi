@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -37,15 +38,29 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $admin = Admin::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+        //$admin = Admin::create([
+        //    'name' => $request->name,
+         //   'email' => $request->email,
+          ///  'password' => Hash::make($request->password),
+       // ]);
+
+         
+        $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
         ]);
+        
 
-        event(new Registered($admin));
+        // Memastikan role hanya ditetapkan jika belum ada
+        if (!$user->hasRole('teacher')) {
+        $user->assignRole('teacher');
+        }
 
-        Auth::guard('admin')->login($admin);
+    
+        //event(new Registered($admin));
+
+        //Auth::guard('admin')->login($admin);
 
         return redirect()->intended(route('dashboard', absolute: false));
         //return redirect(RouteServiceProvider::HOME);

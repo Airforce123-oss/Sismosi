@@ -6,6 +6,36 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $no_induk_id
+ * @property int $class_id
+ * @property int $gender_id
+ * @property int $religion_id
+ * @property string $name
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Attendance> $attendances
+ * @property-read int|null $attendances_count
+ * @property-read \App\Models\Classes $class
+ * @property-read \App\Models\Gender $gender
+ * @property-read \App\Models\NoInduk $noInduk
+ * @property-read \App\Models\Religion $religion
+ * @method static \Illuminate\Database\Eloquent\Builder|Student newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Student newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Student query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereClassId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereGenderId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereNoIndukId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereReligionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Student whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Student extends Model
 {
 
@@ -37,13 +67,7 @@ class Student extends Model
     {
         return $this->belongsTo(Religion::class, 'religion_id');
     }
-
-    // Attendance.php
-    public function student()
-    {
-    return $this->belongsTo(Student::class, 'student_id');
-    }
-
+    
     // Student.php
     public function attendances()
     {
@@ -52,7 +76,7 @@ class Student extends Model
 
     public function index(Request $request)
 {
-    $perPage = $request->input('per_page', 5);
+    $perPage = $request->input('per_page', 10);
     $students = Student::with(['noInduk', 'gender', 'class', 'religion'])
         ->paginate($perPage);
 

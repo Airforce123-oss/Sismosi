@@ -1,61 +1,385 @@
 <script setup>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { initFlowbite } from "flowbite";
+import axios from "axios";
+import { useForm, usePage } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import VueApexCharts from "vue-apexcharts";
-import ApexCharts from "apexcharts";
-import { Link, useForm, usePage } from "@inertiajs/vue3";
-import $ from "jquery";
 
-// Data siswa
-const studentProfile = ref({
-    name: "John Doe",
-    studentId: "12345",
-    gender: "Laki-laki",
-    class: "10A",
-    parentName: "Mr. Doe",
-    address: "Jl. Pendidikan No. 1",
+// State for student profile
+const studentProfile = ref({});
+const paginatedBooks = ref([]);
+const searchQuery = ref("");
+
+// Modal state
+const showModalAdd = ref(false);
+const showModalEdit = ref(false);
+
+// Function to open the modal
+const openAddModal = () => {
+    showModalAdd.value = true;
+    showModalEdit.value = false;
+};
+
+const editStudent = (student) => {
+    // Set form fields with the current student data
+    console.log("Student received in editStudent:", student);
+    form.name = student.name;
+    form.student_id = student.student_id;
+    form.gender = student.gender;
+    form.class_id = student.class_id;
+    form.parentName = student.parent_name;
+    form.address = student.address;
+
+    // Open the modal
+    showModalEdit.value = true;
+};
+
+// Function to close the modal
+const closeModal = () => {
+    showModalAdd.value = false;
+    showModalEdit.value = false;
+};
+
+const students = ref([]);
+
+const props = defineProps({
+    auth: { type: Object },
+    classes_for_student: {
+        type: Object,
+        required: true,
+    },
+    teachers: { type: Object, default: () => ({ data: [] }) },
+    genders: {
+        type: Array,
+        default: () => [], // Pastikan `genders` adalah array meskipun kosong
+    },
 });
 
-// Data buku penghubung
-const books = ref([
+console.log("Classes for student:", props.classes_for_student);
+
+const classesForStudent = props.classes || {};
+console.log(classesForStudent);
+
+const detailStudentsState = ref([]);
+console.log(detailStudentsState.value);
+
+const getClassName = (classId) => {
+    const classItem = props.classes_for_student.find(
+        (item) => item.id === classId
+    );
+    return classItem ? classItem.name : "-";
+};
+
+const genders = [...props.genders];
+
+const getGenderName = (id) => {
+    const genderItem = props.genders.find((item) => item.id === id); // Asumsi item memiliki `id`
+    return genderItem ? genderItem.name : "-";
+};
+
+watch(
+    () => props.classes_for_student,
+    (newValue) => {
+        console.log("Data classes_for_student:", newValue);
+    }
+);
+
+const form = useForm({
+    name: "",
+    student_id: "",
+    gender: "",
+    class_id: "",
+    parentName: "",
+    address: "",
+});
+
+console.log("Form Data yang Dikirim:", {
+    name: form.name,
+    student_id: form.student_id,
+    class_id: form.class_id,
+    gender: form.gender,
+    parent_name: form.parentName,
+    address: form.address,
+});
+
+console.log("parentName:", form.parentName);
+
+const studentData = ref(null);
+
+const addStudentData = (newStudent) => {
+    if (newStudent) {
+        students.value.push(newStudent); // Menambahkan data siswa baru
+    }
+};
+
+// Example entries
+const entries = ref([
     {
-        id: 1,
-        createdBy: "Guru",
-        info: "Saya ingin menyampaikan tentang perkembangan akademik anak Anda...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        date: "11 Okt 2023",
+        parentName: "Nia Gustiani",
+        studentName: "Rangea Pratama",
+        gender: "L",
+        class: "X IPS 3",
+        issue: "Ketahuan membawa rokok ke sekolah",
+        action: "Siswa diberi sanksi oleh BK dan orang tua diminta untuk bekerjasama memantau anak di rumah",
+        note: "",
     },
     {
-        id: 2,
-        createdBy: "Guru",
-        info: "Selamat siang, wali siswa! Anak Anda sangat antusias dalam kegiatan...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        date: "16 Nov 2023",
+        parentName: "Dede Purwati",
+        studentName: "Syifaus Saadah",
+        gender: "P",
+        class: "X IPS 3",
+        issue: "Konsultasi beasiswa siswa berprestasi",
+        action: "Siswa diarahkan mengikuti seleksi yang berkaitan dengan penambahan pengetahuan akademik",
+        note: "",
     },
     {
-        id: 3,
-        createdBy: "Guru",
-        info: "Selamat liburan! Semoga Anda dan keluarga menikmati waktu bersama...",
-        readByTeacher: "Y",
-        readByParent: "Y",
+        date: "20 Nov 2023",
+        parentName: "Popon Rohayati",
+        studentName: "Zakey Muhammad Husni",
+        gender: "L",
+        class: "X IPS 3",
+        issue: "Konsultasi perihal pembelajaran di sekolah",
+        action: "Siswa diberikan stimulus agar bisa lebih konsentrasi dan semangat mengikuti pembelajaran di sekolah",
+        note: "",
     },
 ]);
 
-// Pagination state
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
-
-// Pagination logic
-const paginatedBooks = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return books.value.slice(start, end);
+const filter = ref({
+    class: "",
+    gender: "",
 });
+
+const uniqueClasses = computed(() => {
+    const classes = entries.value.map((entry) => entry.class);
+    return [...new Set(classes)];
+});
+
+const filteredEntries = computed(() => {
+    return entries.value.filter((entry) => {
+        const matchClass = filter.value.class
+            ? entry.class === filter.value.class
+            : true;
+        const matchGender = filter.value.gender
+            ? entry.gender === filter.value.gender
+            : true;
+        return matchClass && matchGender;
+    });
+});
+
+const books = ref({ data: [], total: 0, per_page: 5 });
+const currentPage = ref(1);
+const itemsPerPage = 5;
+const totalPages = ref(0);
+
+const fetchBooks = async () => {
+    const response = await axios.get(
+        `/api/buku_penghubungs?page=${currentPage.value}`
+    );
+    books.value = response.data;
+    totalPages.value = Math.ceil(books.value.total / itemsPerPage);
+};
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+        fetchBooks();
+    }
+};
+
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--;
+        fetchBooks();
+    }
+};
+
+// Fetch student data from API
+const fetchStudents = async () => {
+    let page = 1;
+    let allStudents = [];
+    try {
+        let response;
+        do {
+            response = await axios.get(
+                `http://127.0.0.1:8000/api/students?page=${page}`
+            );
+            console.log(`Fetched Page ${page}:`, response.data.data);
+            allStudents = [...allStudents, ...response.data.data];
+            page++;
+        } while (response.data.next_page_url);
+
+        students.value = allStudents;
+        console.log("All Students Fetched:", students.value);
+    } catch (error) {
+        console.error("Error fetching students:", error);
+    }
+};
+
+const fetchDetailStudents = async () => {
+    let page = 1;
+    let allDetails = []; // Array untuk menampung semua data
+    try {
+        let response;
+        do {
+            // Fetch data dari API detailstudents dengan parameter page
+            response = await axios.get(
+                `http://127.0.0.1:8000/api/detailstudents?page=${page}`
+            );
+            console.log(`Fetched Page ${page}:`, response.data.data);
+
+            // Gabungkan data dari halaman saat ini ke array allDetails
+            allDetails = [...allDetails, ...response.data.data];
+            page++;
+        } while (response.data.next_page_url); // Lanjutkan jika masih ada halaman berikutnya
+
+        console.log("All Detail Students Fetched:", allDetails);
+
+        // Simpan data ke state atau variabel
+        detailStudentsState.value = allDetails; // Misal, menggunakan Vue ref
+    } catch (error) {
+        console.error("Error fetching detail students:", error);
+    }
+};
+
+// Function to handle form submission
+const submitForm = async () => {
+    console.log("Form Data Setelah Validasi:", {
+        name: form.name,
+        student_id: form.student_id,
+        gender: form.gender,
+        class_id: form.class_id,
+        parentName: form.parentName,
+        address: form.address,
+    });
+
+    try {
+        // Mengirim data ke API yang benar (detailstudents)
+        const response = await axios.post("/api/students", {
+            name: form.name,
+            student_id: form.student_id, // pastikan menggunakan student_id sesuai dengan field di tabel
+            class_id: form.class_id, // sesuai dengan field di tabel
+            gender: form.gender,
+            parent_name: form.parentName ?? null, // Send null if no parent name
+            address: form.address ?? null, // Send null if no address
+        });
+
+        console.log("API Response:", response.data);
+
+        // Cek apakah statusnya 200 atau 201 dan pastikan pesan berisi "Siswa berhasil ditambahkan!"
+        if (
+            (response.status === 200 || response.status === 201) &&
+            response.data.message &&
+            response.data.message.includes("Siswa berhasil ditambahkan!")
+        ) {
+            // Menambahkan data siswa baru ke dalam array students
+            addStudentData(response.data.student);
+
+            // Reset form atau tindak lanjut lainnya
+            form.name = "";
+            form.student_id = "";
+            form.gender = "";
+            form.class_id = "";
+            form.parentName = "";
+            form.address = "";
+
+            alert("Data siswa berhasil ditambahkan!");
+        } else {
+            alert(
+                "Terjadi kesalahan saat menambah siswa. Pesan: " +
+                    response.data.message
+            );
+        }
+    } catch (error) {
+        console.error("Error during form submission:", error);
+        alert(
+            "Terjadi kesalahan saat mengirimkan data. Pesan kesalahan: " +
+                error.message
+        );
+    }
+};
+
+const updateStudent = async () => {
+    try {
+        console.log("Student ID:", form.student_id); // Pastikan student_id ada
+
+        let url = null;
+
+        if (form.student_id) {
+            url = `/api/detailstudents/${form.student_id}/detail`;
+            console.log("Generated URL:", url);
+        } else {
+            console.error(
+                "student_id tidak tersedia di form. Pastikan untuk mengisi student_id."
+            );
+            return; // Hentikan eksekusi jika student_id tidak ada
+        }
+
+        console.log("Request URL:", url);
+
+        console.log("Payload data:", {
+            name: form.name,
+            student_id: form.student_id,
+            gender: form.gender,
+            class_id: form.class_id,
+            parent_name: form.parentName,
+            address: form.address,
+        });
+
+        console.log("Form student_id:", form.student_id); // Pastikan student_id sudah ada
+
+        // Gunakan PUT untuk update
+        const response = await axios.put(url, {
+            name: form.name,
+            student_id: form.student_id,
+            gender: form.gender,
+            class_id: form.class_id,
+            parent_name: form.parentName,
+            address: form.address,
+        });
+
+        if (response.status === 200) {
+            alert("Data siswa berhasil diperbarui!");
+            showModalEdit.value = false;
+            fetchStudents();
+        }
+    } catch (error) {
+        console.error(
+            "Error updating student:",
+            error.response ? error.response.data : error.message
+        );
+        alert("Terjadi kesalahan saat memperbarui data siswa.");
+    }
+};
+
+// Call the fetch function when the component is mounted
 onMounted(() => {
+    console.log("Component Mounted");
+    getGenderName();
+    updateStudent();
+    fetchDetailStudents();
+    fetchStudents();
     initFlowbite();
 });
 </script>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+table th,
+table td {
+    text-align: left;
+}
+</style>
+
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -70,7 +394,6 @@ onMounted(() => {
                         class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                         <svg
-                            aria-hidden="true"
                             class="w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -83,7 +406,6 @@ onMounted(() => {
                             ></path>
                         </svg>
                         <svg
-                            aria-hidden="true"
                             class="hidden w-6 h-6"
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -104,43 +426,21 @@ onMounted(() => {
                             alt=""
                         />
                         <span
-                            class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SISTEM MONITORING SISWA</span
+                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
+                            >SMA BARUNAWATI SURABAYA</span
                         >
                     </a>
                 </div>
                 <div class="flex items-center lg:order-2">
-                    <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            aria-hidden="true"
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
                     <!-- Apps -->
                     <button
                         type="button"
                         class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">View notifications</span>
-                    </button>
+                    ></button>
 
                     <button
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        type="button"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown"
@@ -165,22 +465,27 @@ onMounted(() => {
                     </button>
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown"
                     >
-                        <div class="py-3 px-4">
-                            <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                >{{ $page.props.auth.user.email }}</span
+                        <div class="py-3 px-3">
+                            <div
+                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
                             >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >{{ $page.props.auth.user.name }}</span
-                            >
-                            <span
-                                class="block text-sm text-gray-900 truncate dark:text-white"
-                                >{{ $page.props.auth.user.role_type }}</span
-                            >
+                                <span
+                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
+                                    >{{ $page.props.auth.user.email }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                >
+                                    {{ $page.props.auth.user.name }}
+                                </span>
+                                <span
+                                    class="block text-sm text-gray-900 truncate dark:text-white"
+                                    >{{ form.role_type }}</span
+                                >
+                            </div>
                         </div>
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
@@ -201,128 +506,395 @@ onMounted(() => {
 
         <!-- Main -->
 
-        <main class="p-7 md:ml-64 h-screen pt-20">
-            <!-- Identitas Siswa -->
-            <div class="p-6 bg-white shadow rounded-lg mb-10">
-                <h2 class="text-xl font-bold mb-4">Identitas Siswa</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p>
-                            <strong>Nama Siswa:</strong>
-                            {{ studentProfile.name }}
-                        </p>
-                        <p>
-                            <strong>Nomor Induk Siswa:</strong>
-                            {{ studentProfile.studentId }}
-                        </p>
-                        <p>
-                            <strong>Jenis Kelamin:</strong>
-                            {{ studentProfile.gender }}
-                        </p>
-                    </div>
-                    <div>
-                        <p>
-                            <strong>Kelas:</strong> {{ studentProfile.class }}
-                        </p>
-                        <p>
-                            <strong>Nama Orang Tua:</strong>
-                            {{ studentProfile.parentName }}
-                        </p>
-                        <p>
-                            <strong>Alamat:</strong>
-                            {{ studentProfile.address }}
-                        </p>
-                    </div>
-                </div>
+        <main class="p-7 md:ml-64 h-screen">
+            <h2
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+            >
+                Identitas Siswa
+            </h2>
+            <div
+                class="flex flex-wrap sm:flex-nowrap justify-between items-center space-y-4 sm:space-y-0 mb-10"
+            >
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Cari Identitas Siswa..."
+                    class="w-full sm:w-auto px-4 py-2 border rounded-md"
+                />
+                <button
+                    class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
+                    @click="openAddModal"
+                >
+                    <i class="fa fa-plus mr-2"></i> Tambah Identitas Siswa
+                </button>
             </div>
-
-            <!-- Data Buku Penghubung -->
-            <div class="p-6 bg-white shadow rounded-lg">
-                <h2 class="text-xl font-bold mb-4">Data Buku Penghubung</h2>
-                <div class="mb-4 flex justify-between items-center">
-                    <div>
-                        <label for="entries" class="mr-2">Show</label>
-                        <select
-                            id="entries"
-                            class="border rounded p-1"
-                            v-model="itemsPerPage"
-                        >
-                            <option :value="10">10</option>
-                            <option :value="25">25</option>
-                            <option :value="50">50</option>
-                            <option :value="100">100</option>
-                        </select>
-                        <span class="ml-2">entries</span>
-                    </div>
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            class="border rounded p-1"
-                        />
-                    </div>
-                </div>
-
-                <!-- Table -->
-                <table class="min-w-full bg-white border">
+            <!-- Identitas Siswa -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
+                <table class="min-w-full table-auto">
                     <thead>
-                        <tr>
-                            <th class="border px-4 py-2">No</th>
-                            <th class="border px-4 py-2">Dibuat Oleh</th>
-                            <th class="border px-4 py-2">Informasi</th>
-                            <th class="border px-4 py-2">Dibaca Guru</th>
-                            <th class="border px-4 py-2">Dibaca Wali</th>
+                        <tr class="bg-gray-100">
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                ID
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Nama
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                NIS
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Kelas
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Jenis Kelamin
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Nama Orang Tua
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                            >
+                                Alamat
+                            </th>
+                            <th
+                                class="px-4 py-2 text-left text-sm font-semibold text-gray-700 text-right"
+                            >
+                                Aksi
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="(book, index) in paginatedBooks"
-                            :key="book.id"
+                            v-for="(student, index) in detailStudentsState"
+                            :key="student.id"
                         >
-                            <td class="border px-4 py-2">{{ index + 1 }}</td>
-                            <td class="border px-4 py-2">
-                                {{ book.createdBy }}
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ index + 1 }}
                             </td>
-                            <td class="border px-4 py-2">{{ book.info }}</td>
-                            <td class="border px-4 py-2 text-center">
-                                {{ book.readByTeacher }}
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ student.name || "-" }}
                             </td>
-                            <td class="border px-4 py-2 text-center">
-                                {{ book.readByParent }}
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ student.student_id || "-" }}
+                            </td>
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ getClassName(student.class_id) || "-" }}
+                            </td>
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ student.gender }}
+                            </td>
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ student.parent_name || "No Parent Name" }}
+                            </td>
+                            <td class="px-4 py-2 text-sm text-gray-700">
+                                {{ student.address || "-" }}
+                            </td>
+                            <td
+                                class="px-4 py-2 text-sm text-gray-700 text-right"
+                            >
+                                <div class="flex justify-end gap-2">
+                                    <button
+                                        @click="editStudent(student.id)"
+                                        class="bg-blue-500 text-white py-1 px-4 rounded-lg hover:bg-blue-700"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        @click="deleteStudent(student.id)"
+                                        class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
 
-                <!-- Pagination -->
-                <div class="mt-4 flex justify-between items-center">
-                    <p>
-                        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-                        {{ currentPage * itemsPerPage }} of
-                        {{ books.length }} entries
-                    </p>
-                    <div class="flex items-center">
-                        <button
-                            class="border rounded px-2 py-1 mx-1"
-                            :disabled="currentPage === 1"
-                            @click="currentPage--"
-                        >
-                            Previous
-                        </button>
-                        <button class="border rounded px-2 py-1 mx-1" disabled>
-                            {{ currentPage }}
-                        </button>
-                        <button
-                            class="border rounded px-2 py-1 mx-1"
-                            :disabled="
-                                currentPage >=
-                                Math.ceil(books.length / itemsPerPage)
-                            "
-                            @click="currentPage++"
-                        >
-                            Next
-                        </button>
-                    </div>
+            <!-- Button to open the modal -->
+
+            <!-- Modal tambah  -->
+            <div
+                v-if="showModalAdd"
+                class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                    <h3 class="text-xl font-bold text-center mb-6">
+                        Tambah Identitas Siswa
+                    </h3>
+                    <form @submit.prevent="submitForm">
+                        <div class="mb-4">
+                            <label for="name" class="block mb-2"
+                                >Nama Siswa</label
+                            >
+                            <select
+                                v-model="form.name"
+                                id="name"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Nama Siswa</option>
+                                <!-- Menampilkan opsi nama siswa dari API -->
+                                <option
+                                    v-for="student in students"
+                                    :key="student.id"
+                                    :value="student.name"
+                                >
+                                    {{ student.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="studentId" class="block mb-2"
+                                >Nomor Induk Siswa</label
+                            >
+                            <input
+                                type="text"
+                                placeholder="Nomor Induk Siswa"
+                                v-model="form.student_id"
+                                id="studentId"
+                                class="w-full p-2 border rounded"
+                                @input="validateNumber"
+                                required
+                            />
+                        </div>
+                        <div class="mb-4">
+                            <label for="gender" class="block mb-2"
+                                >Jenis Kelamin</label
+                            >
+                            <select
+                                v-model="form.gender"
+                                id="gender"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="class" class="block mb-2">Kelas</label>
+                            <select
+                                v-model="form.class_id"
+                                id="class_id"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Kelas</option>
+                                <!-- Check if classes data is available before looping -->
+                                <option
+                                    v-for="classItem in props.classes_for_student ||
+                                    []"
+                                    :key="classItem.id"
+                                    :value="classItem.id"
+                                >
+                                    {{ classItem.name }}
+                                </option>
+                                <!-- Fallback message if no data is available -->
+                                <option
+                                    v-if="
+                                        props.classes_for_student?.length === 0
+                                    "
+                                    disabled
+                                >
+                                    No classes available
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="parentName" class="block mb-2"
+                                >Nama Orang Tua</label
+                            >
+                            <input
+                                type="text"
+                                v-model="form.parentName"
+                                id="parentName"
+                                placeholder="Nama Orang Tua"
+                                class="w-full p-2 border rounded"
+                                required
+                            />
+                        </div>
+                        <div class="mb-4">
+                            <label for="address" class="block mb-2"
+                                >Alamat</label
+                            >
+                            <textarea
+                                v-model="form.address"
+                                placeholder="Alamat Siswa"
+                                id="address"
+                                class="w-full p-2 border rounded"
+                                required
+                            ></textarea>
+                        </div>
+                        <div class="flex justify-between">
+                            <button
+                                type="button"
+                                @click="closeModal"
+                                class="bg-gray-500 text-white px-4 py-2 rounded-lg"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                            >
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!--Modal Edit -->
+            <div
+                v-if="showModalEdit"
+                class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                    <h3 class="text-xl font-bold text-center mb-6">
+                        Edit Identitas Siswa
+                    </h3>
+                    <form @submit.prevent="updateStudent">
+                        <div class="mb-4">
+                            <label for="name" class="block mb-2"
+                                >Nama Siswa</label
+                            >
+                            <select
+                                v-model="form.name"
+                                id="name"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Nama Siswa</option>
+                                <!-- Menampilkan opsi nama siswa dari API -->
+                                <option
+                                    v-for="student in students"
+                                    :key="student.id"
+                                    :value="student.name"
+                                >
+                                    {{ student.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="studentId" class="block mb-2"
+                                >Nomor Induk Siswa</label
+                            >
+                            <input
+                                type="text"
+                                placeholder="Nomor Induk Siswa"
+                                v-model="form.student_id"
+                                id="studentId"
+                                class="w-full p-2 border rounded"
+                                @input="validateNumber"
+                                required
+                            />
+                        </div>
+                        <div class="mb-4">
+                            <label for="gender" class="block mb-2"
+                                >Jenis Kelamin</label
+                            >
+                            <select
+                                v-model="form.gender"
+                                id="gender"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="class" class="block mb-2">Kelas</label>
+                            <select
+                                v-model="form.class_id"
+                                id="class_id"
+                                class="w-full p-2 border rounded"
+                                required
+                            >
+                                <option value="">Pilih Kelas</option>
+                                <!-- Check if classes data is available before looping -->
+                                <option
+                                    v-for="classItem in props.classes_for_student ||
+                                    []"
+                                    :key="classItem.id"
+                                    :value="classItem.id"
+                                >
+                                    {{ classItem.name }}
+                                </option>
+                                <!-- Fallback message if no data is available -->
+                                <option
+                                    v-if="
+                                        props.classes_for_student?.length === 0
+                                    "
+                                    disabled
+                                >
+                                    No classes available
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="parentName" class="block mb-2"
+                                >Nama Orang Tua</label
+                            >
+                            <input
+                                type="text"
+                                v-model="form.parentName"
+                                id="parentName"
+                                placeholder="Nama Orang Tua"
+                                class="w-full p-2 border rounded"
+                                required
+                            />
+                        </div>
+                        <div class="mb-4">
+                            <label for="address" class="block mb-2"
+                                >Alamat</label
+                            >
+                            <textarea
+                                v-model="form.address"
+                                placeholder="Alamat Siswa"
+                                id="address"
+                                class="w-full p-2 border rounded"
+                                required
+                            ></textarea>
+                        </div>
+                        <div class="flex justify-between">
+                            <button
+                                type="button"
+                                @click="closeModal"
+                                class="bg-gray-500 text-white px-4 py-2 rounded-lg"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                            >
+                                Simpan
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </main>
@@ -459,6 +1031,24 @@ onMounted(() => {
                     <li>
                         <a
                             href="bukuPenghubung"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 576 512"
+                                class="w-6 h-6"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                            />
+                            </svg>
+                            <span class="ml-3">Identitas Siswa</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="bukuPenghubung1"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

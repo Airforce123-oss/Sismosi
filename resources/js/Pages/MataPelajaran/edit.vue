@@ -16,7 +16,7 @@ console.log("Props Mapel:", props.mapel);
 
 // Form handling using Inertia
 const form = useForm({
-    id_mapel: props.mapel?.id_mapel || "", // Harus ada nilai jika dalam mode edit
+    id: props.mapel?.id || "", // Harus ada nilai jika dalam mode edit
     kode_mapel: props.mapel?.kode_mapel || "",
     mapel: props.mapel?.mapel || "",
 });
@@ -48,13 +48,13 @@ const getSections = async (class_id) => {
 // Submit form function
 function submitForm() {
     console.log("Submitting form data:", form);
-    console.log("ID Mapel:", form.id_mapel);
+    console.log("ID Mapel:", form.id);
 
     // Tentukan metode berdasarkan ada atau tidaknya ID
-    const method = form.id_mapel ? "put" : "post";
-    const routeName = form.id_mapel
-        ? route("matapelajaran.update", { id: form.id_mapel }) // Gunakan route update jika id_mapel ada
-        : route("matapelajaran.store"); // Gunakan route store jika tidak ada id_mapel
+    const method = form.id ? "put" : "post";
+    const routeName = form.id
+        ? route("matapelajaran.update", { id: form.id }) // Gunakan route update jika id ada
+        : route("matapelajaran.store"); // Gunakan route store jika tidak ada id
 
     form[method](routeName, {
         onSuccess: () => {

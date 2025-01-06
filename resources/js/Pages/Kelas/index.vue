@@ -1,20 +1,21 @@
 <script setup>
 import { initFlowbite } from "flowbite";
 import Pagination from "../../Components/Pagination.vue";
-import MagnifyingGlass from "../../Components/Icons/MagnifyingGlass.vue";
-import { Link, Head, useForm, usePage, router } from "@inertiajs/vue3";
-import axios from "axios";
+import { Link, useForm, usePage, router } from "@inertiajs/vue3";
 import Swal from "sweetalert2";
-import { onMounted, ref, watch, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
+import { Head } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import MagnifyingGlass from "../../Components/Icons/MagnifyingGlass.vue";
 
+// Define props passed to the component
 const props = defineProps({
     classes_for_student: {
         type: Object,
         required: true,
     },
 });
-
+// Define form and page-related variables
 const form = useForm({
     id_kelas: "",
     kode_kelas: "",
@@ -24,6 +25,7 @@ const form = useForm({
 let pageNumber = ref(1),
     searchTerm = ref(usePage().props.search ?? "");
 
+// URL for fetching classes with pagination and search parameters
 let studentsUrl = computed(() => {
     const url = new URL(route("kelas.index"));
 
@@ -36,19 +38,20 @@ let studentsUrl = computed(() => {
     return url;
 });
 
+// URL for mapels (subjects) with pagination and search parameters
 const mapelsUrl = computed(() => {
     const url = new URL(route("kelas.index"));
-    url.searchParams.set("page", pageNumber.value); // pastikan pageNumber ada
+    url.searchParams.set("page", pageNumber.value); // Ensure pageNumber is included
     if (searchTerm.value) {
         url.searchParams.set("search", searchTerm.value);
     }
     return url;
 });
 
+// Watch for changes in mapelsUrl and trigger page navigation
 watch(
     () => mapelsUrl.value,
     (updatedMapelsUrl) => {
-        console.log("Navigating to URL:", updatedMapelsUrl.toString());
         router.visit(updatedMapelsUrl.toString(), {
             preserveState: true,
             preserveScroll: true,
@@ -57,6 +60,7 @@ watch(
     }
 );
 
+// Form for deletion
 const deleteForm = useForm({});
 
 const deleteClass = (id) => {
@@ -85,24 +89,34 @@ const deleteClass = (id) => {
 
             Swal.fire(
                 "Terhapus!",
-                "Data guru telah berhasil dihapus.",
+                "Data kelas telah berhasil dihapus.",
                 "success"
             );
         }
     });
 };
 
+// Set the current page based on the pagination link clicked
 const currentPage = ref(1);
 const updatedPageNumber = (link) => {
     const pageNumber = new URLSearchParams(link.url.split("?")[1]).get("page");
     currentPage.value = parseInt(pageNumber, 10);
 };
 
+console.log(props.classes_for_student);
+
+// On mounted, initialize Flowbite
 onMounted(() => {
     initFlowbite();
 });
-</script>
 
+// Example of using Ziggy to generate the route for editing a class
+
+const editClassRoute = (classId) => {
+    // Pastikan classId diberikan sebagai parameter untuk route kelas.edit
+    return route("kelas.edit", { classId });
+};
+</script>
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -276,35 +290,31 @@ onMounted(() => {
                                 class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8"
                             >
                                 <div
-                                    class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                                    class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8"
                                 >
                                     <div
-                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
+                                        class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg relative"
                                     >
                                         <table class="min-w-full bg-white">
-                                            <thead class="bg-gray-50">
+                                            <thead
+                                                class="divide-y divide-gray-200 bg-white-50"
+                                            >
                                                 <tr>
                                                     <th
                                                         scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-1/4"
                                                     >
                                                         ID
                                                     </th>
                                                     <th
                                                         scope="col"
-                                                        class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                                                    >
-                                                        Kode Kelas
-                                                    </th>
-                                                    <th
-                                                        scope="col"
-                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                                        class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-1/2"
                                                     >
                                                         Nama Kelas
                                                     </th>
                                                     <th
                                                         scope="col"
-                                                        class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
+                                                        class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-1/4"
                                                     >
                                                         Action
                                                     </th>
@@ -317,29 +327,18 @@ onMounted(() => {
                                                     v-for="classForStudent in props
                                                         .classes_for_student
                                                         .data"
-                                                    :key="
-                                                        classForStudent.id_kelas
-                                                    "
+                                                    :key="classForStudent.id"
                                                 >
                                                     <td
                                                         class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                     >
-                                                        {{
-                                                            classForStudent.id_kelas
-                                                        }}
+                                                        {{ classForStudent.id }}
                                                     </td>
                                                     <td
                                                         class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                     >
                                                         {{
-                                                            classForStudent.kode_kelas
-                                                        }}
-                                                    </td>
-                                                    <td
-                                                        class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                                                    >
-                                                        {{
-                                                            classForStudent.nama_kelas
+                                                            classForStudent.name
                                                         }}
                                                     </td>
                                                     <td
@@ -347,18 +346,22 @@ onMounted(() => {
                                                     >
                                                         <Link
                                                             :href="
-                                                                route(
-                                                                    'kelas.edit',
-                                                                    classForStudent.id_kelas
+                                                                editClassRoute(
+                                                                    classForStudent.id
                                                                 )
                                                             "
                                                             class="text-indigo-600 hover:text-indigo-900"
-                                                            >Edit</Link
                                                         >
+                                                            Edit
+                                                        </Link>
+                                                    </td>
+                                                    <td
+                                                        class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                                                    >
                                                         <button
                                                             @click="
                                                                 deleteClass(
-                                                                    classForStudent.id_kelas
+                                                                    classForStudent.id
                                                                 )
                                                             "
                                                             class="ml-2 text-indigo-600 hover:text-indigo-900"
@@ -370,6 +373,8 @@ onMounted(() => {
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <!-- Pagination -->
                                     <Pagination
                                         v-if="props.classes_for_student.meta"
                                         :data="props.classes_for_student"

@@ -1,6 +1,6 @@
 @extends('laratrust::panel.layout')
 
-@section('title', 'Roles Assignment')
+@section('title', '3')
 
 @section('content')
   <div class="flex flex-col">
@@ -10,7 +10,7 @@
         x-init="$watch('model', value => value != 'initial' ? window.location = `?model=${value}` : '')"
         class="mt-4 align-middle inline-block min-w-full shadow overflow-hidden sm:rounded-lg border-b border-gray-200 p-4"
       >
-        <span class="text-gray-700">User model to assign roles/permissions</span>
+        <span class="text-gray-700">User model to assign roles/permissionss</span>
         <label class="block w-3/12">
           <select class="form-select block w-full mt-1" x-model="model">
             <option value="initial" disabled selected>Select a user model</option>

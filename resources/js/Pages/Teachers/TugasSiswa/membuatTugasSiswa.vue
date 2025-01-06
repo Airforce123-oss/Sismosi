@@ -9,14 +9,22 @@ import axios from "axios";
 defineProps({
     totalCourses: Number,
     courses: Array,
-    totalTeachers: Number,
+    totalTeachers: Array,
+    students: Array,
     totalCourseHours: Number,
     paginatedEnrollments: Array,
 });
 
-// Initialize Page Properties
-const courses = ref([]);
 const { props } = usePage();
+console.log("Props received:", props.students);
+// Initialize Page Properties
+const courses = ref(props.courses || []);
+const students = ref(props.students || []);
+
+const totalCourses = computed(() => courses.value.length);
+
+console.log("Fetching students...");
+console.log("Fetched students:", toRaw(students.value));
 
 // Form Data for User Authentication
 const form = useForm({
@@ -27,11 +35,7 @@ const form = useForm({
 
 // Data for Courses, Teachers, Students, and Enrollment
 const teachers = ref([]);
-const students = ref([
-    { id: 1, name: "Siswa 1" },
-    { id: 2, name: "Siswa 2" },
-    { id: 3, name: "Siswa 3" },
-]);
+
 const enrollments = ref([]);
 
 // Modal Control
@@ -40,9 +44,10 @@ const isEditModalOpen = ref(false);
 
 // Task Form Data
 const taskForm = ref({
-    mapel_id: null,
+    mapel_id: "",
     description: "",
     teacher_id: "",
+    student_id: "",
 });
 
 const editForm = ref({
@@ -50,7 +55,43 @@ const editForm = ref({
     mapel_id: "",
     description: "",
     teacher_id: "",
+    student_id: "",
 });
+
+const fetchTeachers = async () => {
+    try {
+        const response = await axios.get("/api/teachers");
+
+        // Memastikan response.data dan response.data.data ada dan berbentuk array
+        if (
+            response.data &&
+            response.data.data &&
+            Array.isArray(response.data.data)
+        ) {
+            // Proses data guru (seperti penambahan nama atau atribut lain)
+            response.data.data.forEach((teacher) => {
+                console.log("Nama Guru:", teacher.name);
+            });
+
+            // Perbarui data teachers tanpa menghapus data yang ada
+            response.data.data.forEach((newTeacher) => {
+                const index = teachers.value.findIndex(
+                    (teacher) => teacher.id === newTeacher.id
+                );
+
+                if (index === -1) {
+                    teachers.value.push(newTeacher); // Jika data baru, tambahkan
+                } else {
+                    teachers.value[index] = newTeacher; // Jika ada data lama, update
+                }
+            });
+        } else {
+            console.error("Invalid or empty data for teachers:", response.data);
+        }
+    } catch (error) {
+        console.error("Error fetching teachers:", error);
+    }
+};
 
 // Pagination & Search Data
 const totalPages = ref(1);
@@ -60,6 +101,7 @@ const searchQuery = ref("");
 
 // Teacher & Course Selection
 const selectedTeacherId = ref(null);
+const selectedStudentId = ref(null);
 const selectedCourseId = ref(null);
 
 // Modal Handling Functions
@@ -67,8 +109,55 @@ const showAddModal = () => {
     isTaskModalOpen.value = true;
 };
 
-const closeTaskModal = () => {
-    isTaskModalOpen.value = false;
+const getMapelName = (mapelId) => {
+    const mapel = courses.value.find((course) => course.id === mapelId);
+    return mapel ? mapel.mapel : "Tidak ada nama mata pelajaran";
+};
+
+const getStudentName = (studentId) => {
+    console.log("Mencari nama untuk Student ID:", studentId);
+    console.log("Data students:", toRaw(students.value));
+
+    // Cek apakah students.value adalah array sebelum menggunakan .find()
+    if (Array.isArray(students.value)) {
+        const student = students.value.find(
+            (student) => String(student.id) === String(studentId)
+        );
+
+        if (student) {
+            console.log("Student ditemukan:", student);
+            return student.name;
+        } else {
+            console.log("Student tidak ditemukan untuk ID:", studentId);
+            return "Tidak ada nama siswa";
+        }
+    } else {
+        console.error("students.value bukan array yang valid");
+        return "Data siswa tidak tersedia";
+    }
+};
+
+const getTeacherName = (teacherId) => {
+    // Log the teachers data to ensure it's available
+    const rawTeachers = toRaw(teachers.value); // Remove the Vue proxy if needed
+    // console.log("Teachers data (raw):", rawTeachers);
+
+    // Make sure teachers is an array
+    if (Array.isArray(rawTeachers)) {
+        // Find the teacher by matching the id
+        const teacher = rawTeachers.find((teacher) => teacher.id === teacherId);
+
+        if (teacher) {
+            console.log("Teacher found:", teacher.name);
+            return teacher.name;
+        } else {
+            //console.log("Teacher not found for ID:", teacherId);
+            return "Tidak ada nama guru";
+        }
+    } else {
+        console.log("Teachers data is not an array");
+        return "Tidak ada nama guru";
+    }
 };
 
 // Generate Dummy Enrollments Data
@@ -89,10 +178,17 @@ watch(
 );
 
 watch(
+    () => students.value,
+    (newStudents) => {
+        console.log(newStudents);
+    }
+);
+
+watch(
     () => courses.value,
     (newCourses) => {
-        if (newCourses.length > 0 && !taskForm.mapel_id) {
-            taskForm.mapel_id = courses[0]?.id_mapel || null;
+        if (newCourses.length > 0 && !taskForm.value.mapel_id) {
+            taskForm.value.mapel_id = newCourses[0]?.id || null;
         }
         console.log("Courses updated:", newCourses);
     },
@@ -106,32 +202,122 @@ watch(
     }
 );
 
-const mapelName = (mapelId) => {
-    const mapel = courses.value.find((course) => course.id_mapel === mapelId);
-    return mapel ? mapel.mapel : "Unknown Mapel";
+watch(
+    () => taskForm.student_id,
+    (newValue, oldValue) => {
+        console.log("Student ID berubah:", oldValue, "->", newValue);
+    }
+);
+
+// Menambahkan watch untuk update teacher_id
+watch(
+    () => selectedTeacherId.value,
+    (newTeacherId) => {
+        console.log("New Teacher ID:", newTeacherId); // Debug
+        if (newTeacherId) {
+            // Pastikan `teacher_id` berupa string
+            editForm.value.teacher_id = String(newTeacherId);
+        }
+    }
+);
+
+watch(
+    () => selectedStudentId.value,
+    (newstudentId) => {
+        console.log("New Student ID:", newstudentId); // Debug
+        if (newstudentId) {
+            // Pastikan `student_id` berupa string
+            editForm.value.student_id = String(newstudentId);
+        }
+    }
+);
+
+const mapelName = computed(() => {
+    return (mapelId) => {
+        const mapel = courses.value.find((course) => course.id === mapelId);
+        return mapel ? mapel.mapel : "Pilih Mata Pelajaran";
+    };
+});
+
+const saveEnrollmentsToLocalStorage = () => {
+    localStorage.setItem("enrollments", JSON.stringify(enrollments.value));
+};
+
+watch(enrollments, saveEnrollmentsToLocalStorage, { deep: true });
+
+const fetchEnrollments = async () => {
+    try {
+        const response = await axios.get(
+            `/api/enrollments?page=${currentPage.value}`
+        );
+        const newEnrollments = response.data.data;
+
+        // Proses nama guru wali kelas untuk data baru terlebih dahulu
+        newEnrollments.forEach((enrollment) => {
+            const teacherName = enrollment.teacher
+                ? enrollment.teacher.name
+                : "Belum ada wali kelas";
+            console.log("Nama Guru Wali Kelas:", teacherName);
+        });
+
+        // Perbarui enrollments tanpa menghapus data yang ada
+        newEnrollments.forEach((newEnrollment) => {
+            const index = enrollments.value.findIndex(
+                (enrollment) => enrollment.id === newEnrollment.id
+            );
+
+            if (index === -1) {
+                enrollments.value.push(newEnrollment); // Jika data baru, tambahkan
+            } else {
+                enrollments.value[index] = newEnrollment; // Jika ada data lama, update
+            }
+        });
+
+        totalPages.value = response.data.last_page;
+
+        // Setelah menggabungkan, proses data gabungan (opsional)
+        enrollments.value.forEach((enrollment) => {
+            const teacherName = enrollment.teacher
+                ? enrollment.teacher.name
+                : "Belum ada wali kelas";
+            console.log("Nama Guru Wali Kelas:", teacherName);
+        });
+    } catch (error) {
+        console.error("Error fetching enrollments:", error);
+    }
+};
+
+//const modalVisible = ref(false); // Deklarasikan modalVisible
+//const isModalOpen = ref(false);
+const closeTaskModal = () => {
+    console.log("Closing modal - before", isTaskModalOpen.value);
+    isTaskModalOpen.value = false;
+    console.log("Closing modal - after", isTaskModalOpen.value);
 };
 
 // Save Task Function
 const saveTask = async () => {
     try {
-        console.log(
-            "Enrollments before checking for duplicates:",
-            enrollments.value
-        );
-        const isDuplicateTask = enrollments.value.some(
-            (enrollment) =>
-                enrollment.mapel_id === taskForm.value.mapel_id &&
-                enrollment.teacher_id === taskForm.value.teacher_id
-        );
+        console.log("Form Submitted:", taskForm.value);
 
-        if (isDuplicateTask) {
-            console.error("Duplikasi tugas ditemukan!");
-            return;
+        // Konversi teacher_id ke integer
+        taskForm.value.teacher_id = parseInt(taskForm.value.teacher_id);
+
+        taskForm.value.student_id = parseInt(taskForm.value.student_id);
+
+        if (!taskForm.value.teacher_id) {
+            console.error("Teacher ID belum dipilih.");
+            return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
+        }
+
+        if (!taskForm.value.student) {
+            console.error("Student ID belum dipilih.");
+            return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
         }
 
         taskForm.value.teacher_id = selectedTeacherId.value;
-        console.log("Task Form sebelum pengiriman:", taskForm.value);
-        console.log("Courses raw data:", courses.value);
+
+        taskForm.value.student_id = selectedStudentId.value;
 
         // Set CSRF Token in Header
         const token = document.head.querySelector(
@@ -147,70 +333,151 @@ const saveTask = async () => {
             courses.value.length > 0
         ) {
             const rawCourses = toRaw(courses.value);
-            taskForm.value.mapel_id = rawCourses[0]?.id_mapel || null;
-
+            taskForm.value.mapel_id = rawCourses[0]?.id || null;
             console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
-            if (taskForm.value.mapel_id === null) {
-                console.error(
-                    "Tidak ada ID mapel yang valid pada data courses."
-                );
-            }
-        } else if (!courses.value || courses.value.length === 0) {
-            console.error("Data courses tidak tersedia.");
-        } else {
-            console.log("Mapel ID sudah terisi:", taskForm.value.mapel_id);
         }
 
         console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
+
+        if (
+            (!taskForm.value.student_id ||
+                taskForm.value.student_id === null) &&
+            students.value &&
+            students.value.length > 0
+        ) {
+            const rawStudents = toRaw(students.value);
+            taskForm.value.student_id = rawStudents[0]?.id || null;
+            console.log(
+                "Students ID setelah diatur:",
+                taskForm.value.student_id
+            );
+        }
+
+        console.log("Mapel ID setelah diatur:", taskForm.value.student_id);
 
         // Submit Task Data
         const response = await axios.post("/api/tugas", {
             mapel_id: taskForm.value.mapel_id,
             description: taskForm.value.description,
             teacher_id: taskForm.value.teacher_id,
+            student_id: taskForm.value.student_id,
         });
 
-        console.log("Data berhasil disimpan:", response.data);
+        console.log("Respons API setelah submit task:", response.data);
 
-        const newEnrollment = {
-            id: response.data.id, // ID yang diterima dari respons server
-            student_id: taskForm.value.student_id, // pastikan taskForm memiliki student_id yang valid
-            mapel_id: taskForm.value.mapel_id,
-            teacher_id: taskForm.value.teacher_id,
-            description: taskForm.value.description, // Menambahkan description
-            enrollment_date: new Date().toISOString(), // atau data tanggal lainnya
-            status: "active",
-        };
-
-        enrollments.value.push(newEnrollment);
-
-        // Log Task Form setelah pengiriman
-        console.log("Task Form setelah pengiriman:", taskForm.value);
-
-        // Fetch Latest Enrollments Data
-        const enrollmentsResponse = await axios.get("/api/enrollments", {
-            params: { page: currentPage.value },
-        });
-        enrollments.value = enrollmentsResponse.data.data;
-        totalPages.value = enrollmentsResponse.data.last_page;
-
-        closeTaskModal();
+        if (response.data && response.data.tugas) {
+            console.log("Tugas berhasil disimpan:", response.data);
+            closeTaskModal(); // Tutup modal setelah berhasil menyimpan
+        } else {
+            console.log("Gagal menyimpan tugas:", response.data);
+        }
     } catch (error) {
         console.error(
             "Error saving task:",
             error.response?.data || error.message || "Unknown error occurred"
         );
+        closeTaskModal();
+    }
+};
+
+const updateTask = async () => {
+    try {
+        console.log("Data sebelum update:", taskForm.value);
+
+        // Konversi teacher_id ke integer
+        editForm.value.teacher_id = parseInt(editForm.value.teacher_id);
+
+        const response = await axios.put(
+            "/api/enrollments/" + taskForm.value.id,
+            editForm.value
+        );
+
+        console.log("Respons API setelah update:", response.data);
+
+        if (response.data && response.data.enrollment) {
+            const updatedEnrollment = response.data.enrollment;
+
+            const index = enrollments.value.findIndex(
+                (enrollment) => enrollment.id === updatedEnrollment.id
+            );
+
+            if (index !== -1) {
+                enrollments.value[index] = { ...updatedEnrollment };
+                console.log(
+                    "Enrollments setelah update:",
+                    toRaw(enrollments.value)
+                );
+            }
+
+            localStorage.setItem("editForm", JSON.stringify(editForm.value));
+            closeEditModal();
+        } else {
+            console.log("Gagal mengupdate enrollment:", response.data);
+        }
+    } catch (error) {
+        console.error(
+            "Error updating task:",
+            error.response?.data || error.message || "Unknown error occurred"
+        );
+    }
+};
+
+const handleTask = () => {
+    if (taskForm.value.id) {
+        // Jika ID ada, berarti ini adalah update
+        updateTask();
+    } else {
+        // Jika ID tidak ada, berarti ini adalah add (tambah)
+        saveTask();
     }
 };
 
 // On Mounted Hook to Fetch Initial Data
 onMounted(async () => {
     try {
-        console.log("Fetching courses data...");
-        const response = await axios.get("/api/courses");
-        courses.value = response.data.data;
-        console.log("Courses loaded:", courses.value);
-        console.log("Response data courses:", response.data);
+        // Ambil data taskForm dan enrollments dari localStorage
+        const savedTaskForm = localStorage.getItem("taskForm");
+        if (savedTaskForm) {
+            taskForm.value = JSON.parse(savedTaskForm);
+        }
+
+        const savedEnrollments = localStorage.getItem("enrollments");
+        if (savedEnrollments) {
+            enrollments.value = JSON.parse(savedEnrollments);
+        } else {
+            fetchEnrollments(); // Jika tidak ada di localStorage, ambil dari server
+        }
+
+        // Cek apakah ada data courses di localStorage
+        const savedCourses = localStorage.getItem("courses");
+        if (savedCourses) {
+            courses.value = JSON.parse(savedCourses); // Ambil data dari localStorage
+            console.log("Courses loaded from localStorage:", courses.value);
+        } else {
+            console.log("Fetching courses data from API...");
+            const response = await axios.get("/api/courses");
+            console.log("Courses received:", response.data);
+            courses.value = response.data.data;
+
+            // Simpan data courses ke localStorage
+            localStorage.setItem("courses", JSON.stringify(courses.value));
+            console.log("Courses loaded from API:", courses.value);
+        }
+
+        const savedStudents = localStorage.getItem("students");
+        if (savedStudents) {
+            students.value = JSON.parse(savedStudents); // Ambil data dari localStorage
+            console.log("Students loaded from localStorage:", students.value);
+        } else {
+            console.log("Fetching students data from API...");
+            const response = await axios.get("/api/students");
+            console.log("Students received:", response.data);
+            students.value = response.data.data;
+
+            // Simpan data courses ke localStorage
+            localStorage.setItem("students", JSON.stringify(students.value));
+            console.log("Students loaded from API:", students.value);
+        }
 
         // Cek apakah mapel_id sudah ada, jika belum atur ke yang pertama
         if (
@@ -218,41 +485,65 @@ onMounted(async () => {
             courses.value &&
             courses.value.length > 0
         ) {
-            taskForm.value.mapel_id = courses.value[0].id_mapel;
+            taskForm.value.mapel_id = courses.value[0].id;
         }
 
+        if (courses.value && courses.value.length > 0) {
+            const rawCourses = toRaw(courses.value);
+            console.log("Raw Courses:", rawCourses); // Debug data raw
+            taskForm.value.mapel_id = rawCourses[0]?.id || null;
+        }
+
+        // Cek apakah student_id sudah ada, jika belum atur ke yang pertama
+        if (
+            !taskForm.value.student_id &&
+            students.value &&
+            students.value.length > 0
+        ) {
+            taskForm.value.student_id = students.value[0].id;
+        }
+
+        if (students.value && students.value.length > 0) {
+            const rawStudents = toRaw(students.value);
+            console.log("Raw Students:", rawStudents); // Debug data raw
+            taskForm.value.student_id = rawStudents[0]?.id || null;
+        }
+
+        console.log("Selected Teacher ID:", selectedTeacherId.value);
+
         console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
+
+        console.log("Selected Student ID:", selectedStudentId.value);
+
+        console.log("Mapel ID setelah diatur:", taskForm.value.student_id);
+
+        // Fetch data guru (teachers)
         const teachersResponse = await axios.get("/api/teachers");
         if (teachersResponse.data && teachersResponse.data.data) {
             teachers.value = teachersResponse.data.data;
         }
 
+        // Ambil data enrollments jika perlu
         const enrollmentsResponse = await axios.get("/api/enrollments", {
             params: { page: currentPage.value },
         });
         enrollments.value = enrollmentsResponse.data.data;
+
+        await fetchTeachers();
+
+        const coursesResponse = await axios.get("/api/courses");
+        courses.value = coursesResponse.data.data;
         totalPages.value = enrollmentsResponse.data.last_page;
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 });
 
-// Computed for Pagination
-const paginatedEnrollmentsManual = computed(() => {
-    return enrollments.value;
-});
+const saveTaskFormToLocalStorage = () => {
+    localStorage.setItem("taskForm", JSON.stringify(taskForm.value));
+};
 
-async function fetchEnrollments() {
-    try {
-        const response = await axios.get(
-            `/api/enrollments?page=${currentPage.value}`
-        );
-        enrollments.value = response.data.data;
-        totalPages.value = response.data.last_page;
-    } catch (error) {
-        console.error("Error fetching enrollments:", error);
-    }
-}
+watch(taskForm, saveTaskFormToLocalStorage, { deep: true });
 
 // Change Page Function for Pagination
 const changePage = async (page) => {
@@ -270,8 +561,10 @@ const changePage = async (page) => {
 
 // Edit and Delete Enrollment Functions
 function editEnrollment(enrollment) {
+    console.log("Editing enrollment:", enrollment);
     editForm.value = { ...enrollment };
     isEditModalOpen.value = true;
+    console.log("Modal state after edit:", isEditModalOpen.value);
 }
 
 function closeEditModal() {
@@ -282,19 +575,76 @@ const deleteEnrollment = (id) => {
     console.log(`Delete enrollment dengan ID: ${id}`);
 };
 
-function submitEdit() {
-    // Mencari enrollment yang akan diupdate berdasarkan ID
-    const index = enrollments.value.findIndex(
-        (enrollment) => enrollment.id === editForm.value.id
-    );
-    if (index !== -1) {
-        // Mengupdate data enrollments
-        enrollments.value[index] = { ...editForm.value };
-    }
+const submitEdit = async () => {
+    try {
+        editForm.value.teacher_id = String(editForm.value.teacher_id);
+        // Log data sebelum pengiriman untuk memastikan data yang dikirim sudah benar
+        console.log("Data yang akan diperbarui:", editForm.value);
 
-    // Menutup modal setelah berhasil menyimpan
-    closeEditModal();
-}
+        // Set CSRF Token di header
+        const token = document.head.querySelector(
+            'meta[name="csrf-token"]'
+        ).content;
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
+        axios.defaults.withCredentials = true;
+
+        // Periksa apakah editForm memiliki ID yang valid
+        if (!editForm.value.id) {
+            console.error("ID form tidak valid.");
+            return; // Hentikan eksekusi jika ID tidak valid
+        }
+
+        // Validasi jika teacher_id belum dipilih
+        if (!editForm.value.teacher_id) {
+            console.error("Teacher ID belum dipilih.");
+            return; // Tampilkan pesan kesalahan jika `teacher_id` belum dipilih
+        }
+
+        // Kirim data update ke API
+        const response = await axios.put(
+            "/api/enrollments/" + editForm.value.id,
+            editForm.value // Kirim seluruh data dari form untuk update
+        );
+
+        // Log respons API setelah update
+        console.log("Respons API setelah update:", response.data);
+
+        // Periksa apakah update berhasil
+        if (response.data && response.data.enrollment) {
+            // Jika berhasil, perbarui data di sisi client
+            const updatedEnrollment = response.data.enrollment;
+
+            // Cari index enrollment yang perlu diperbarui
+            const index = enrollments.value.findIndex(
+                (enrollment) => enrollment.id === updatedEnrollment.id
+            );
+
+            if (index !== -1) {
+                // Update data di enrollments array
+                enrollments.value[index] = updatedEnrollment;
+
+                // Verifikasi pembaruan
+                console.log(
+                    "Enrollments setelah update:",
+                    toRaw(enrollments.value)
+                );
+            }
+
+            // Menyimpan perubahan di localStorage (optional)
+            localStorage.setItem("editForm", JSON.stringify(editForm.value));
+
+            // Menutup modal setelah berhasil menyimpan
+            closeEditModal();
+        } else {
+            console.log("Gagal mengupdate enrollment:", response.data);
+        }
+    } catch (error) {
+        console.error(
+            "Error updating enrollment:",
+            error.response?.data || error.message || "Unknown error occurred"
+        );
+    }
+};
 </script>
 
 <style scoped>
@@ -536,16 +886,18 @@ function submitEdit() {
 
         <!-- Main -->
 
-        <main class="p-7 md:ml-64 h-screen pt-20">
+        <main class="p-7 md:ml-64 h-screen">
             <Head title="Membuat Tugas Siswa" />
-            <h1 class="text-center text-3xl font-semibold mb-10">
-                TUGAS SISWA
-            </h1>
+            <h2
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+            >
+                Tugas Siswa
+            </h2>
 
             <!-- Kontrol -->
             <div class="container mx-auto px-4 py-6">
                 <div
-                    class="flex flex-wrap sm:flex-nowrap justify-between items-center mb-6 space-y-4 sm:space-y-0"
+                    class="flex flex-wrap sm:flex-nowrap justify-between items-center space-y-4 sm:space-y-0"
                 >
                     <input
                         v-model="searchQuery"
@@ -559,267 +911,316 @@ function submitEdit() {
                     >
                         <i class="fa fa-plus mr-2"></i> Tambah Tugas
                     </button>
-
-                    <div
-                        v-if="isTaskModalOpen"
-                        class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
-                    >
-                        <div
-                            class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"
-                        >
-                            <!-- Tombol Close -->
-                            <button
-                                @click="closeTaskModal"
-                                class="absolute top-4 right-4 text-2xl font-bold text-gray-700"
-                            >
-                                X
-                            </button>
-
-                            <!-- Add Judul Modal -->
-                            <h3 class="text-xl font-bold text-center mb-6">
-                                Tambah Tugas Siswa
-                            </h3>
-
-                            <!-- Form -->
-                            <!-- Form -->
-                            <form @submit.prevent="saveTask">
-                                <div class="mb-4">
-                                    <label
-                                        for="course_id"
-                                        class="block text-sm font-medium text-gray-700"
-                                        >Nama Mata Pelajaran</label
-                                    >
-                                    <select
-                                        v-model="taskForm.mapel_id"
-                                        :items="courses"
-                                        item-value="id"
-                                        class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
-                                    >
-                                        <option value="" disabled>
-                                            Pilih Mata Pelajaran
-                                        </option>
-                                        <option
-                                            v-for="course in courses"
-                                            :key="course.id"
-                                            :value="course.id_mapel"
-                                        >
-                                            {{ course.mapel }}
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <!-- Input Deskripsi Tugas -->
-                                <div class="mb-4">
-                                    <label
-                                        for="description"
-                                        class="block text-sm font-medium text-gray-700"
-                                        >Deskripsi</label
-                                    >
-                                    <input
-                                        v-model="taskForm.description"
-                                        type="text"
-                                        id="description"
-                                        class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
-                                        placeholder="Deskripsi tugas"
-                                        required
-                                    />
-                                </div>
-
-                                <!-- Input Guru -->
-                                <div class="mb-4">
-                                    <label
-                                        for="teacher_id"
-                                        class="block text-sm font-medium text-gray-700"
-                                        >Nama Guru</label
-                                    >
-                                    <select
-                                        v-model="selectedTeacherId"
-                                        id="teacher"
-                                        class="w-full px-4 py-2 border rounded-md"
-                                    >
-                                        <option value="" disabled selected>
-                                            Pilih Guru
-                                        </option>
-                                        <option
-                                            v-for="teacher in teachers"
-                                            :key="teacher.id"
-                                            :value="teacher.id"
-                                        >
-                                            {{ teacher.name }}
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div class="flex justify-end space-x-4">
-                                    <button
-                                        type="button"
-                                        @click="closeTaskModal"
-                                        class="btn-cancel"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button type="submit" class="btn-save">
-                                        Simpan
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div
-                            v-if="isEditModalOpen"
-                            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500 bg-opacity-75"
-                        >
-                            <div class="bg-white p-6 rounded-lg w-96">
-                                <h2 class="text-xl font-bold mb-4">
-                                    Edit Enrollment
-                                </h2>
-                                <form @submit.prevent="submitEdit">
-                                    <div class="mb-4">
-                                        <label
-                                            for="mapel_id"
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Mapel</label
-                                        >
-                                        <input
-                                            v-model="editForm.mapel_id"
-                                            type="text"
-                                            id="mapel_id"
-                                            class="mt-1 block w-full border-gray-300 rounded-md"
-                                        />
-                                    </div>
-                                    <div class="mb-4">
-                                        <label
-                                            for="description"
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Description</label
-                                        >
-                                        <input
-                                            v-model="editForm.description"
-                                            type="text"
-                                            id="description"
-                                            class="mt-1 block w-full border-gray-300 rounded-md"
-                                        />
-                                    </div>
-                                    <div class="mb-4">
-                                        <label
-                                            for="teacher_id"
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Teacher ID</label
-                                        >
-                                        <input
-                                            v-model="editForm.teacher_id"
-                                            type="text"
-                                            id="teacher_id"
-                                            class="mt-1 block w-full border-gray-300 rounded-md"
-                                        />
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button
-                                            type="submit"
-                                            class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600"
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            @click="closeEditModal"
-                                            class="bg-gray-500 text-white py-2 px-6 rounded-lg hover:bg-gray-600"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Statistik -->
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+                    v-if="isTaskModalOpen"
+                    class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
                 >
-                    <div class="card">
-                        <h3>Total Tugas</h3>
-                        <p class="text-lg md:text-xl">{{ totalCourses }}</p>
-                    </div>
-                    <div class="card">
-                        <h3>Total Jam Tugas</h3>
-                        <p class="text-lg md:text-xl">{{ totalCourseHours }}</p>
-                    </div>
-                </div>
-
-                <!-- Tabel -->
-                <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
-                    <table class="min-w-full table-auto">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="px-4 py-3 text-left">ID</th>
-                                <th class="px-4 py-3 text-left">
-                                    Mata Pelajaran
-                                </th>
-                                <th class="px-4 py-3 text-left">Deskripsi</th>
-                                <th class="px-4 py-3 text-left">Guru</th>
-                                <th class="px-4 py-3 text-left">Siswa</th>
-                                <th class="px-4 py-3 text-left">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="enrollment in paginatedEnrollmentsManual"
-                                :key="enrollment.id"
-                                class="border-t"
-                            >
-                                <td class="px-4 py-3">{{ enrollment.id }}</td>
-                                <td class="px-4 py-3">
-                                    {{ mapelName(enrollment.mapel_id) }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    {{ enrollment.description }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    {{ enrollment.teacher_id }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    {{ enrollment.student_count || "0" }}
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-800">
-                                    <div class="flex space-x-2">
-                                        <button
-                                            @click="editEnrollment(enrollment)"
-                                            class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            @click="
-                                                deleteEnrollment(enrollment.id)
-                                            "
-                                            class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination Controls -->
-                <div>
-                    <button
-                        v-if="currentPage > 1"
-                        @click="changePage(currentPage - 1)"
+                    <div
+                        class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"
                     >
-                        Previous
-                    </button>
-                    <span>Page {{ currentPage }} of {{ totalPages }}</span>
-                    <button
-                        v-if="currentPage < totalPages"
-                        @click="changePage(currentPage + 1)"
-                    >
-                        Next
-                    </button>
+                        <!-- Add Judul Modal -->
+                        <h3 class="text-xl font-bold text-center mb-6">
+                            Tambah Tugas Siswa
+                        </h3>
+                        <!-- Form -->
+                        <form @submit.prevent="handleTask">
+                            <div class="mb-4">
+                                <label
+                                    for="course_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Nama Mata Pelajaran</label
+                                >
+                                <select
+                                    v-model="taskForm.mapel_id"
+                                    :items="courses"
+                                    item-value="id"
+                                    class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                                >
+                                    <option value="" disabled>
+                                        Pilih Mata Pelajaran
+                                    </option>
+                                    <option
+                                        v-for="course in courses"
+                                        :key="course.id"
+                                        :value="course.id"
+                                    >
+                                        {{ course.mapel }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Input Deskripsi Tugas -->
+                            <div class="mb-4">
+                                <label
+                                    for="description"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Deskripsi</label
+                                >
+                                <textarea
+                                    v-model="editForm.description"
+                                    id="description"
+                                    class="mt-1 block w-full border-gray-300 rounded-md"
+                                    placeholder="Masukkan deskripsi"
+                                ></textarea>
+                            </div>
+
+                            <!-- Input Guru -->
+                            <div class="mb-4">
+                                <label
+                                    for="teacher_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Nama Guru</label
+                                >
+                                <select
+                                    v-model="selectedTeacherId"
+                                    id="teacher"
+                                    class="w-full px-4 py-2 border rounded-md"
+                                >
+                                    <option value="" disabled selected>
+                                        Pilih Guru
+                                    </option>
+                                    <option
+                                        v-for="teacher in teachers"
+                                        :key="teacher.id"
+                                        :value="teacher.id"
+                                    >
+                                        {{ teacher.name }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Input Siswa -->
+                            <div class="mb-4">
+                                <label
+                                    for="course_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Nama Siswa</label
+                                >
+                                <select
+                                    v-model="taskForm.student_id"
+                                    :items="students"
+                                    item-value="id"
+                                    class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                                >
+                                    <option value="" disabled>
+                                        Pilih Siswa
+                                    </option>
+                                    <option
+                                        v-for="student in students"
+                                        :key="student.id"
+                                        :value="student.id"
+                                    >
+                                        {{ student.student }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="flex justify-end space-x-4">
+                                <button
+                                    type="button"
+                                    @click="closeTaskModal"
+                                    class="btn btn-secondary mr-3"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary mr-2"
+                                >
+                                    Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
+                <div
+                    v-if="isEditModalOpen"
+                    class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+                >
+                    <div class="bg-white p-6 rounded-lg w-96 z-50">
+                        <h2 class="text-xl text-center font-bold mb-4">
+                            Edit Enrollment
+                        </h2>
+                        <form @submit.prevent="submitEdit">
+                            <div class="mb-4">
+                                <label
+                                    for="mapel_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Mapel</label
+                                >
+                                <input
+                                    v-model="editForm.mapel_id"
+                                    type="text"
+                                    id="mapel_id"
+                                    class="mt-1 block w-full border-gray-300 rounded-md"
+                                    readonly
+                                />
+                            </div>
+                            <div class="mb-4">
+                                <label
+                                    for="description"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Description</label
+                                >
+                                <textarea
+                                    v-model="editForm.description"
+                                    id="description"
+                                    class="mt-1 block w-full border-gray-300 rounded-md"
+                                    placeholder="Masukkan deskripsi"
+                                ></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label
+                                    for="teacher_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Teacher ID</label
+                                >
+                                <select
+                                    v-model="editForm.teacher_id"
+                                    id="teacher"
+                                    class="w-full px-4 py-2 border rounded-md"
+                                >
+                                    <option value="" disabled selected>
+                                        Pilih Guru
+                                    </option>
+                                    <option
+                                        v-for="teacher in teachers"
+                                        :key="teacher.id"
+                                        :value="teacher.id"
+                                    >
+                                        {{ teacher.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label
+                                    for="teacher_id"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Siswa</label
+                                >
+                                <input
+                                    v-model="editForm.student_id"
+                                    type="text"
+                                    id="mapel_id"
+                                    class="mt-1 block w-full border-gray-300 rounded-md"
+                                    readonly
+                                />
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button
+                                    @click="closeEditModal"
+                                    class="btn btn-primary mr-2"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="btn btn-secondary mr-3"
+                                >
+                                    Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center"
+            >
+                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                    <p
+                        class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600"
+                    >
+                        Total Tugas: {{ totalCourses }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tabel -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
+                <table class="min-w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-3 text-left">ID</th>
+                            <th class="px-4 py-3 text-left">Mata Pelajaran</th>
+                            <th class="px-4 py-3 text-left">Deskripsi</th>
+                            <th class="px-4 py-3 text-left">Guru</th>
+                            <th class="px-4 py-3 text-left">Siswa</th>
+                            <th class="px-4 py-3 text-left">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="enrollment in enrollments"
+                            :key="enrollment.id"
+                            class="border-t"
+                        >
+                            <td class="px-4 py-3">{{ enrollment.id }}</td>
+                            <td class="px-4 py-3">
+                                <!-- Menampilkan Nama Mata Pelajaran -->
+                                <p>
+                                    {{ getMapelName(enrollment.mapel_id) }}
+                                </p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <!-- Pastikan data description ada di sini -->
+                                <p>{{ enrollment.description }}</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <!-- Menampilkan Nama Guru -->
+                                <p>
+                                    {{ getTeacherName(enrollment.teacher_id) }}
+                                </p>
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ getStudentName(enrollment.student_id) }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-800">
+                                <div class="flex space-x-2">
+                                    <button
+                                        @click="editEnrollment(enrollment)"
+                                        class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        @click="deleteEnrollment(enrollment.id)"
+                                        class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700">
+                    Page {{ currentPage }} of {{ totalPages }}
+                </span>
+                <button
+                    v-if="currentPage > 1"
+                    @click="changePage(currentPage - 1)"
+                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                >
+                    Previous
+                </button>
+
+                <button
+                    @click="goToPage(currentPage + 1)"
+                    :disabled="currentPage === totalPages"
+                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                >
+                    Next
+                </button>
             </div>
         </main>
         <!-- Sidebar -->
@@ -955,6 +1356,24 @@ function submitEdit() {
                     <li>
                         <a
                             href="bukuPenghubung"
+                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                        >
+                            <svg
+                                viewBox="0 0 576 512"
+                                class="w-6 h-6"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                                />
+                            </svg>
+                            <span class="ml-3">Identitas Siswa</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="bukuPenghubung1"
                             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                         >
                             <svg

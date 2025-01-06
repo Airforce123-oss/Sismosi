@@ -16,7 +16,7 @@ class MapelResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id_mapel' => $this->id_mapel,
+            'id' => $this->id,
             'kode_mapel' => $this->kode_mapel,
             'mapel' => $this->mapel,
             'created_at' => $this->created_at,

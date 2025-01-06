@@ -58,7 +58,7 @@ const deleteMapel = (mapel) => {
         if (result.isConfirmed) {
             // Gunakan deleteForm untuk penghapusan
             deleteForm.delete(
-                route("matapelajaran.destroy", { id: mapel.id_mapel }),
+                route("matapelajaran.destroy", { id: mapel.id }),
                 {
                     preserveScroll: true,
                     onSuccess: () => {
@@ -319,12 +319,12 @@ onMounted(() => {
                                             <tr
                                                 v-for="mapel in props
                                                     .master_mapel.data"
-                                                :key="mapel.id_mapel"
+                                                :key="mapel.id"
                                             >
                                                 <td
                                                     class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                                                 >
-                                                    {{ mapel.id_mapel }}
+                                                    {{ mapel.id }}
                                                 </td>
                                                 <td
                                                     class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
@@ -344,7 +344,7 @@ onMounted(() => {
                                                             route(
                                                                 'matapelajaran.edit',
                                                                 {
-                                                                    mapel: mapel.id_mapel,
+                                                                    mapel: mapel.id,
                                                                 }
                                                             )
                                                         "

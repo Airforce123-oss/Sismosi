@@ -23,7 +23,7 @@ return [
     'checkers' => [
 
         /*
-        |--------------------------------------------------------------------------
+    |--------------------------------------------------------------------------
         | Which permissions checker to use.
         |--------------------------------------------------------------------------
         |
@@ -117,6 +117,8 @@ return [
         'role' => \App\Models\Role::class,
 
         'permission' => \App\Models\Permission::class,
+
+        'guard_name' => 'web',
 
         /**
          * Will be used only if the teams functionality is enabled.

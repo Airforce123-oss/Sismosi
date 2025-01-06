@@ -5,34 +5,47 @@ namespace App\Http\Controllers;
 use App\Models\Mapel;
 use App\Models\Teacher;
 use App\Models\Tugas;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Enrollment;
 use Illuminate\Support\Facades\Log;
 
 class TugasController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil data guru dan mata pelajaran
-        $courses = $this->uniqueByKey(Mapel::all(), 'id_mapel');
+        // Ambil data guru dan mata pelajaran, pastikan data unik
+        /*
+              $courses = $this->uniqueByKey(Mapel::all(), 'id');
         $teachers = $this->uniqueByKey(Teacher::all(), 'id');
+        $students = $this->uniqueByKey(Student::all(), 'id');
+        */
+        
+        $courses = Mapel::distinct()->get();
+        $teachers = Teacher::distinct()->get();
+        $students = Student::distinct()->get();
+        // Logging query untuk debugging, jika perlu
+        $tugasQuery = Tugas::with(['mapel', 'teacher']);
+        Log::info("Query SQL: " . $tugasQuery->toSql()); // Log query untuk debugging
+        
+        // Mengambil data tugas dengan pagination
+        $page = $request->input('page', 1); // Halaman yang diminta
+        $perPage = $request->input('per_page', 10); // Jumlah data per halaman
     
-        // Ambil semua data tugas untuk debugging
-        $tugas = Tugas::with(['mapel', 'teacher'])->get();
-        dd($tugas->toJson());
+        // Periksa apakah parameter pagination valid
+        $perPage = is_numeric($perPage) && $perPage > 0 ? (int) $perPage : 10;
     
         // Ambil data tugas dengan pagination
-        $page = $request->input('page', 1);
-        $perPage = $request->input('per_page', 10);
-    
-        $tugas = Tugas::with(['mapel', 'teacher'])
+        $tugas = Tugas::with(['mapel', 'teacher', 'student'])
             ->paginate($perPage, ['*'], 'page', $page);
     
         // Kirim data ke Vue.js melalui Inertia
         return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', [
+            'students' => $students,
             'courses' => $courses,
             'teachers' => $teachers,
-            'tugas' => $tugas->items(),
+            'tugas' => $tugas->items(), // Kirim data tugas per halaman
             'pagination' => [
                 'current_page' => $tugas->currentPage(),
                 'total_pages' => $tugas->lastPage(),
@@ -52,33 +65,66 @@ class TugasController extends Controller
 
         return response()->json($tugas);
     }
-
     public function store(Request $request)
     {
         // Validasi input
         $validated = $request->validate([
-            'mapel_id' => 'required|exists:master_mapel,id_mapel',
-            'teacher_id' => 'required|exists:wali_kelas,id',
+            'mapel_id' => 'required|exists:master_mapel,id',
+            'teacher_id' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if (!is_numeric($value)) {
+                        $fail("The $attribute must be a valid number.");
+                    }
+                },
+                'exists:wali_kelas,id',
+            ],
             'description' => 'required|string',
+            'student_id' => 'required|exists:students,id',
         ]);
-
+    
         // Simpan data tugas
         $tugas = Tugas::create([
+            'student_id' => $validated['student_id'],
             'mapel_id' => $validated['mapel_id'],
             'teacher_id' => $validated['teacher_id'],
             'description' => $validated['description'],
         ]);
-
-        // Ambil data terkait untuk dikembalikan
-        $mapel = Mapel::find($validated['mapel_id']);
-        $teacher = Teacher::find($validated['teacher_id']);
-
-        return response()->json([
-            'tugas' => $tugas,
-            'mapel' => $mapel,
-            'teacher' => $teacher,
-        ], 201);
+    
+        return response()->json($tugas, 201);
     }
+    
+    public function update(Request $request, $id)
+    {
+        // Validasi input
+        $request->validate([
+            'mapel_id' => 'required|exists:master_mapel,id',
+            'teacher_id' => 'required|numeric|exists:wali_kelas,id', // Memastikan teacher_id numerik
+            'description' => 'required|string',
+            'student_id' => 'required|exists:students,id',
+        ]);
+    
+        // Temukan tugas yang akan diperbarui
+        $tugas = Tugas::findOrFail($id);
+    
+        // Perbarui data tugas
+        $tugas->update([
+            'mapel_id' => $request->mapel_id,
+            'teacher_id' => $request->teacher_id,
+            'description' => $request->description,
+        ]);
+    
+        // Ambil data tugas yang sudah diperbarui beserta relasi yang dibutuhkan
+        $tugasUpdated = Tugas::with(['mapel', 'teacher'])->findOrFail($id);
+    
+        // Kirimkan respons JSON dengan data yang diperbarui
+        return response()->json($tugasUpdated);
+    }
+    
+    
+    
+    
+    
 
     public function getPaginatedTugas(Request $request)
     {

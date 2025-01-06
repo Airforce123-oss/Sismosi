@@ -12,7 +12,8 @@ use App\Http\Resources\NoIndukResource;
 use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Database\Eloquent\Builder;
-
+use App\Helpers\StudentHelper;
+use App\Models\DetailStudent;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Attendance;
@@ -76,14 +77,15 @@ class StudentController extends Controller
             'attendanceRecords' => $attendanceRecords,
             'currentDate' => $currentDate,
         ]);
-    }
+}
 
     public function indexApi(Request $request)
     {
         $studentQuery = Student::query()->with('noInduk', 'religion', 'gender', 'class');
-
-        // Apply search filter if present
         $this->applySearch($studentQuery, $request->search);
+        $detailStudents = $studentQuery->paginate(5)->appends($request->only('search'));
+
+        // Query untuk data yang digunakan di modal (students)
 
         $studentQuery->orderBy('id');
 
@@ -92,6 +94,21 @@ class StudentController extends Controller
 
         return response()->json($students);
     }
+
+    public function indexDetailStudentApi(Request $request)
+{
+    // Query untuk DetailStudent dengan relasi yang sesuai
+    $detailStudentQuery = DetailStudent::query()->with('student'); // Jika DetailStudent punya relasi ke student
+    $this->applySearch($detailStudentQuery, $request->search);
+
+    // Pagination untuk detail students
+    $detailStudents = $detailStudentQuery->paginate(10)->appends($request->only('search'));
+
+    return response()->json($detailStudents);
+}
+
+
+    
 
     protected function applySearch(Builder $query, $search)
     {
@@ -123,6 +140,10 @@ class StudentController extends Controller
         //$student = Student::create($request->validated());
         
         //Log::info('Data yang berhasil disimpan:', $student->toArray());
+
+        StudentHelper::logReceivedData($request->all());
+
+         $validated = StudentHelper::validateStudentData($request);
 
         try {
             Student::create($request->validated());
@@ -213,16 +234,59 @@ class StudentController extends Controller
         return response()->json($noInduks);
     }
     
-    public function show($id)
+    public function showStudent($id)
     {
-        $student = Student::find($id);
-
-        if (!$student) {
-            return redirect()->route('dashboard')->with('error', 'Student not found');
+        try {
+            // Ambil data siswa berdasarkan ID dari tabel 'detailstudents'
+            $student = DetailStudent::findOrFail($id);  // Menggunakan findOrFail agar memunculkan error jika ID tidak ditemukan
+            
+            return response()->json([
+                'student' => $student,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Siswa tidak ditemukan',
+            ], 404);  // Status 404 jika siswa tidak ditemukan
         }
-
-        return inertia('Students/show', [
-            'student' => StudentResource::make($student)
-        ]);
     }
+
+    public function indexApiDetailStudent(Request $request)
+{
+    // Ambil data dari tabel detailstudents, misalnya dengan pagination
+    $students = DetailStudent::paginate(10);  // Sesuaikan pagination sesuai kebutuhan
+
+    return response()->json($students);
+}
+
+    public function storeStudent(Request $request)
+    {
+        // Validasi data yang diterima
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'student_id' => 'required|string|unique:detailstudents,student_id|max:255',
+            'class_id' => 'required|exists:classes,id',
+            'gender' => 'required|string|max:10',
+            'parent_name' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
+        ]);
+    
+        try {
+            // Simpan data ke dalam tabel detailstudents
+            $student = DetailStudent::create([
+                'name' => $validated['name'],
+                'student_id' => $validated['student_id'],
+                'class_id' => $validated['class_id'],
+                'gender' => $validated['gender'],
+                'parent_name' => $validated['parent_name'] ?? null,
+                'address' => $validated['address'] ?? null,
+            ]);
+    
+            // Mengembalikan respon sukses
+            return response()->json(['message' => 'Siswa berhasil ditambahkan!', 'student' => $student], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating student:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Terjadi kesalahan saat menyimpan data siswa'], 500);
+        }
+    }
+    
 }

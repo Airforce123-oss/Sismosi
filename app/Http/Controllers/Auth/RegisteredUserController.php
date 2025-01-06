@@ -35,31 +35,22 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-    ]);
+        ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
-        if (!$user->hasRole('todolistuser')) {
-            $user->addRole('todolistuser');
-        }
-        
-        if (!$user->hasRole('teacher')) {
-            $user->addRole('teacher');
-        }
-        
-        if (!$user->hasRole('student')) {
-            $user->addRole('student');
-        }
+
+        // Gunakan assignRole() untuk menetapkan role
+        $user->assignRole('todolistuser');
+        $user->assignRole('teacher');
+        $user->assignRole('student');
         
         event(new Registered($user));
 
-
         Auth::login($user);
-
-        $user->hasRole('role');
 
         return redirect(RouteServiceProvider::HOME);
     }

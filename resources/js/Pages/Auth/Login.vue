@@ -47,6 +47,29 @@ const submit = () => {
             if (response.data.token) {
                 localStorage.setItem("auth_token", response.data.token); // Menyimpan token di localStorage
                 console.log("Token saved:", response.data.token); // Debugging untuk memastikan token disimpan
+
+                // Mengirim permintaan ke /laratrust/roles-assignment setelah login berhasil
+                const token = response.data.token;
+                const data = {
+                    // Data yang ingin Anda kirim, sesuaikan dengan kebutuhan
+                    someKey: "someValue", // Misalnya, sesuaikan dengan parameter yang diperlukan
+                };
+                axios
+                    .post(
+                        "http://127.0.0.1:8000/laratrust/roles-assignment/1?model=users",
+                        data,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        }
+                    )
+                    .then((res) => {
+                        console.log("Role assignment successful:", res.data);
+                    })
+                    .catch((error) => {
+                        console.error("Error during role assignment:", error);
+                    });
             } else {
                 console.error("Token is missing in the response.");
             }
@@ -124,5 +147,5 @@ const submit = () => {
                 </form>
             </div>
         </div>
-    </div>   
+    </div>
 </template>

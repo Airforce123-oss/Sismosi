@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mapel;
+use App\Models\Tugas;
 use App\Http\Resources\MapelResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 
 class MataPelajaranController extends Controller
 {
@@ -62,9 +65,9 @@ class MataPelajaranController extends Controller
         ]);
     }
 
-    public function show($id_mapel)
+    public function show($id)
 {
-    $mapel = Mapel::find($id_mapel);  // Mengambil data berdasarkan id_mapel
+    $mapel = Mapel::find($id);  // Mengambil data berdasarkan id
     if (!$mapel) {
         return response()->json(['message' => 'Mata Pelajaran tidak ditemukan'], 404);
     }
@@ -92,7 +95,7 @@ class MataPelajaranController extends Controller
         $newMapel = Mapel::create($validated); // Menggunakan model Mapel
 
         Log::info('Successfully stored new mata pelajaran', [
-            'id_mapel' => $newMapel->id_mapel,
+            'id' => $newMapel->id,
             'kode_mapel' => $newMapel->kode_mapel,
             'mapel' => $newMapel->mapel,
         ]);
@@ -100,19 +103,27 @@ class MataPelajaranController extends Controller
         return redirect()->route('matapelajaran.index')->with('success', 'Data berhasil disimpan!');
     }
 
+    public function getMapel()
+{
+    //$mapel = DB::table('master_mapel')->where('id', 6)->first();
+    //$mapel = Mapel::where('id', 1)->count();
+    $mapel = Mapel::where('id', 1)->first();
+    return response()->json($mapel);
+}
+
     // Mengupdate mata pelajaran yang sudah ada
-    public function update(Request $request, $id_mapel)
+    public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'kode_mapel' => 'required|string|max:40|unique:master_mapel,kode_mapel,' . $id_mapel . ',id_mapel', // Validasi unik
+            'kode_mapel' => 'required|string|max:40|unique:master_mapel,kode_mapel,' . $id . ',id', // Validasi unik
             'mapel' => 'required|string|max:60',
         ]);
     
-        $mapel = Mapel::findOrFail($id_mapel); // Cari berdasarkan id_mapel
+        $mapel = Mapel::findOrFail($id); // Cari berdasarkan id
         $mapel->update($validated); // Perbarui data
     
         Log::info('Successfully updated mata pelajaran', [
-            'id_mapel' => $id_mapel,
+            'id' => $id,
             'updated_data' => $validated,
         ]);
     
@@ -121,9 +132,9 @@ class MataPelajaranController extends Controller
     
     
     // Menampilkan form untuk edit mata pelajaran
-    public function edit($id_mapel)
+    public function edit($id)
     {
-        $mapel = Mapel::find($id_mapel); // Mengambil data berdasarkan id_mapel
+        $mapel = Mapel::find($id); // Mengambil data berdasarkan id
         if (!$mapel) {
             return redirect()->route('matapelajaran.index')->withErrors(['message' => 'Mata Pelajaran tidak ditemukan']);
         }
@@ -135,12 +146,12 @@ class MataPelajaranController extends Controller
     
 
     // Menghapus mata pelajaran
-    public function destroy($id_mapel)
+    public function destroy($id)
     {
-        $mapel = Mapel::findOrFail($id_mapel); // Mengambil data berdasarkan id_mapel
+        $mapel = Mapel::findOrFail($id); // Mengambil data berdasarkan id
     
         Log::info('Deleting mata pelajaran', [
-            'id_mapel' => $id_mapel,
+            'id' => $id,
             'kode_mapel' => $mapel->kode_mapel,
             'mapel' => $mapel->mapel,
         ]);

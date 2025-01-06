@@ -1,13 +1,13 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref,  } from "vue";
 import axios from "axios";
-import { initFlowbite } from "flowbite";
+import { Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
+import { initFlowbite } from "flowbite";
 import VueApexCharts from "vue-apexcharts";
 import ApexCharts from "apexcharts";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import $ from "jquery";
-import "@assets/plugins/simple-calendar/jquery.simple-calendar.js";
 import "@assets/plugins/simple-calendar/simple-calendar.css";
 
 const userName = ref("");
@@ -22,209 +22,22 @@ const form = useForm({
 const fetchSessionData = async () => {
     try {
         const response = await axios.get("/api/session-name");
-
         userName.value = response.data.name;
     } catch (error) {
         console.error("There was an error fetching the session data:", error);
     }
 };
 
+// Inisialisasi kalender
+// Memanggil Flowbite dan SimpleCalendar setelah komponen dimuat
 onMounted(() => {
     initFlowbite();
-
-    // Inisialisasi ApexCharts
-    var options = {
-        chart: { height: 350, type: "line", toolbar: { show: false } },
-        dataLabels: { enabled: false },
-        stroke: { curve: "smooth" },
-        series: [
-            {
-                name: "Guru",
-                color: "#3D5EE1",
-                data: [45, 60, 75, 51, 42, 42, 30],
-            },
-            {
-                name: "Siswa",
-                color: "#70C4CF",
-                data: [24, 48, 56, 32, 34, 52, 25],
-            },
-        ],
-        xaxis: {
-            categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-        },
-    };
-    var chart = new ApexCharts(
-        document.querySelector("#apexcharts-area"),
-        options
-    );
-    chart.render();
-
-    // Initialize simple calendar
-    const initCalendar = () => {
-        /*
-              if (typeof $.fn.simpleCalendar === "undefined") {
-            console.error(
-                "simpleCalendar is not defined. Ensure jQuery and simpleCalendar are loaded correctly."
-            );
-            return;
-        }
-
-             $("#calendar-doctor").simpleCalendar({
-            months: [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December",
-            ],
-            days: [
-                "Sunday",
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-            ],
-            displayYear: true,
-            fixedStartDay: true,
-            displayEvent: true,
-            disableEventDetails: false,
-            disableEmptyDetails: false,
-            events: [
-                {
-                    startDate: new Date(2024, 6, 20),
-                    endDate: new Date(2024, 6, 20),
-                    summary: "Event Example",
-                },
-            ],
-            onInit: function (calendar) {
-                console.log("Calendar initialized");
-            },
-            onMonthChange: function (month, year) {
-                console.log("Month changed to: ", month, "Year: ", year);
-            },
-            onDateSelect: function (date, events) {
-                console.log("Date selected: ", date, "Events: ", events);
-            },
-            onEventSelect: function () {
-                console.log("Event selected");
-            },
-            onEventCreate: function ($el) {
-                console.log("Event created: ", $el);
-            },
-            onDayCreate: function ($el, d, m, y) {
-                console.log(
-                    "Day created: ",
-                    $el,
-                    "Date: ",
-                    d,
-                    "Month: ",
-                    m,
-                    "Year: ",
-                    y
-                );
-            },
-        });
-        */
-    };
-
-    setTimeout(initCalendar, 1000); // Adjust the delay as needed
-
-    // calendar trial
-    const daysContainer = document.getElementById("days");
-    const monthYearDisplay = document.getElementById("monthYear");
-    const prevButton = document.getElementById("prev");
-    const nextButton = document.getElementById("next");
-
-    const months = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ];
-    let currentDate = new Date();
-
-    function renderCalendar() {
-        daysContainer.innerHTML = "";
-        monthYearDisplay.textContent = `${
-            months[currentDate.getMonth()]
-        } ${currentDate.getFullYear()}`;
-
-        const firstDayOfMonth = new Date(
-            currentDate.getFullYear(),
-            currentDate.getMonth(),
-            1
-        ).getDay();
-        const daysInMonth = new Date(
-            currentDate.getFullYear(),
-            currentDate.getMonth() + 1,
-            0
-        ).getDate();
-
-        for (let i = 0; i < firstDayOfMonth; i++) {
-            daysContainer.appendChild(document.createElement("div"));
-        }
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayElement = document.createElement("div");
-            dayElement.textContent = day;
-            dayElement.classList.add(
-                "flex",
-                "items-center",
-                "justify-center",
-                "w-12",
-                "h-12"
-            );
-
-            if (
-                day === currentDate.getDate() &&
-                currentDate.getMonth() === new Date().getMonth() &&
-                currentDate.getFullYear() === new Date().getFullYear()
-            ) {
-                dayElement.classList.add(
-                    "bg-blue-500",
-                    "text-white",
-                    "rounded-full"
-                );
-            }
-
-            daysContainer.appendChild(dayElement);
-        }
-    }
-
-    prevButton.addEventListener("click", () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    });
-
-    nextButton.addEventListener("click", () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    });
-
-    renderCalendar();
-    //end calendar trial
 
     // Fetch session data
     fetchSessionData();
 });
 </script>
+
 
 <style scoped>
 @import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
@@ -398,7 +211,7 @@ onMounted(() => {
                 <div class="page-sub-header">
                     <div>
                         <h3 class="page-title">
-                        Selamat Datang {{ $page.props.auth.user.name }}!
+                            Selamat Datang {{ $page.props.auth.user.name }}!
                         </h3>
                     </div>
                 </div>
@@ -485,51 +298,10 @@ onMounted(() => {
                         </div>
                     </div>
                     -->
-                    <!-- calendar trial -->
-                    <div class="bg-white p-6 rounded-lg shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
-                            <button
-                                id="prev"
-                                class="bg-blue-500 text-white px-4 py-2 rounded"
-                            >
-                                Prev
-                            </button>
-                            <h2 id="monthYear" class="text-xl font-bold"></h2>
-                            <button
-                                id="next"
-                                class="bg-blue-500 text-white px-4 py-2 rounded"
-                            >
-                                Next
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-7 gap-4">
-                            <div class="text-center font-bold">Sun</div>
-                            <div class="text-center font-bold">Mon</div>
-                            <div class="text-center font-bold">Tue</div>
-                            <div class="text-center font-bold">Wed</div>
-                            <div class="text-center font-bold">Thu</div>
-                            <div class="text-center font-bold">Fri</div>
-                            <div class="text-center font-bold">Sat</div>
-                        </div>
-                        <div
-                            id="days"
-                            class="grid grid-cols-7 gap-4 mt-2"
-                        ></div>
-                    </div>
-                    <!-- calendar trial end -->
-                </div>
+            </div>
             </div>
 
-            <p>
-                melihat tugas, mengumpulkan tugas, melihat presensi, melakukan
-                presensi, melihat jadwal pelajaran
-            </p>
-
-            <p>
-                siswa seira: melihat tugas, mengumpulkan tugas, melihat
-                presensi, melakukan presensi, melihat jadwal pelajara
-            </p>
-            <p>guru memberikan tugas</p>
+            <div id="apexcharts-area"></div>
         </main>
 
         <!-- Sidebar -->
@@ -542,34 +314,6 @@ onMounted(() => {
             <div
                 class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
             >
-                <form action="#" method="GET" class="md:hidden mb-2">
-                    <label for="sidebar-search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div
-                            class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"
-                        >
-                            <svg
-                                class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="search"
-                            id="sidebar-search"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Search"
-                        />
-                    </div>
-                </form>
                 <ul class="space-y-2">
                     <li>
                         <a

@@ -6,8 +6,10 @@ use App\Http\Controllers\ClassController;
 use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\AttendanceController;
 use Inertia\Inertia;
+use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\BukuPenghubung1Controller;
 use App\Http\Controllers\AuthController;
 use Illuminate\Foundation\Application;
 use App\Http\Controllers\ProfileController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\FileUploadController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+
 
 // Home Route
 Route::get('/', function () {
@@ -49,10 +52,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('students', StudentController::class);
     Route::resource('teachers', TeacherController::class);
     Route::resource('kelas', ClassController::class);
+    Route::get('/kelas/edit/{classId}', [ClassController::class, 'edit'])->name('kelas.edit');
     Route::resource('/Profile', ProfileController::class);
     Route::resource('/penilaian', PenilaianController::class);    
     Route::get('/membuatTugasSiswa', [TeacherController::class, 'membuatTugasSiswa'])->name('membuatTugasSiswa');
     Route::get('/bukuPenghubung', [TeacherController::class, 'bukuPenghubung'])->name('bukuPenghubung');
+    Route::get('/bukuPenghubung1', [BukuPenghubung1Controller::class, 'index'])->name('bukuPenghubung1');
     Route::get('/bukuPenghubungDashboard', [TeacherController::class, 'bukuPenghubungDashboard'])->name('teacherbukuPenghubung');
     
     // Enrollment Routes
@@ -80,7 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
-    Route::delete('/matapelajaran/{id_mapel}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
+    Route::delete('/matapelajaran/{id}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
     Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
 
 });
@@ -102,6 +107,18 @@ Route::get('/api/religions', [StudentController::class, 'getReligion']);
 Route::get('/api/students', [StudentController::class, 'indexApi']);
 Route::get('/api/genders', [StudentController::class, 'getGender']);
 Route::get('/api/no_induks', [StudentController::class, 'getNoInduk']);
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/buku-penghubung', [BukuPenghubung1Controller::class, 'index']);
+    Route::post('/buku-penghubung', [BukuPenghubung1Controller::class, 'store']);
+    Route::put('/buku-penghubung/{bukuPenghubung1}', [BukuPenghubung1Controller::class, 'update']);
+    Route::delete('/buku-penghubung/{bukuPenghubung1}', [BukuPenghubung1Controller::class, 'destroy']);
+});
+
+Route::post('/user/{userId}/assign-role', [UserController::class, 'assignRole']);
+Route::put('/user/{user}/roles', [UserController::class, 'updateRoles'])->name('user.roles.update');
+
+
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';

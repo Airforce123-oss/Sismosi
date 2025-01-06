@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClassesForStudent;
+use App\Models\Classes;
 use App\Http\Requests\StoreClassesRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +14,7 @@ class ClassController extends Controller
         $itemsPerPage = $request->input('itemsPerPage', 10); // Default to 10 items per page
         $currentPage = $request->input('currentPage', 1); // Default to the first page
 
-        $classesQuery = ClassesForStudent::query();
+        $classesQuery = Classes::query();
         $classes_for_student = $classesQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
                                ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
 
@@ -25,7 +25,7 @@ class ClassController extends Controller
 
     public function indexApi(Request $request)
     {
-        $classesQuery = ClassesForStudent::query();
+        $classesQuery = Classes::query();
 
         // Terapkan filter pencarian jika ada
         $this->applySearch($classesQuery, $request->search);
@@ -34,7 +34,7 @@ class ClassController extends Controller
         $classesQuery->orderBy('id');
 
         // Pagination, dengan jumlah per halaman 5
-        $classes = $classesQuery->paginate(5)->appends($request->only('search'));
+        $classes = $classesQuery->paginate(10)->appends($request->only('search'));
 
         return response()->json($classes);
     }
@@ -46,37 +46,39 @@ class ClassController extends Controller
 
     public function store(StoreClassesRequest $request)
     {
-        ClassesForStudent::create($request->validated());
+        Classes::create($request->validated());
         return redirect()->route('kelas.index');
     }
 
-    public function show($id)
+    public function show($classId)
     {
-        $classForStudent = ClassesForStudent::findOrFail($id);
+        $classForStudent = Classes::findOrFail($classId);
         return inertia('Kelas/show', [
             'classForStudent' => $classForStudent
         ]);
     }
 
-    public function edit($id)
+    public function edit($classId)
     {
-        $classForStudent = ClassesForStudent::findOrFail($id);
-
+        // Mengambil data kelas berdasarkan classId
+        $classForStudent = Classes::findOrFail($classId);
+    
+        // Mengembalikan tampilan dengan data kelas
         return inertia('Kelas/edit', [
-        'classForStudent' => $classForStudent
+            'classForStudent' => $classForStudent
         ]);
     }
-
-    public function update(StoreClassesRequest $request, $id)
+    
+    public function update(StoreClassesRequest $request, $classId)
     {
-        $classForStudent = ClassesForStudent::findOrFail($id);
+        $classForStudent = Classes::findOrFail($classId);
         $classForStudent->update($request->validated());
         return redirect()->route('kelas.index');
     }
 
-    public function destroy($id)
+    public function destroy($classId)
     {
-        $classForStudent = ClassesForStudent::findOrFail($id);
+        $classForStudent = Classes::findOrFail($classId);
         $classForStudent->delete();
         return redirect()->route('kelas.index')->with('success', 'Kelas berhasil dihapus.');
     }

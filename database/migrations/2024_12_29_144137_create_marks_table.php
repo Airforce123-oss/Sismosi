@@ -21,9 +21,9 @@ class CreateMarksTable extends Migration
                   ->on('students')  // Tabel 'students'
                   ->onDelete('cascade');  // On delete cascade
 
-            // Menambahkan foreign key yang mengarah ke kolom 'id_mapel' di tabel 'master_mapel'
+            // Menambahkan foreign key yang mengarah ke kolom 'id' di tabel 'master_mapel'
             $table->foreign('mapel_id')
-                  ->references('id_mapel')  // Mengarah ke kolom 'id_mapel' di tabel 'master_mapel'
+                  ->references('id')  // Mengarah ke kolom 'id' di tabel 'master_mapel'
                   ->on('master_mapel')  // Tabel 'master_mapel'
                   ->onDelete('cascade');  // On delete cascade
         });
