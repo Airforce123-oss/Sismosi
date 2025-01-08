@@ -9,11 +9,10 @@ class CreateTugasTable extends Migration
     public function up()
     {
         Schema::create('tugas', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('mapel_id')->constrained('master_mapel', 'id')->onDelete('cascade'); // Menyesuaikan dengan kolom id
-            $table->foreignId('teacher_id')->constrained('wali_kelas')->onDelete('cascade');
-            $table->text('description');
-            $table->timestamps();
+            $table->bigIncrements('id');
+            $table->bigInteger('mapel_id')->unsigned();
+            $table->foreign('mapel_id')->references('id_mapel')->on('master_mapel')->onDelete('cascade');
+            // kolom lainnya...
         });
     }
 

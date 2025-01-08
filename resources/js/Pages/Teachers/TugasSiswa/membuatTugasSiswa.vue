@@ -21,7 +21,10 @@ console.log("Props received:", props.students);
 const courses = ref(props.courses || []);
 const students = ref(props.students || []);
 
-const totalCourses = computed(() => courses.value.length);
+const totalCourses = computed(() => {
+    console.log("Total Courses:", courses.value.length);
+    return courses.value.length;
+});
 
 console.log("Fetching students...");
 console.log("Fetched students:", toRaw(students.value));
@@ -232,6 +235,10 @@ watch(
     }
 );
 
+watch(courses, (newValue) => {
+    console.log("Courses updated:", newValue);
+});
+
 const mapelName = computed(() => {
     return (mapelId) => {
         const mapel = courses.value.find((course) => course.id === mapelId);
@@ -435,6 +442,10 @@ const handleTask = () => {
 // On Mounted Hook to Fetch Initial Data
 onMounted(async () => {
     try {
+        fetchStudents().then((data) => {
+            students.value = data;
+            console.log("Fetched students:", students.value); // Menampilkan data siswa yang telah di-fetch
+        });
         // Ambil data taskForm dan enrollments dari localStorage
         const savedTaskForm = localStorage.getItem("taskForm");
         if (savedTaskForm) {

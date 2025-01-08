@@ -58,15 +58,18 @@ class Enrollment extends Model
        }
    
        // Relasi ke model Mapel (atau Course)
-       public function course() {
+    public function course() {
         return $this->belongsTo(Mapel::class, 'mapel_id', 'id');
     }
     
-   // Relasi ke Teacher melalui Student (karena Teacher terkait dengan Student melalui class_id)
+    // Relasi ke Teacher melalui Student (karena Teacher terkait dengan Student melalui class_id)
    public function teacher()
    {
        return $this->belongsTo(Teacher::class, 'teacher_id');
    }
+    
+    
+   
 
 
 }

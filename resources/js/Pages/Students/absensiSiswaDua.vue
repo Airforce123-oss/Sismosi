@@ -2396,15 +2396,6 @@ onMounted(async () => {
 
                 <!-- Modal update absen -->
                 <div>
-                    <!-- Daftar Siswa dan Tanggal -->
-                    <div v-for="student in students" :key="student.id">
-                        <!--            <p>{{ student.name }}</p>
-                        <p>Tanggal: {{ date }}</p>
-                        <button @click="handleStatusChange(student.id, date)">
-                            Ubah Status Kehadiran
-                        </button>-->
-                    </div>
-
                     <!-- Modal untuk memilih status kehadiran -->
                     <div
                         v-if="isModalVisible"
@@ -2443,6 +2434,14 @@ onMounted(async () => {
                         </div>
                     </div>
                 </div>
+                         <!-- Daftar Siswa dan Tanggal -->
+                         <div v-for="student in students" :key="student.id">
+                        <!--            <p>{{ student.name }}</p>
+                        <p>Tanggal: {{ date }}</p>
+                        <button @click="handleStatusChange(student.id, date)">
+                            Ubah Status Kehadiran
+                        </button>-->
+                    </div>
             </form>
 
             <!--

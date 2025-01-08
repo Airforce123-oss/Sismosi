@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceTeacherController;
 use Inertia\Inertia;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
@@ -67,6 +68,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
     Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])->name('studentsabsensiSiswa');
+    Route::get('/absensiGuru', [AttendanceTeacherController::class, 'absensiGuru'])->name('studentsabsensiGuru');
+    Route::post('/absensiGuru', [AttendanceTeacherController::class, 'store']);
     Route::put('/attendances/{studentId}', [AttendanceController::class, 'update']);
     Route::post('/api/attendances', [AttendanceController::class, 'store'])->name('apiattendancesstore');
     Route::post('/update/{id}/tanggal/{tanggal_kehadiran}', [AttendanceController::class, 'update'])->name('update');

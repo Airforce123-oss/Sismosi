@@ -10,8 +10,11 @@ defineProps({
 });
 
 const { students, courses } = usePage().props;
-console.log("Courses:", courses);
+console.log("Courses:", toRaw(courses));
 console.log("Students:", toRaw(students));
+console.log("Data pertama di array courses:", courses[0]);
+console.log("ID Mata Pelajaran:", courses[0].id);
+console.log("Nama Mata Pelajaran:", courses[0].mapel);
 
 const selectedEnrollmentId = ref(null);
 // Fungsi untuk memilih enrollment dan mengatur ID
@@ -43,7 +46,9 @@ const getEnrollment = async () => {
         console.log("Response data getenrollment:", response.data);
         newEnrollment.value.status = response.data.status;
         newEnrollment.value.studentId = response.data.student_id;
+        //newEnrollment.value.studentId = selectedStudentId;
         newEnrollment.value.courseId = response.data.course_id;
+        //newEnrollment.value.courseId = selectedCourseId;
         newEnrollment.value.enrollmentDate = response.data.enrollment_date;
     } catch (error) {
         console.error("Error fetching enrollment:", error);
@@ -54,10 +59,19 @@ const emit = defineEmits(["close", "markAdded"]);
 
 const newMark = ref({
     studentId: "",
-    mapelId: "",
-    mark: "",
-    status: "",
-    remark: "",
+    courseId: "",
+    status: "active",
+    enrollmentDate: "",
+    noKd: "",
+    cognitive1: null,
+    cognitive2: null,
+    cognitivePAS: null,
+    cognitiveAverage: null,
+    skill1: null,
+    skill2: null,
+    skillPAS: null,
+    skillAverage: null,
+    finalMark: null,
 });
 
 const isMarkModalVisible = ref(false);
@@ -66,8 +80,7 @@ const isEnrollmentModalVisible = ref(false);
 const markEnrollment = async (enrollmentId, studentId, mapelId) => {
     selectedEnrollmentId.value = enrollmentId;
     newMark.value.studentId = studentId;
-    newMark.value.mapelId = mapelId; // Set mapelId dari parameter
-    newMark.value.courseId = mapelId; // Sinkron dengan mapelId
+    newMark.value.mapelId = mapelId; // Sinkron dengan mapelId
     isMarkModalVisible.value = true;
 
     try {
@@ -82,7 +95,7 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
 
         // Memastikan data dari API lebih prioritas
         newMark.value.studentId = enrollmentData.student_id;
-        newMark.value.courseId = enrollmentData.mapel_id;
+        newMark.value.mapelId = enrollmentData.mapel_id;
         newMark.value.status = enrollmentData.status;
 
         // Menampilkan data siswa dan mata pelajaran
@@ -100,9 +113,27 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
         console.log("Selected Student:", selectedStudent);
         console.log("Selected Course:", selectedCourse);
 
-        // Memastikan bahwa courseId diperbarui
-        newMark.value.courseId = selectedCourse ? selectedCourse.id : mapelId;
-        newMark.value.mapelId = enrollmentData.mapel_id; // Set mapelId dari API jika ada
+        // Pastikan data ini sudah terupdate
+        newMark.value.studentId = selectedStudent
+            ? selectedStudent.id
+            : enrollmentData.student_id;
+        newMark.value.mapelId = selectedCourse
+            ? selectedCourse.id
+            : enrollmentData.mapel_id;
+        newMark.value.status = enrollmentData.status || "active";
+
+        // Mengisi nilai penilaian dengan data yang tersedia (menggunakan data dari enrollment)
+        newMark.value.cognitive1 = enrollmentData.nilai1_tek || "";
+        newMark.value.cognitive2 = enrollmentData.nilai2_tek || "";
+        newMark.value.cognitivePAS = enrollmentData.nilai1_nil || "";
+        newMark.value.cognitiveAverage = enrollmentData.nilai2_tek || "";
+
+        newMark.value.skill1 = enrollmentData.nilai1_tek || "";
+        newMark.value.skill2 = enrollmentData.nilai2_tek || "";
+        newMark.value.skillPAS = enrollmentData.nilai1_nil || "";
+        newMark.value.skillAverage = enrollmentData.nilai2_tek || "";
+
+        newMark.value.finalMark = enrollmentData.nilai1_tek || ""; // Set nilai akhir sesuai dengan data yang ada
 
         // Log tambahan untuk memastikan newMark terupdate
         console.log("Updated newMark (raw):", toRaw(newMark.value));
@@ -114,13 +145,21 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
 const closeAddMarkModal = () => {
     isMarkModalVisible.value = false;
 
-    // Reset hanya sekali dengan semua properti
+    // Reset berdasarkan enrollmentData yang sudah ada
     newMark.value = {
-        studentId: null,
-        courseId: null,
-        mark: null,
-        status: "active", // Nilai default
-        remark: "", // Nilai default
+        studentId: "",
+        courseId: "",
+        status: "active",
+        cognitive1: null,
+        cognitive2: null,
+        cognitivePAS: null,
+        cognitiveAverage: null,
+        skill1: null,
+        skill2: null,
+        skillPAS: null,
+        skillAverage: null,
+        finalMark: null,
+        //mark: null,
     };
 
     emit("close");
@@ -295,6 +334,7 @@ const showAddModal = () => {
     isEnrollmentModalVisible.value = true;
 };
 const hideAddModal = () => {
+    console.log("Modal ditutup");
     isEnrollmentModalVisible.value = false;
 };
 const addEnrollmentToDatabase = async (enrollmentData) => {
@@ -302,13 +342,61 @@ const addEnrollmentToDatabase = async (enrollmentData) => {
         const response = await axios.post("/api/enrollments", enrollmentData);
         console.log("Response from server:", response);
 
-        if (response.data && response.data.student && response.data.course) {
-            enrollments.value.push(response.data);
-            await nextTick(); // Menunggu render ulang
-            console.log("Data setelah render ulang:", enrollments.value);
+        // Cek apakah data yang diterima lengkap
+        if (response.data) {
+            const {
+                student_id,
+                mapel_id,
+                enrollment_date,
+                status,
+                created_at,
+                updated_at,
+            } = response.data;
+
+            if (!student_id) {
+                console.error("Data student_id tidak ditemukan.");
+                alert("student_id tidak ditemukan.");
+            }
+            if (!mapel_id) {
+                console.error("Data mapel_id tidak ditemukan.");
+                alert("mapel_id tidak ditemukan.");
+            }
+            if (!enrollment_date) {
+                console.error("Data enrollment_date tidak ditemukan.");
+                alert("enrollment_date tidak ditemukan.");
+            }
+            if (!status) {
+                console.error("Data status tidak ditemukan.");
+                alert("status tidak ditemukan.");
+            }
+            if (!created_at) {
+                console.error("Data created_at tidak ditemukan.");
+                alert("created_at tidak ditemukan.");
+            }
+            if (!updated_at) {
+                console.error("Data updated_at tidak ditemukan.");
+                alert("updated_at tidak ditemukan.");
+            }
+
+            // Jika semua data tersedia, lanjutkan
+            if (
+                student_id &&
+                mapel_id &&
+                enrollment_date &&
+                status &&
+                created_at &&
+                updated_at
+            ) {
+                enrollments.value.push(response.data);
+                await nextTick(); // Menunggu render ulang
+                console.log("Data setelah render ulang:", enrollments.value);
+            } else {
+                console.error("Data tidak lengkap:", response.data);
+                alert("Data yang diterima tidak lengkap.");
+            }
         } else {
-            console.error("Data tidak lengkap:", response.data);
-            alert("Data yang diterima tidak lengkap.");
+            console.error("Tidak ada data yang diterima dari server.");
+            alert("Tidak ada data yang diterima.");
         }
 
         return response; // Pastikan respons dikembalikan
@@ -318,6 +406,7 @@ const addEnrollmentToDatabase = async (enrollmentData) => {
         throw error; // Lemparkan ulang error jika ada
     }
 };
+
 const addEnrollment = async () => {
     console.log("Sebelum perubahan:", students);
     console.log("Isi newEnrollment.value:", newEnrollment.value); // Tambahkan di sini
@@ -326,31 +415,29 @@ const addEnrollment = async () => {
     if (newEnrollment.value.studentId && newEnrollment.value.courseId) {
         if (Array.isArray(students)) {
             // Pastikan courseId sudah terisi dengan benar
-            if (newEnrollment.value.courseId) {
-                students.push({ ...newEnrollment.value });
-            } else {
-                console.error("courseId tidak ditemukan");
-                return;
-            }
+            students.push({ ...newEnrollment.value });
         } else {
             console.error("students bukan array");
+            return;
         }
     } else {
         console.error("Data enrollment tidak lengkap");
         return;
     }
-    students.push({ ...newEnrollment.value });
+
     console.log("Setelah perubahan:", students);
 
     try {
         const response = await addEnrollmentToDatabase({
             student_id: newEnrollment.value.studentId,
-            mapel_id: newEnrollment.value.courseId, // Ubah menjadi mapel_id
+            mapel_id: newEnrollment.value.courseId,
             enrollment_date: newEnrollment.value.enrollmentDate,
             status: newEnrollment.value.status,
         });
 
-        console.log("Respons dari API:", response); // Sekarang respons akan terlihat
+        // Pastikan data telah terupdate di enrollments.value
+        enrollments.value.push(response.data);
+        console.log("Data setelah render ulang:", enrollments.value);
 
         // Reset form setelah berhasil
         newEnrollment.value = {
@@ -359,79 +446,164 @@ const addEnrollment = async () => {
             enrollmentDate: "",
             status: "active",
         };
+
+        // Menutup modal setelah data berhasil disimpan
+        hideAddModal();
     } catch (error) {
         console.error("Error adding enrollment:", error);
     }
 };
+
 console.log("Enrollments:", enrollments.value);
 console.log("New Enrollment Status:", newEnrollment.value.status);
 
-const addMark = async () => {
+const payload = {
+    student_id: 1,
+    enrollment_id: 1,
+    cognitive1: 11,
+    cognitive2: 11,
+    cognitivePAS: 11,
+    cognitiveAverage: 11,
+    skill1: 11,
+    skill2: 11,
+    skillPAS: 11,
+    skillAverage: 11,
+    finalMark: 11,
+    mapel_id: 1,
+    //teacher_id: 2,
+    status: "active",
+    noKd: "123456",
+};
+
+// Debug payload sebelum dikirim
+console.log("Payload yang akan dikirim:", payload);
+
+// Debug URL API yang digunakan
+const url = `/api/enrollments/${payload.enrollment_id}`;
+console.log("URL API:", url);
+
+// Menjalankan permintaan HTTP
+axios
+    .put(`/api/enrollments/${payload.enrollment_id}`, payload)
+    .then((response) => {
+        console.log("Respons berhasil:", response.data);
+        if (payload.mapel_id === 0) {
+            alert("Mapel ID tidak valid!");
+            return;
+        }
+    })
+    .catch((error) => {
+        if (error.response) {
+            // Respons dari server
+            console.error("Respons error dari server:", error.response.data);
+            console.error("Status code:", error.response.status);
+            console.error("Headers:", error.response.headers);
+        } else if (error.request) {
+            // Jika request dikirim tapi tidak ada respons
+            console.error(
+                "Request dikirim tapi tidak ada respons:",
+                error.request
+            );
+        } else {
+            // Jika terjadi kesalahan lain dalam setup request
+            console.error("Kesalahan lain:", error.message);
+        }
+    });
+
+const saveMark = async () => {
     try {
-        // Debugging awal untuk memastikan nilai yang diterima
-        console.log("Selected Enrollment ID (raw):", selectedEnrollmentId);
-
-        // Akses nilai dari ref dengan .value
-        const enrollmentId = selectedEnrollmentId.value;
-
-        // Konversi nilai ke angka
+        // Ambil nilai dari form modal
+        const enrollmentId = selectedEnrollmentId.value; // Pastikan ini adalah ID yang sesuai
         const numericEnrollmentId = Number(enrollmentId);
 
-        // Debugging setelah konversi
-        console.log("Selected Enrollment ID (numeric):", numericEnrollmentId);
-
-        // Validasi nilai setelah konversi
         if (!numericEnrollmentId || isNaN(numericEnrollmentId)) {
             throw new Error("Invalid enrollment ID: Expected a numeric value");
         }
 
-        console.log("Mark before conversion:", newMark.value.mark);
-        const markValue = Number(newMark.value.mark);
-        console.log("Mark after conversion:", markValue);
-        if (!markValue || isNaN(markValue)) {
-            throw new Error("Invalid mark: Expected a numeric value");
+        // Ambil nilai penilaian yang dimasukkan di modal
+        const cognitive1 = Number(newMark.value.cognitive1);
+        const cognitive2 = Number(newMark.value.cognitive2);
+        const cognitivePAS = Number(newMark.value.cognitivePAS);
+        const cognitiveAverage = Number(newMark.value.cognitiveAverage);
+
+        const skill1 = Number(newMark.value.skill1);
+        const skill2 = Number(newMark.value.skill2);
+        const skillPAS = Number(newMark.value.skillPAS);
+        const skillAverage = Number(newMark.value.skillAverage);
+
+        const finalMark = Number(newMark.value.finalMark);
+
+        // Validasi nilai kognitif dan keterampilan
+        if (
+            isNaN(cognitive1) ||
+            isNaN(cognitive2) ||
+            isNaN(cognitivePAS) ||
+            isNaN(cognitiveAverage)
+        ) {
+            throw new Error("Invalid cognitive values");
         }
 
-        console.log("Mark value:", markValue);
-
-        if (!newMark.value.remark || newMark.value.remark.trim() === "") {
-            throw new Error("Description (remark) is required.");
+        if (
+            isNaN(skill1) ||
+            isNaN(skill2) ||
+            isNaN(skillPAS) ||
+            isNaN(skillAverage)
+        ) {
+            throw new Error("Invalid skill values");
         }
 
-        // Menambahkan log untuk memastikan teacher_id
-        console.log("Teacher ID:", newMark.value.teacher_id);
+        if (isNaN(finalMark)) {
+            throw new Error("Invalid final mark");
+        }
 
         // Kirim data ke API
         const response = await axios.post("/api/marks", {
             enrollment_id: numericEnrollmentId,
-            mark: markValue,
+            cognitive1,
+            cognitive2,
+            cognitivePAS,
+            cognitiveAverage,
+            skill1,
+            skill2,
+            skillPAS,
+            skillAverage,
+            finalMark,
             status: newMark.value.status,
             remark: newMark.value.remark,
-            teacher_id: newMark.value.teacher_id ?? null, // Kirimkan null jika tidak ada teacher_id
+            //teacher_id: newMark.value.teacher_id ?? null,
+            mapel_id: newMark.mapelId ?? 0,
         });
 
         console.log("API Response:", response.data);
 
         if (response.status === 200) {
-            // Reset atau tindak lanjut lainnya
+            // Reset form setelah berhasil
             newMark.value = {
                 studentId: null,
                 mapelId: null,
-                mark: "",
+                cognitive1: "",
+                cognitive2: "",
+                cognitivePAS: "",
+                cognitiveAverage: "",
+                skill1: "",
+                skill2: "",
+                skillPAS: "",
+                skillAverage: "",
+                finalMark: "",
                 status: "active",
                 remark: "",
-                teacher_id: null,
+                //teacher_id: null,
             };
         }
 
+        // Update enrollments setelah berhasil
         const updatedEnrollment = response.data;
-
         const enrollmentIndex = enrollments.value.findIndex(
             (enrollment) => enrollment.id === updatedEnrollment.id
         );
 
         if (enrollmentIndex !== -1) {
-            enrollments.value[enrollmentIndex].mark = updatedEnrollment.mark;
+            enrollments.value[enrollmentIndex] = updatedEnrollment;
         }
 
         const rawEnrollments = toRaw(enrollments.value);
@@ -443,12 +615,10 @@ const addMark = async () => {
         closeAddMarkModal();
     } catch (error) {
         console.error("Error adding mark:", error);
-
         if (error.response) {
             console.error("Error Status:", error.response.status);
             console.error("API Response Error:", error.response.data);
         }
-
         alert("Gagal menambahkan mark. Silakan coba lagi.");
     }
 };
@@ -666,7 +836,7 @@ button:hover {
             </div>
         </nav>
         <!-- Main content -->
-        <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20">
+        <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-20 mb-20">
             <h2
                 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
             >
@@ -815,24 +985,28 @@ button:hover {
                 v-if="isMarkModalVisible"
                 class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
             >
-                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <div
+                    class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                >
                     <!-- Tombol Close -->
                     <button
                         @click="closeModal"
-                        class="absolute top-4 right-4 text-2xl font-bold text-gray-700"
+                        class="absolute top-3 right-3 text-xl sm:text-2xl font-bold text-gray-700"
                     >
                         X
                     </button>
 
                     <!-- Judul Modal -->
-                    <h3 class="text-xl font-bold text-center mb-6">
-                        Tambah Mark
+                    <h3
+                        class="text-lg sm:text-xl font-bold text-center mb-4 sm:mb-6"
+                    >
+                        Tambah/Perbarui Data Kognitif & Keterampilan
                     </h3>
 
                     <!-- Form -->
-                    <form @submit.prevent="addMark">
+                    <form @submit.prevent="saveMark">
                         <!-- Enrollment ID -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label
                                 for="enrollmentId"
                                 class="block text-sm font-medium text-gray-700"
@@ -843,18 +1017,18 @@ button:hover {
                                 v-model="selectedEnrollmentId"
                                 id="enrollmentId"
                                 type="text"
-                                class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                                class="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
                                 readonly
                             />
                         </div>
 
-                        <!-- Pilih Siswa -->
-                        <div class="mb-4">
+                        <!-- Nama Siswa -->
+                        <div class="mb-3">
                             <label
-                                for="studentId"
+                                for="studentName"
                                 class="block text-sm font-medium text-gray-700"
                             >
-                                Siswa
+                                Nama Siswa
                             </label>
                             <input
                                 :value="
@@ -865,13 +1039,13 @@ button:hover {
                                 "
                                 id="studentName"
                                 type="text"
-                                class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                                class="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
                                 readonly
                             />
                         </div>
 
-                        <!-- Pilih Mata Pelajaran -->
-                        <div class="mb-4">
+                        <!-- Mata Pelajaran -->
+                        <div class="mb-3">
                             <label
                                 for="mapelId"
                                 class="block text-sm font-medium text-gray-700"
@@ -882,34 +1056,56 @@ button:hover {
                                 :value="
                                     courses.find(
                                         (course) =>
-                                            course.id === newMark.courseId
+                                            course.id === newMark.mapelId
                                     )?.mapel || 'Mata pelajaran tidak ditemukan'
                                 "
-                                id="courseName"
+                                id="mapelId"
                                 type="text"
-                                class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                                class="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
                                 readonly
                             />
                         </div>
 
-                        <!-- Input Nilai -->
-                        <div class="mb-4">
+                        <!-- Tanggal Enrollment -->
+                        <div class="mb-3">
                             <label
-                                for="mark"
+                                for="enrollmentDate"
                                 class="block text-sm font-medium text-gray-700"
+                                >Tanggal Enrollment</label
                             >
-                                Mark
-                            </label>
                             <input
-                                v-model="newMark.mark"
-                                type="text"
-                                id="mark"
+                                type="date"
+                                v-model="newEnrollment.enrollmentDate"
+                                id="enrollmentDate"
+                                required
                                 class="w-full px-4 py-2 border rounded-md"
                             />
                         </div>
 
+                        <!-- No. KD -->
+                        <div class="mb-3">
+                            <label
+                                for="enrollmentDate"
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                No. KD
+                            </label>
+                            <textarea
+                                v-model="newMark.noKd"
+                                id="description"
+                                class="mt-1 block w-full border-gray-300 rounded-md mb-2"
+                                placeholder="Masukkan deskripsi"
+                            ></textarea>
+                            <label
+                                for="keterangan"
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                Keterangan: No. Kompetensi Dasar
+                            </label>
+                        </div>
+
                         <!-- Status -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label
                                 for="status"
                                 class="block text-sm font-medium text-gray-700"
@@ -919,39 +1115,180 @@ button:hover {
                             <select
                                 v-model="newMark.status"
                                 id="status"
-                                required
-                                class="w-full px-4 py-2 border rounded-md"
+                                class="w-full px-3 py-2 border rounded-md"
                             >
                                 <option value="active">Aktif</option>
                                 <option value="inactive">Tidak Aktif</option>
                             </select>
                         </div>
 
-                        <!-- Remark -->
-                        <div class="mb-4">
+                        <!-- Nilai Kognitif -->
+                        <h4 class="text-lg font-semibold mt-4 mb-4">
+                            Kognitif
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label
+                                    for="cognitive1"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    TEK
+                                </label>
+                                <input
+                                    v-model="newMark.cognitive1"
+                                    type="number"
+                                    id="cognitive1"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="cognitive2"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    NIL
+                                </label>
+                                <input
+                                    v-model="newMark.cognitive2"
+                                    type="number"
+                                    id="cognitive2"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="cognitivePAS"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    PAS
+                                </label>
+                                <input
+                                    v-model="newMark.cognitivePAS"
+                                    type="number"
+                                    id="cognitivePAS"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                                <label
+                                    for="cognitivePAS"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    Keterangan: Penilaian Akhir Semester
+                                </label>
+                            </div>
+                            <div>
+                                <label
+                                    for="cognitiveAverage"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    Rerata
+                                </label>
+                                <input
+                                    v-model="newMark.cognitiveAverage"
+                                    type="number"
+                                    id="cognitiveAverage"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Nilai Keterampilan -->
+                        <h4 class="text-lg font-semibold mt-4 mb-4">
+                            Keterampilan
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label
+                                    for="skill1"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    TEK
+                                </label>
+                                <input
+                                    v-model="newMark.skill1"
+                                    type="number"
+                                    id="skill1"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="skill2"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    NIL
+                                </label>
+                                <input
+                                    v-model="newMark.skill2"
+                                    type="number"
+                                    id="skill2"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="skillPAS"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    PAS
+                                </label>
+                                <input
+                                    v-model="newMark.skillPAS"
+                                    type="number"
+                                    id="skillPAS"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                                <label
+                                    for="skillPAS"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    Keterangan: Penilaian Akhir Semester
+                                </label>
+                            </div>
+                            <div>
+                                <label
+                                    for="skillAverage"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    Rerata
+                                </label>
+                                <input
+                                    v-model="newMark.skillAverage"
+                                    type="number"
+                                    id="skillAverage"
+                                    class="w-full px-3 py-2 border rounded-md"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Nilai Akhir -->
+                        <div class="mt-4">
                             <label
-                                for="remark"
+                                for="finalMark"
                                 class="block text-sm font-medium text-gray-700"
                             >
-                                Remark
+                                Nilai Akhir
                             </label>
                             <input
-                                v-model="newMark.remark"
-                                type="text"
-                                id="remark"
-                                class="w-full px-4 py-2 border rounded-md"
+                                v-model="newMark.finalMark"
+                                type="number"
+                                id="finalMark"
+                                class="w-full px-3 py-2 border rounded-md"
                             />
                         </div>
 
-                        <div class="flex justify-end">
+                        <!-- Tombol -->
+                        <div class="flex justify-end mt-4">
                             <button
                                 type="button"
-                                @click="closeAddMarkModal"
-                                class="btn btn-secondary mr-3"
+                                @click="closeModal"
+                                class="bg-gray-300 text-gray-700 py-2 px-3 rounded-lg mr-2"
                             >
                                 Batal
                             </button>
-                            <button type="submit" class="btn btn-primary mr-2">
+                            <button
+                                type="submit"
+                                class="bg-blue-500 text-white py-2 px-3 rounded-lg"
+                            >
                                 Simpan
                             </button>
                         </div>
@@ -1008,56 +1345,163 @@ button:hover {
 
             <!-- Enrollments Table -->
             <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
-                <table class="min-w-full table-auto">
+                <table class="min-w-full table-auto border border-gray-300">
                     <thead>
-                        <tr class="bg-gray-100">
+                        <!-- Baris pertama header -->
+                        <tr class="bg-gray-100 border-b border-gray-300">
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-12"
                             >
                                 ID
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-48"
                             >
                                 Nama Siswa
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-48"
                             >
                                 Mata Pelajaran
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-36"
                             >
                                 Tanggal Enrollment
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-24"
                             >
                                 Status
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-24"
                             >
-                                Nilai
+                                No. KD
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                                colspan="4"
+                                class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                Kognitif
+                            </th>
+                            <th
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-24"
+                            >
+                                No. KD
+                            </th>
+                            <th
+                                colspan="4"
+                                class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                Keterampilan
+                            </th>
+                            <th
+                                rowspan="3"
+                                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-12"
+                            >
+                                Nilai Akhir
+                            </th>
+                            <th
+                                rowspan="3"
+                                class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-l border-gray-300 w-36"
                             >
                                 Actions
                             </th>
                         </tr>
+                        <!-- Baris kedua header -->
+                        <tr class="bg-gray-100 border-b border-gray-300">
+                            <th
+                                colspan="2"
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                Nilai 1
+                            </th>
+                            <th
+                                colspan="2"
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                Nilai 2
+                            </th>
+                            <th
+                                colspan="2"
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                Nilai 1
+                            </th>
+                            <th
+                                colspan="2"
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                Nilai 2
+                            </th>
+                        </tr>
+                        <!-- Baris ketiga header -->
+                        <tr class="bg-gray-100 border-b border-gray-300">
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                TEK
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                NIL
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                TEK
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                NIL
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                TEK
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                NIL
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-l border-r border-gray-300"
+                            >
+                                TEK
+                            </th>
+                            <th
+                                class="text-center text-sm font-semibold text-gray-700 border-r border-gray-300"
+                            >
+                                NIL
+                            </th>
+                        </tr>
                     </thead>
+
                     <tbody>
                         <tr
                             v-for="enrollment in paginatedEnrollments"
                             :key="enrollment.id"
-                            class="border-t"
+                            class="border-b border-gray-300"
                         >
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
+                            >
                                 {{ enrollment.id }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
+                            >
                                 {{
                                     enrollment.student &&
                                     enrollment.student.name
@@ -1065,20 +1509,26 @@ button:hover {
                                         : "Nama tidak tersedia"
                                 }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
+                            >
                                 {{
                                     enrollment.course
                                         ? enrollment.course.mapel
                                         : "Mapel tidak tersedia"
                                 }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
+                            >
                                 {{
                                     formatDate(enrollment.enrollment_date) ||
                                     "Tanggal tidak tersedia"
                                 }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-l border-gray-300 border-r border-gray-300"
+                            >
                                 <span
                                     :class="{
                                         'text-green-500':
@@ -1093,10 +1543,44 @@ button:hover {
                                     }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
-                                {{ enrollment.mark || "Nilai tidak tersedia" }}
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_tek || "-" }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
+                            <!-- Nilai Kognitif -->
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_tek || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_nil || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_tek || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai2_tek || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai2_nil || "-" }}
+                            </td>
+                            <!-- Nilai Keterampilan -->
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_tek || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai1_nil || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai2_tek || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.nilai2_nil || "-" }}
+                            </td>
+                            <td
+                                class="text-center border-r border-gray-300"
+                            ></td>
+                            <td
+                                class="px-4 py-3 text-sm text-gray-800 border-l border-gray-300"
+                            >
                                 <div class="flex space-x-2">
                                     <button
                                         @click="editEnrollment(enrollment.id)"
@@ -1146,6 +1630,29 @@ button:hover {
                 >
                     Next
                 </button>
+            </div>
+
+            <div class="row mt-3 me-3 mb-20">
+                <div class="col-12">
+                    <p class="fw-bold">Status Kehadiran:</p>
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <span class="badge bg-info text-black fw-bold"
+                                >Kompetensi Dasar (KD)</span
+                            >
+                        </div>
+                        <div class="me-3">
+                            <span class="badge bg-danger text-black fw-bold"
+                                >Nilai (NIL)</span
+                            >
+                        </div>
+                        <div class="me-3">
+                            <span class="badge bg-warning text-black fw-bold"
+                                >Penilaian Akhir Semester (PAS)</span
+                            >
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 

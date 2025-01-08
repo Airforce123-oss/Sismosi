@@ -2398,7 +2398,7 @@ onMounted(async () => {
                                     v-for="status in statuses"
                                     :key="status"
                                     :class="getButtonClass(status)"
-                                    @click="selectStatus(status)"
+                                @click="selectStatus(status)"
                                 >
                                     {{ status }}
                                 </button>

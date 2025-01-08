@@ -43,42 +43,30 @@ class EnrollmentController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'student_id' => 'required|exists:students,id',
-            'mapel_id' => 'required|exists:master_mapel,id',
-            'teacher_id' => 'nullable|exists:teachers,id', // Menjadikan teacher_id nullable
-            'enrollment_date' => 'required|date',
-            'status' => 'required|in:active,inactive',
-            'mark' => 'nullable|integer',
-            'description' => 'nullable|string',
-        ]);
+        try {
+            $data = $request->validate([
+                'student_id' => 'required|exists:students,id',
+                'mapel_id' => 'required|exists:master_mapel,id',
+                'enrollment_date' => 'required|date',
+                'status' => 'required|in:active,inactive',
+                //'mark' => 'nullable|numeric',
+                'description' => 'nullable|string',
+            ]);
     
-        // Cek jika teacher_id tidak ada, set null
-        $teacher_id = $validated['teacher_id'] ?? null;
+            // Buat enrollment baru
+            $enrollment = Enrollment::create($data);
     
-        $enrollment = Enrollment::create([
-            'student_id' => $validated['student_id'],
-            'mapel_id' => $validated['mapel_id'],
-            'teacher_id' => $teacher_id, // Jika teacher_id null, maka tetap dikirim null
-            'enrollment_date' => $validated['enrollment_date'],
-            'status' => $validated['status'],
-            'mark' => $validated['mark'] ?? 0,
-            'description' => $validated['description'] ?? null,
-        ]);
+            // Kembalikan data yang baru dibuat
+            return response()->json($enrollment, 201);
     
-        // Mengambil data student dan course
-        $student = Student::find($validated['student_id']);
-        $course = Mapel::find($validated['mapel_id']);
-        $teacher = $teacher_id ? Teacher::find($teacher_id) : null;
-    
-        return response()->json([
-            'student' => $student,
-            'course' => $course,
-            'teacher' => $teacher,
-            'enrollment' => $enrollment,
-        ], 201);
+        } catch (\Exception $e) {
+            // Log error untuk debugging
+            \Log::error('Error creating enrollment: ' . $e->getMessage());
+            return response()->json(['message' => 'Internal Server Error'], 500);
+        }
     }
-
+    
+    
     public function getEnrollments(Request $request)
 {
     $page = $request->input('page', 1);
@@ -153,23 +141,83 @@ class EnrollmentController extends Controller
 
     public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'mapel_id' => 'required|exists:master_mapel,id',
-            'teacher_id' => 'nullable|string',
-            'description' => 'nullable|string',
-        ]);
+        // Log untuk mencatat data request yang diterima
+        Log::info('Request data:', $request->all());
     
-        $enrollment = Enrollment::find($id);
+        try {
+            // Validasi request
+            $validated = $request->validate([
+                'student_id' => 'required|exists:students,id',
+                'mapel_id' => 'required|exists:master_mapel,id',
+                'status' => 'required|in:active,inactive',
+                'noKd' => 'nullable|string',
+                'cognitive1' => 'nullable|numeric',
+                'cognitive2' => 'nullable|numeric',
+                'cognitivePAS' => 'nullable|numeric',
+                'cognitiveAverage' => 'nullable|numeric',
+                'skill1' => 'nullable|numeric',
+                'skill2' => 'nullable|numeric',
+                'skillPAS' => 'nullable|numeric',
+                'skillAverage' => 'nullable|numeric',
+                'finalMark' => 'nullable|numeric',
+                //'teacher_id' => 'required|exists:wali_kelas,id',
+            ]);
     
-        if (!$enrollment) {
-            return response()->json(['message' => 'Enrollment not found'], 404);
+            // Log data setelah validasi
+            Log::info('Validated data:', $validated);
+    
+            // Cari data enrollment
+            $enrollment = Enrollment::find($id);
+    
+            if (!$enrollment) {
+                Log::warning("Enrollment with ID $id not found.");
+                return response()->json(['message' => 'Enrollment not found'], 404);
+            }
+         
+            // Update data enrollment
+            $enrollment->update([
+                'student_id' => $validated['student_id'],
+                'mapel_id' => $validated['mapel_id'],
+                'status' => $validated['status'],
+                'no_kd' => $validated['noKd'],
+                'cognitive_1' => $validated['cognitive1'],
+                'cognitive_2' => $validated['cognitive2'],
+                'cognitive_pas' => $validated['cognitivePAS'],
+                'cognitive_average' => $validated['cognitiveAverage'],
+                'skill_1' => $validated['skill1'],
+                'skill_2' => $validated['skill2'],
+                'skill_pas' => $validated['skillPAS'],
+                'skill_average' => $validated['skillAverage'],
+                'final_mark' => $validated['finalMark'],
+                //'teacher_id' => $validated['teacher_id'],
+            ]);
+    
+            // Log data setelah berhasil diperbarui
+            Log::info('Updated enrollment:', $enrollment->toArray());
+    
+            // Ambil data terkait
+            $student = Student::find($validated['student_id']);
+            $course = Mapel::find($validated['mapel_id']);
+            //$waliKelas = Teacher::find($validated['wali_kelas_id']); // Model Teacher digunakan
+    
+            return response()->json([
+                'student' => $student,
+                'course' => $course,
+                //'wali_kelas' => $waliKelas,
+                'enrollment' => $enrollment,
+            ], 200);
+        } catch (\Exception $e) {
+            // Log error jika terjadi kesalahan
+            Log::error('Error updating enrollment:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(), // Menampilkan stack trace untuk debug lebih lanjut
+            ]);
+    
+            // Mengembalikan respon error
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-    
-        // Perbarui data enrollment
-        $enrollment->update($validated);
-    
-        return response()->json(['enrollment' => $enrollment], 200);
     }
+    
     
     
 }

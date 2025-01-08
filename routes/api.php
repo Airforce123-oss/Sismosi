@@ -3,8 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\SectionController;
 use App\Models\Student;
-use App\Models\Attendance;
+use App\Models\AttendanceTeacher;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceTeacherController;
 use App\Http\Controllers\BukuPenghubung1Controller; 
 use App\Models\Mapel;
 use Illuminate\Support\Facades\Session;
@@ -98,3 +99,15 @@ Route::get('/class-by-teacher', [TeacherController::class, 'getClassByTeacher'])
 Route::middleware('role')->get('/dashboard', function () {
     return response()->json(['message' => 'Welcome to the dashboard!']);
 });
+
+Route::get('/attendance-teacher/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'show']);
+Route::get('/attendance-teacher-detail/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'getAttendance']);
+//Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'store'])->name('attendance-teacher-create');
+Route::get('/teachers/attendance', [AttendanceTeacherController::class, 'absensiGuru'])->name('teachers.attendance');
+Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'create']);
+
+
+
+
+
+

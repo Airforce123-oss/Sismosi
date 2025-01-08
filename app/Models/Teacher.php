@@ -28,6 +28,7 @@ class Teacher extends Model
 {
     use HasFactory;
 
+    protected $table = 'wali_kelas';
     protected $fillable = [
         'name',
         'class_id',
@@ -43,7 +44,10 @@ class Teacher extends Model
     {
         return $this->belongsTo(Classes::class, 'class_id');
     }
-    protected $table = 'wali_kelas';
 
+    public function attendance()
+    {
+        return $this->hasMany(AttendanceTeacher::class, 'teacher_id', 'id');
+    }
     
 }
