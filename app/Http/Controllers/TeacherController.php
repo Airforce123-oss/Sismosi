@@ -41,16 +41,19 @@ class TeacherController extends Controller
         $this->applySearch($teacherQuery, $request->search);
     
         // Pagination
-        $wali_kelas = $teacherQuery->paginate(10)->appends($request->only('search'));
-        $itemsPerPage = $request->input('itemsPerPage', 10); // Default to 10 items per page
+        $wali_kelas = $teacherQuery->paginate(20)->appends($request->only('search'));
+        $itemsPerPage = $request->input('itemsPerPage', 20); // Default to 10 items per page
 
         $currentPage = $request->input('currentPage', 1); // Default
     
         // Ambil data classes yang relevan
         $classesQuery = Classes::query();
 
+        
+
         $classes_for_student = $classesQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
         ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
+        
     
     
         return inertia('Teachers/index', [

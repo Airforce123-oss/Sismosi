@@ -40,14 +40,19 @@ class Enrollment extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'student_id',
-        'mapel_id',
-        'enrollment_date',
         'status',
-        'mark',
-        'description',
-        'teacher_id'
+        'no_kd',
+        'cognitive_1',
+        'cognitive_2',
+        'cognitive_pas',
+        'cognitive_average',
+        'skill_1',
+        'skill_2',
+        'skill_pas',
+        'skill_average',
+        'final_mark',
     ];
+    
 
    
 

@@ -31,7 +31,7 @@ const date = ref(new Date());
 const userInputDate = ref("");
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth();
-const currentMonthYear = computed(() => {
+const futureMonthYear = computed(() => {
     const months = [
         "Januari",
         "Februari",
@@ -46,10 +46,13 @@ const currentMonthYear = computed(() => {
         "November",
         "Desember",
     ];
-    const nextMonthIndex = (currentMonth + 2) % 12;
-    const nextYear = currentYear + Math.floor((currentMonth + 2) / 12);
-    const monthName = months[nextMonthIndex];
-    return `${monthName} ${nextYear}`;
+    const currentDate = new Date();
+
+    const futureMonth = (currentMonth + 5) % 12; // Menambahkan 5 bulan ke bulan sekarang
+    const futureYear = currentMonth + 5 >= 12 ? currentYear + 1 : currentYear; // Menambahkan tahun jika lebih dari Desember
+
+    const monthName = months[futureMonth];
+    return `${monthName} ${futureYear}`;
 });
 
 // Mendapatkan tanggal saat ini (tanggal hari ini)
@@ -1892,6 +1895,7 @@ onMounted(async () => {
     background-color: rgba(15, 13, 14, 0.889);
 }
 </style>
+
 <template>
     <div class="antialiased bg-gray-50 dark:bg-gray-900">
         <nav
@@ -2049,14 +2053,14 @@ onMounted(async () => {
                                     Tabel Absensi Siswa
                                 </h1>
                                 <p class="text-sm mb-3 fw-bold text-danger">
-                                    Bulan {{ currentMonthYear }}
+                                    Bulan {{ futureMonthYear }}
                                 </p>
                                 <!--
                                 {{ nextMonthYear }} and {{ nextNextMonthYear }}
                                 -->
                             </div>
                         </div>
-                        <!--              <div>
+                        <!--     <div>
                             <button
                                 class="btn btn-primary modal-title fs-5"
                                 @click="showAddModal"
@@ -2414,7 +2418,7 @@ onMounted(async () => {
                 <div>
                     <!-- Daftar Siswa dan Tanggal -->
                     <div v-for="student in students" :key="student.id">
-                        <!--                        <p>{{ student.name }}</p>
+                        <!--          <p>{{ student.name }}</p>
                         <p>Tanggal: {{ date }}</p>
                         <button @click="handleStatusChange(student.id, date)">
                             Ubah Status Kehadiran
@@ -2424,99 +2428,38 @@ onMounted(async () => {
                     <!-- Modal untuk memilih status kehadiran -->
                     <div
                         v-if="isModalVisible"
-                        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+                        class="modal-overlay"
                         @click.self="closeModal"
                     >
-                        <!-- Modal Content -->
-                        <div
-                            class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full relative overflow-hidden transform transition-all duration-300 scale-95 hover:scale-100"
-                        >
-                            <!-- Close Icon -->
-                            <button
-                                class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"
-                                @click="closeModal"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke-width="2"
-                                    stroke="currentColor"
-                                    class="w-6 h-6"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-
-                            <!-- Modal Header -->
-                            <div class="text-center mb-6">
-                                <div
-                                    class="w-14 h-14 mx-auto flex items-center justify-center bg-blue-100 rounded-full mb-4"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="2"
-                                        stroke="currentColor"
-                                        class="w-8 h-8 text-blue-600"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M9 12h6m-3-3v6m9-6a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                    </svg>
-                                </div>
-                                <h3 class="text-2xl font-bold text-gray-800">
-                                    Pilih Status Kehadiran
-                                </h3>
-                                <p class="text-gray-500 text-sm">
-                                    Silakan pilih salah satu status di bawah
-                                    ini.
-                                </p>
-                            </div>
-
+                        <div class="modal-content">
+                            <h3>Masukkan Status Kehadiran</h3>
                             <!-- Pilihan Status -->
-                            <div class="space-y-4">
+                            <div class="status-options">
                                 <button
                                     v-for="status in statuses"
                                     :key="status"
                                     :class="getButtonClass(status)"
-                                    class="w-full py-3 px-5 rounded-lg font-semibold text-black transition-all duration-300"
                                     @click="selectStatus(status)"
                                 >
                                     {{ status }}
                                 </button>
                             </div>
 
-                            <!-- Input Custom Status -->
+                            <!-- Input untuk Status -->
                             <div
                                 v-if="isCustomStatus"
-                                class="custom-status-input mt-4"
+                                class="custom-status-input"
                             >
                                 <input
                                     v-model="customStatus"
                                     type="text"
                                     placeholder="Masukkan status (P, A, S, I)"
                                     @keyup.enter="selectStatus(customStatus)"
-                                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                                 />
                             </div>
-
-                            <!-- Modal Footer -->
-                            <div class="mt-6 text-center">
-                                <button
-                                    class="w-full py-3 bg-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-300 transition-colors"
-                                    @click="closeModal"
-                                >
-                                    Tutup
-                                </button>
-                            </div>
+                            <button class="close-btn" @click="closeModal">
+                                Tutup
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -18,7 +18,9 @@ class AttendanceController extends Controller
     }
 
     // General method for fetching attendance data
-    private function getAttendanceData(Request $request)
+
+    /*
+        private function getAttendanceData(Request $request)
     {
         return Attendance::with('siswa')
             ->when($request->has('student_id'), function ($query) use ($request) {
@@ -30,6 +32,40 @@ class AttendanceController extends Controller
                 return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
             });
     }
+
+    */
+    private function getAttendanceData(Request $request)
+    {
+        $month = $request->query('month');
+        $year = $request->query('year');
+    
+        // Mapping nama bulan ke angka
+        $monthMapping = [
+            'Januari' => '01', 'Februari' => '02', 'Maret' => '03', 'April' => '04',
+            'Mei' => '05', 'Juni' => '06', 'Juli' => '07', 'Agustus' => '08',
+            'September' => '09', 'Oktober' => '10', 'November' => '11', 'Desember' => '12',
+        ];
+    
+        // Konversi nama bulan ke angka jika perlu
+        if (isset($monthMapping[$month])) {
+            $month = $monthMapping[$month];
+        }
+    
+        return Attendance::with('siswa')
+            ->when($month, function ($query) use ($month, $year) {
+                $startOfMonth = Carbon::createFromFormat('Y-m', "$year-$month")->startOfMonth();
+                $endOfMonth = Carbon::createFromFormat('Y-m', "$year-$month")->endOfMonth();
+    
+                $query->whereBetween('tanggal_kehadiran', [$startOfMonth, $endOfMonth]);
+            })
+            ->get()
+            ->groupBy('student_id')
+            ->map(function ($attendance) {
+                return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+            });
+    }
+    
+    
 
     // Reusable method for rendering attendance views
     private function renderAttendanceView(Request $request, $viewName)
@@ -52,6 +88,12 @@ class AttendanceController extends Controller
         '4' => 'Students/absensiSiswaEmpat',
         '5' => 'Students/absensiSiswaLima',
         '6' => 'Students/absensiSiswaEnam',
+        '7' => 'Students/absensiSiswaTujuh',
+        '8' => 'Students/absensiSiswaDelapan',
+        '9' => 'Students/absensiSiswaSembilan',
+        '10' => 'Students/absensiSiswaSepuluh',
+        '11' => 'Students/absensiSiswaSebelas',
+        '12' => 'Students/absensiSiswaDuaBelas',
     ];
 
     // Validasi apakah ID valid
@@ -72,7 +114,69 @@ class AttendanceController extends Controller
         'filterParams' => $request->all(),
     ]);
 }
+public function absensiSiswa()
+{
+    return inertia('Students/absensiSiswa');
+}
 
+/*
+public function absensiSiswa(Request $request)
+{
+    // Set locale untuk Carbon ke bahasa Indonesia
+    Carbon::setLocale('id');
+    $timezone = 'Asia/Jakarta'; 
+
+    $request->validate([
+        'month' => 'required|string|in:Januari,Februari,Maret,April,Mei,Juni,Juli,Agustus,September,Oktober,November,Desember',
+        'year' => 'required|integer|min:1900|max:' . date('Y'),
+    ]);
+
+    // Ambil query string untuk bulan dan tahun
+    $month = $request->query('month');
+    $year = $request->query('year');
+
+    // Validasi bulan dan tahun (opsional)
+    if (!$month || !$year) {
+        return inertia('Students/absensiSiswa', [
+            'error' => 'Bulan dan tahun harus dipilih.',
+            'attendances' => [],
+            'filterParams' => $request->all(),
+        ]);
+    }
+
+    // Coba untuk memparsing bulan dengan format yang lebih umum
+    try {
+        if (!in_array($month, ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'])) {
+            throw new \Exception("Invalid month");
+        }
+        $monthNumber = Carbon::parse("1 $month $year", $timezone)->month;
+    } catch (\Exception $e) {
+        return inertia('Students/absensiSiswa', [
+            'error' => 'Bulan atau tahun tidak valid.',
+            'attendances' => [],
+            'filterParams' => $request->all(),
+        ]);
+    }
+    
+
+    // Ambil data absensi berdasarkan bulan dan tahun
+    $attendances = Attendance::with('siswa')
+        ->whereYear('tanggal_kehadiran', $year)
+        ->whereMonth('tanggal_kehadiran', $monthNumber)
+        ->get()
+        ->groupBy('student_id')
+        ->map(function ($attendance) {
+            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
+        });
+
+    // Return data ke frontend
+    return inertia('Students/absensiSiswa', [
+        'attendances' => $attendances,
+        'studentCount' => $attendances->count(),
+        'filterParams' => $request->all(),
+    ]);
+}
+*/
 
     public function absensiSiswaSatu(Request $request)
     {
@@ -104,9 +208,34 @@ class AttendanceController extends Controller
         return $this->renderAttendanceView($request, 'Students/absensiSiswaEnam');
     }
 
-    public function absensiSiswa()
+    public function absensiSiswaTujuh(Request $request)
     {
-        return inertia('Students/absensiSiswa');
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaTujuh');
+    }
+
+    public function absensiSiswaDelapan(Request $request)
+    {
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaDelapan');
+    }
+
+    public function absensiSiswaSembilan(Request $request)
+    {
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaSembilan');
+    }
+
+    public function absensiSiswaSepuluh(Request $request)
+    {
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaSepuluh');
+    }
+
+    public function absensiSiswaSebelas(Request $request)
+    {
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaSebelas');
+    }
+
+    public function absensiSiswaDuaBelas(Request $request)
+    {
+        return $this->renderAttendanceView($request, 'Students/absensiSiswaDuaBelas');
     }
 
     public function kelolaAbsensiSiswa()

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<script src="{{ URL::to('assets/plugins/apexchart/apexcharts.min.js') }}"></script>
+
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
@@ -40,7 +40,10 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        <div id="app" data-page="{{ json_encode($page) }}"></div>
+
     </body>
+    
 </html>
 
 

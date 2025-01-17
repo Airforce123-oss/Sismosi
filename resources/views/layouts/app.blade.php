@@ -37,6 +37,7 @@
         <div class="login-wrapper">
             <div class="container">
                 <div class="loginbox">
+                    <div id="app" data-page="{{ json_encode($page) }}"></div>
                     <div class="login-left">
                         <img class="img-fluid" src="{{ URL::to('assets/img/login.png') }}" alt="Logo">
                     </div>

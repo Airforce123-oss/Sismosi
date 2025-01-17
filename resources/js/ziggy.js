@@ -1,5 +1,511 @@
-const Ziggy = {"url":"http:\/\/localhost","port":null,"defaults":{},"routes":{"sanctum.csrf-cookie":{"uri":"sanctum\/csrf-cookie","methods":["GET","HEAD"]},"ignition.healthCheck":{"uri":"_ignition\/health-check","methods":["GET","HEAD"]},"ignition.executeSolution":{"uri":"_ignition\/execute-solution","methods":["POST"]},"ignition.updateConfig":{"uri":"_ignition\/update-config","methods":["POST"]},"dashboard":{"uri":"dashboard","methods":["GET","HEAD"]},"profile.edit":{"uri":"profile","methods":["GET","HEAD"]},"profile.update":{"uri":"profile","methods":["PATCH"]},"profile.destroy":{"uri":"profile","methods":["DELETE"]},"students.index":{"uri":"students","methods":["GET","HEAD"]},"students.create":{"uri":"students\/create","methods":["GET","HEAD"]},"students.store":{"uri":"students","methods":["POST"]},"students.show":{"uri":"students\/{student}","methods":["GET","HEAD"],"parameters":["student"]},"students.edit":{"uri":"students\/{student}\/edit","methods":["GET","HEAD"],"parameters":["student"],"bindings":{"student":"id"}},"students.update":{"uri":"students\/{student}","methods":["PUT","PATCH"],"parameters":["student"],"bindings":{"student":"id"}},"students.destroy":{"uri":"students\/{student}","methods":["DELETE"],"parameters":["student"],"bindings":{"student":"id"}},"kelas.index":{"uri":"kelas","methods":["GET","HEAD"]},"kelas.create":{"uri":"kelas\/create","methods":["GET","HEAD"]},"kelas.store":{"uri":"kelas","methods":["POST"]},"kelas.show":{"uri":"kelas\/{kela}","methods":["GET","HEAD"],"parameters":["kela"]},"kelas.edit":{"uri":"kelas\/{kela}\/edit","methods":["GET","HEAD"],"parameters":["kela"]},"kelas.update":{"uri":"kelas\/{kela}","methods":["PUT","PATCH"],"parameters":["kela"]},"kelas.destroy":{"uri":"kelas\/{kela}","methods":["DELETE"],"parameters":["kela"]},"Profile.index":{"uri":"Profile","methods":["GET","HEAD"]},"Profile.create":{"uri":"Profile\/create","methods":["GET","HEAD"]},"Profile.store":{"uri":"Profile","methods":["POST"]},"Profile.show":{"uri":"Profile\/{Profile}","methods":["GET","HEAD"],"parameters":["Profile"]},"Profile.edit":{"uri":"Profile\/{Profile}\/edit","methods":["GET","HEAD"],"parameters":["Profile"]},"Profile.update":{"uri":"Profile\/{Profile}","methods":["PUT","PATCH"],"parameters":["Profile"]},"Profile.destroy":{"uri":"Profile\/{Profile}","methods":["DELETE"],"parameters":["Profile"]},"tugas.index":{"uri":"tugas","methods":["GET","HEAD"]},"tugas.create":{"uri":"tugas\/create","methods":["GET","HEAD"]},"tugas.store":{"uri":"tugas","methods":["POST"]},"tugas.show":{"uri":"tugas\/{tuga}","methods":["GET","HEAD"],"parameters":["tuga"]},"tugas.edit":{"uri":"tugas\/{tuga}\/edit","methods":["GET","HEAD"],"parameters":["tuga"]},"tugas.update":{"uri":"tugas\/{tuga}","methods":["PUT","PATCH"],"parameters":["tuga"]},"tugas.destroy":{"uri":"tugas\/{tuga}","methods":["DELETE"],"parameters":["tuga"]},"penilaian.index":{"uri":"penilaian","methods":["GET","HEAD"]},"penilaian.create":{"uri":"penilaian\/create","methods":["GET","HEAD"]},"penilaian.store":{"uri":"penilaian","methods":["POST"]},"penilaian.show":{"uri":"penilaian\/{penilaian}","methods":["GET","HEAD"],"parameters":["penilaian"]},"penilaian.edit":{"uri":"penilaian\/{penilaian}\/edit","methods":["GET","HEAD"],"parameters":["penilaian"]},"penilaian.update":{"uri":"penilaian\/{penilaian}","methods":["PUT","PATCH"],"parameters":["penilaian"]},"penilaian.destroy":{"uri":"penilaian\/{penilaian}","methods":["DELETE"],"parameters":["penilaian"]},"adminlogin":{"uri":"admin\/login","methods":["GET","HEAD"]},"admin":{"uri":"admin\/api\/sections","methods":["GET","HEAD"]},"adminregister":{"uri":"admin\/register","methods":["GET","HEAD"]},"adminlogout":{"uri":"admin\/logout","methods":["POST"]},"admindashboard":{"uri":"admin\/dashboard","methods":["GET","HEAD"]},"register":{"uri":"register","methods":["GET","HEAD"]},"login":{"uri":"login","methods":["GET","HEAD"]},"password.request":{"uri":"forgot-password","methods":["GET","HEAD"]},"password.email":{"uri":"forgot-password","methods":["POST"]},"password.reset":{"uri":"reset-password\/{token}","methods":["GET","HEAD"],"parameters":["token"]},"password.store":{"uri":"reset-password","methods":["POST"]},"verification.notice":{"uri":"verify-email","methods":["GET","HEAD"]},"verification.verify":{"uri":"verify-email\/{id}\/{hash}","methods":["GET","HEAD"],"parameters":["id","hash"]},"verification.send":{"uri":"email\/verification-notification","methods":["POST"]},"password.confirm":{"uri":"confirm-password","methods":["GET","HEAD"]},"password.update":{"uri":"password","methods":["PUT"]},"logout":{"uri":"logout","methods":["POST"]},"adminprofile.edit":{"uri":"admin\/profile","methods":["GET","HEAD"]},"adminprofile.update":{"uri":"admin\/profile","methods":["PATCH"]},"adminprofile.destroy":{"uri":"admin\/profile","methods":["DELETE"]},"adminstudents.index":{"uri":"admin\/students","methods":["GET","HEAD"]},"adminstudents.create":{"uri":"admin\/students\/create","methods":["GET","HEAD"]},"adminstudents.store":{"uri":"admin\/students","methods":["POST"]},"adminstudents.show":{"uri":"admin\/students\/{student}","methods":["GET","HEAD"],"parameters":["student"]},"adminstudents.edit":{"uri":"admin\/students\/{student}\/edit","methods":["GET","HEAD"],"parameters":["student"],"bindings":{"student":"id"}},"adminstudents.update":{"uri":"admin\/students\/{student}","methods":["PUT","PATCH"],"parameters":["student"],"bindings":{"student":"id"}},"adminstudents.destroy":{"uri":"admin\/students\/{student}","methods":["DELETE"],"parameters":["student"],"bindings":{"student":"id"}},"adminkelas.index":{"uri":"admin\/kelas","methods":["GET","HEAD"]},"adminkelas.create":{"uri":"admin\/kelas\/create","methods":["GET","HEAD"]},"adminkelas.store":{"uri":"admin\/kelas","methods":["POST"]},"adminkelas.show":{"uri":"admin\/kelas\/{kela}","methods":["GET","HEAD"],"parameters":["kela"]},"adminkelas.edit":{"uri":"admin\/kelas\/{kela}\/edit","methods":["GET","HEAD"],"parameters":["kela"]},"adminkelas.update":{"uri":"admin\/kelas\/{kela}","methods":["PUT","PATCH"],"parameters":["kela"]},"adminkelas.destroy":{"uri":"admin\/kelas\/{kela}","methods":["DELETE"],"parameters":["kela"]},"adminProfile.index":{"uri":"admin\/Profile","methods":["GET","HEAD"]},"adminProfile.create":{"uri":"admin\/Profile\/create","methods":["GET","HEAD"]},"adminProfile.store":{"uri":"admin\/Profile","methods":["POST"]},"adminProfile.show":{"uri":"admin\/Profile\/{Profile}","methods":["GET","HEAD"],"parameters":["Profile"]},"adminProfile.edit":{"uri":"admin\/Profile\/{Profile}\/edit","methods":["GET","HEAD"],"parameters":["Profile"]},"adminProfile.update":{"uri":"admin\/Profile\/{Profile}","methods":["PUT","PATCH"],"parameters":["Profile"]},"adminProfile.destroy":{"uri":"admin\/Profile\/{Profile}","methods":["DELETE"],"parameters":["Profile"]},"admintugas.index":{"uri":"admin\/tugas","methods":["GET","HEAD"]},"admintugas.create":{"uri":"admin\/tugas\/create","methods":["GET","HEAD"]},"admintugas.store":{"uri":"admin\/tugas","methods":["POST"]},"admintugas.show":{"uri":"admin\/tugas\/{tuga}","methods":["GET","HEAD"],"parameters":["tuga"]},"admintugas.edit":{"uri":"admin\/tugas\/{tuga}\/edit","methods":["GET","HEAD"],"parameters":["tuga"]},"admintugas.update":{"uri":"admin\/tugas\/{tuga}","methods":["PUT","PATCH"],"parameters":["tuga"]},"admintugas.destroy":{"uri":"admin\/tugas\/{tuga}","methods":["DELETE"],"parameters":["tuga"]},"adminpenilaian.index":{"uri":"admin\/penilaian","methods":["GET","HEAD"]},"adminpenilaian.create":{"uri":"admin\/penilaian\/create","methods":["GET","HEAD"]},"adminpenilaian.store":{"uri":"admin\/penilaian","methods":["POST"]},"adminpenilaian.show":{"uri":"admin\/penilaian\/{penilaian}","methods":["GET","HEAD"],"parameters":["penilaian"]},"adminpenilaian.edit":{"uri":"admin\/penilaian\/{penilaian}\/edit","methods":["GET","HEAD"],"parameters":["penilaian"]},"adminpenilaian.update":{"uri":"admin\/penilaian\/{penilaian}","methods":["PUT","PATCH"],"parameters":["penilaian"]},"adminpenilaian.destroy":{"uri":"admin\/penilaian\/{penilaian}","methods":["DELETE"],"parameters":["penilaian"]}}};
-if (typeof window !== 'undefined' && typeof window.Ziggy !== 'undefined') {
+const Ziggy = {
+    url: "http://127.0.0.1:8000",
+    port: 8000,
+    defaults: {},
+    routes: {
+        "sanctum.csrf-cookie": {
+            uri: "sanctum/csrf-cookie",
+            methods: ["GET", "HEAD"],
+        },
+        "livewire.update": { uri: "livewire/update", methods: ["POST"] },
+        "livewire.upload-file": {
+            uri: "livewire/upload-file",
+            methods: ["POST"],
+        },
+        "livewire.preview-file": {
+            uri: "livewire/preview-file/{filename}",
+            methods: ["GET", "HEAD"],
+            parameters: ["filename"],
+        },
+        "laratrust.permissions.index": {
+            uri: "laratrust/permissions",
+            methods: ["GET", "HEAD"],
+        },
+        "laratrust.permissions.create": {
+            uri: "laratrust/permissions/create",
+            methods: ["GET", "HEAD"],
+        },
+        "laratrust.permissions.store": {
+            uri: "laratrust/permissions",
+            methods: ["POST"],
+        },
+        "laratrust.permissions.edit": {
+            uri: "laratrust/permissions/{permission}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["permission"],
+        },
+        "laratrust.permissions.update": {
+            uri: "laratrust/permissions/{permission}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["permission"],
+        },
+        "laratrust.roles.index": {
+            uri: "laratrust/roles",
+            methods: ["GET", "HEAD"],
+        },
+        "laratrust.roles.create": {
+            uri: "laratrust/roles/create",
+            methods: ["GET", "HEAD"],
+        },
+        "laratrust.roles.store": { uri: "laratrust/roles", methods: ["POST"] },
+        "laratrust.roles.show": {
+            uri: "laratrust/roles/{role}",
+            methods: ["GET", "HEAD"],
+            parameters: ["role"],
+        },
+        "laratrust.roles.edit": {
+            uri: "laratrust/roles/{role}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["role"],
+        },
+        "laratrust.roles.update": {
+            uri: "laratrust/roles/{role}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["role"],
+        },
+        "laratrust.roles.destroy": {
+            uri: "laratrust/roles/{role}",
+            methods: ["DELETE"],
+            parameters: ["role"],
+        },
+        "laratrust.roles-assignment.index": {
+            uri: "laratrust/roles-assignment",
+            methods: ["GET", "HEAD"],
+        },
+        "laratrust.roles-assignment.edit": {
+            uri: "laratrust/roles-assignment/{roles_assignment}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["roles_assignment"],
+        },
+        "laratrust.roles-assignment.update": {
+            uri: "laratrust/roles-assignment/{roles_assignment}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["roles_assignment"],
+        },
+        "ignition.healthCheck": {
+            uri: "_ignition/health-check",
+            methods: ["GET", "HEAD"],
+        },
+        "ignition.executeSolution": {
+            uri: "_ignition/execute-solution",
+            methods: ["POST"],
+        },
+        "ignition.updateConfig": {
+            uri: "_ignition/update-config",
+            methods: ["POST"],
+        },
+        "sections.index": { uri: "api/sections", methods: ["GET", "HEAD"] },
+        "teachers.attendance": {
+            uri: "api/teachers/attendance",
+            methods: ["GET", "HEAD"],
+        },
+        logout: { uri: "logout", methods: ["POST"] },
+        dashboard: { uri: "dashboard", methods: ["GET", "HEAD"] },
+        teachersdashboard: {
+            uri: "teachersDashboard",
+            methods: ["GET", "HEAD"],
+        },
+        studentsdashboard: {
+            uri: "studentsDashboard",
+            methods: ["GET", "HEAD"],
+        },
+        "profile.edit": { uri: "profile/edit", methods: ["GET", "HEAD"] },
+        "profile.update": { uri: "profile", methods: ["PUT"] },
+        "profile.destroy": { uri: "profile", methods: ["DELETE"] },
+        "students.index": { uri: "students", methods: ["GET", "HEAD"] },
+        "students.create": { uri: "students/create", methods: ["GET", "HEAD"] },
+        "students.store": { uri: "students", methods: ["POST"] },
+        "students.show": {
+            uri: "students/{student}",
+            methods: ["GET", "HEAD"],
+            parameters: ["student"],
+        },
+        "students.edit": {
+            uri: "students/{student}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "students.update": {
+            uri: "students/{student}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "students.destroy": {
+            uri: "students/{student}",
+            methods: ["DELETE"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "teachers.index": { uri: "teachers", methods: ["GET", "HEAD"] },
+        "teachers.create": { uri: "teachers/create", methods: ["GET", "HEAD"] },
+        "teachers.store": { uri: "teachers", methods: ["POST"] },
+        "teachers.show": {
+            uri: "teachers/{teacher}",
+            methods: ["GET", "HEAD"],
+            parameters: ["teacher"],
+        },
+        "teachers.edit": {
+            uri: "teachers/{teacher}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["teacher"],
+            bindings: { teacher: "id" },
+        },
+        "teachers.update": {
+            uri: "teachers/{teacher}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["teacher"],
+            bindings: { teacher: "id" },
+        },
+        "teachers.destroy": {
+            uri: "teachers/{teacher}",
+            methods: ["DELETE"],
+            parameters: ["teacher"],
+            bindings: { teacher: "id" },
+        },
+        "kelas.index": { uri: "kelas", methods: ["GET", "HEAD"] },
+        "kelas.create": { uri: "kelas/create", methods: ["GET", "HEAD"] },
+        "kelas.store": { uri: "kelas", methods: ["POST"] },
+        "kelas.show": {
+            uri: "kelas/{kela}",
+            methods: ["GET", "HEAD"],
+            parameters: ["kela"],
+        },
+        "kelas.edit": {
+            uri: "kelas/{kela}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["kela"],
+        },
+        "kelas.update": {
+            uri: "kelas/{kela}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["kela"],
+        },
+        "kelas.destroy": {
+            uri: "kelas/{kela}",
+            methods: ["DELETE"],
+            parameters: ["kela"],
+        },
+        "Profile.index": { uri: "Profile", methods: ["GET", "HEAD"] },
+        "Profile.create": { uri: "Profile/create", methods: ["GET", "HEAD"] },
+        "Profile.store": { uri: "Profile", methods: ["POST"] },
+        "Profile.show": {
+            uri: "Profile/{Profile}",
+            methods: ["GET", "HEAD"],
+            parameters: ["Profile"],
+        },
+        "Profile.edit": {
+            uri: "Profile/{Profile}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["Profile"],
+        },
+        "Profile.update": {
+            uri: "Profile/{Profile}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["Profile"],
+        },
+        "Profile.destroy": {
+            uri: "Profile/{Profile}",
+            methods: ["DELETE"],
+            parameters: ["Profile"],
+        },
+        "penilaian.index": { uri: "penilaian", methods: ["GET", "HEAD"] },
+        "penilaian.create": {
+            uri: "penilaian/create",
+            methods: ["GET", "HEAD"],
+        },
+        "penilaian.store": { uri: "penilaian", methods: ["POST"] },
+        "penilaian.show": {
+            uri: "penilaian/{penilaian}",
+            methods: ["GET", "HEAD"],
+            parameters: ["penilaian"],
+        },
+        "penilaian.edit": {
+            uri: "penilaian/{penilaian}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["penilaian"],
+        },
+        "penilaian.update": {
+            uri: "penilaian/{penilaian}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["penilaian"],
+        },
+        "penilaian.destroy": {
+            uri: "penilaian/{penilaian}",
+            methods: ["DELETE"],
+            parameters: ["penilaian"],
+        },
+        membuatTugasSiswa: {
+            uri: "membuatTugasSiswa",
+            methods: ["GET", "HEAD"],
+        },
+        bukuPenghubung: { uri: "bukuPenghubung", methods: ["GET", "HEAD"] },
+        bukuPenghubung1: { uri: "bukuPenghubung1", methods: ["GET", "HEAD"] },
+        teacherbukuPenghubung: {
+            uri: "bukuPenghubungDashboard",
+            methods: ["GET", "HEAD"],
+        },
+        "enrollments.create": {
+            uri: "enrollments/create",
+            methods: ["GET", "HEAD"],
+        },
+        teachermembuatEnrollment: {
+            uri: "membuat-enrollment",
+            methods: ["GET", "HEAD"],
+        },
+        teachersabsensiSiswa: {
+            uri: "absensiSiswaTeacher",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswa: { uri: "absensiSiswa", methods: ["GET", "HEAD"] },
+        studentsabsensiGuru: { uri: "absensiGuru", methods: ["GET", "HEAD"] },
+        apiattendancesstore: { uri: "api/attendances", methods: ["POST"] },
+        update: {
+            uri: "update/{id}/tanggal/{tanggal_kehadiran}",
+            methods: ["POST"],
+            parameters: ["id", "tanggal_kehadiran"],
+        },
+        studentkelolaAbsensiSiswa: {
+            uri: "kelolaAbsensiSiswa",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaSatu: {
+            uri: "AbsensiSiswaSatu",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaDua: {
+            uri: "AbsensiSiswaDua",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaTiga: {
+            uri: "AbsensiSiswaTiga",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaEmpat: {
+            uri: "AbsensiSiswaEmpat",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaLima: {
+            uri: "AbsensiSiswaLima",
+            methods: ["GET", "HEAD"],
+        },
+        studentsabsensiSiswaEnam: {
+            uri: "AbsensiSiswaEnam",
+            methods: ["GET", "HEAD"],
+        },
+        tugastambah: { uri: "tugasTambah", methods: ["GET", "HEAD"] },
+        "matapelajaran.index": {
+            uri: "mataPelajaran",
+            methods: ["GET", "HEAD"],
+        },
+        "matapelajaran.create": {
+            uri: "mataPelajaran/create",
+            methods: ["GET", "HEAD"],
+        },
+        "matapelajaran.store": {
+            uri: "mata-pelajaran/store",
+            methods: ["POST"],
+        },
+        "matapelajaran.destroy": {
+            uri: "matapelajaran/{id}",
+            methods: ["DELETE"],
+            parameters: ["id"],
+        },
+        "matapelajaran.edit": {
+            uri: "matapelajaran/{mapel}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["mapel"],
+        },
+        adminlogin: { uri: "admin/login", methods: ["GET", "HEAD"] },
+        admin: { uri: "admin/api/sections", methods: ["GET", "HEAD"] },
+        adminregister: { uri: "admin/register", methods: ["GET", "HEAD"] },
+        adminlogout: { uri: "admin/logout", methods: ["POST"] },
+        "user.roles.update": {
+            uri: "user/{user}/roles",
+            methods: ["PUT"],
+            parameters: ["user"],
+        },
+        register: { uri: "register", methods: ["GET", "HEAD"] },
+        login: { uri: "login", methods: ["GET", "HEAD"] },
+        "password.request": {
+            uri: "forgot-password",
+            methods: ["GET", "HEAD"],
+        },
+        "password.email": { uri: "forgot-password", methods: ["POST"] },
+        "password.reset": {
+            uri: "reset-password/{token}",
+            methods: ["GET", "HEAD"],
+            parameters: ["token"],
+        },
+        "password.store": { uri: "reset-password", methods: ["POST"] },
+        "verification.notice": {
+            uri: "verify-email",
+            methods: ["GET", "HEAD"],
+        },
+        "verification.verify": {
+            uri: "verify-email/{id}/{hash}",
+            methods: ["GET", "HEAD"],
+            parameters: ["id", "hash"],
+        },
+        "verification.send": {
+            uri: "email/verification-notification",
+            methods: ["POST"],
+        },
+        "password.confirm": {
+            uri: "confirm-password",
+            methods: ["GET", "HEAD"],
+        },
+        "password.update": { uri: "password", methods: ["PUT"] },
+        adminDashboard: { uri: "admin/Dashboard", methods: ["GET", "HEAD"] },
+        "adminprofile.edit": { uri: "admin/profile", methods: ["GET", "HEAD"] },
+        "adminprofile.update": { uri: "admin/profile", methods: ["PATCH"] },
+        "adminprofile.destroy": { uri: "admin/profile", methods: ["DELETE"] },
+        "adminstudents.index": {
+            uri: "admin/students",
+            methods: ["GET", "HEAD"],
+        },
+        "adminstudents.create": {
+            uri: "admin/students/create",
+            methods: ["GET", "HEAD"],
+        },
+        "adminstudents.store": { uri: "admin/students", methods: ["POST"] },
+        "adminstudents.show": {
+            uri: "admin/students/{student}",
+            methods: ["GET", "HEAD"],
+            parameters: ["student"],
+        },
+        "adminstudents.edit": {
+            uri: "admin/students/{student}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "adminstudents.update": {
+            uri: "admin/students/{student}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "adminstudents.destroy": {
+            uri: "admin/students/{student}",
+            methods: ["DELETE"],
+            parameters: ["student"],
+            bindings: { student: "id" },
+        },
+        "adminkelas.index": { uri: "admin/kelas", methods: ["GET", "HEAD"] },
+        "adminkelas.create": {
+            uri: "admin/kelas/create",
+            methods: ["GET", "HEAD"],
+        },
+        "adminkelas.store": { uri: "admin/kelas", methods: ["POST"] },
+        "adminkelas.show": {
+            uri: "admin/kelas/{kela}",
+            methods: ["GET", "HEAD"],
+            parameters: ["kela"],
+        },
+        "adminkelas.edit": {
+            uri: "admin/kelas/{kela}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["kela"],
+        },
+        "adminkelas.update": {
+            uri: "admin/kelas/{kela}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["kela"],
+        },
+        "adminkelas.destroy": {
+            uri: "admin/kelas/{kela}",
+            methods: ["DELETE"],
+            parameters: ["kela"],
+        },
+        "adminProfile.index": {
+            uri: "admin/Profile",
+            methods: ["GET", "HEAD"],
+        },
+        "adminProfile.create": {
+            uri: "admin/Profile/create",
+            methods: ["GET", "HEAD"],
+        },
+        "adminProfile.store": { uri: "admin/Profile", methods: ["POST"] },
+        "adminProfile.show": {
+            uri: "admin/Profile/{Profile}",
+            methods: ["GET", "HEAD"],
+            parameters: ["Profile"],
+        },
+        "adminProfile.edit": {
+            uri: "admin/Profile/{Profile}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["Profile"],
+        },
+        "adminProfile.update": {
+            uri: "admin/Profile/{Profile}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["Profile"],
+        },
+        "adminProfile.destroy": {
+            uri: "admin/Profile/{Profile}",
+            methods: ["DELETE"],
+            parameters: ["Profile"],
+        },
+        "admintugas.index": { uri: "admin/tugas", methods: ["GET", "HEAD"] },
+        "admintugas.create": {
+            uri: "admin/tugas/create",
+            methods: ["GET", "HEAD"],
+        },
+        "admintugas.store": { uri: "admin/tugas", methods: ["POST"] },
+        "admintugas.show": {
+            uri: "admin/tugas/{tuga}",
+            methods: ["GET", "HEAD"],
+            parameters: ["tuga"],
+        },
+        "admintugas.edit": {
+            uri: "admin/tugas/{tuga}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["tuga"],
+        },
+        "admintugas.update": {
+            uri: "admin/tugas/{tuga}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["tuga"],
+        },
+        "admintugas.destroy": {
+            uri: "admin/tugas/{tuga}",
+            methods: ["DELETE"],
+            parameters: ["tuga"],
+        },
+        "adminpenilaian.index": {
+            uri: "admin/penilaian",
+            methods: ["GET", "HEAD"],
+        },
+        "adminpenilaian.create": {
+            uri: "admin/penilaian/create",
+            methods: ["GET", "HEAD"],
+        },
+        "adminpenilaian.store": { uri: "admin/penilaian", methods: ["POST"] },
+        "adminpenilaian.show": {
+            uri: "admin/penilaian/{penilaian}",
+            methods: ["GET", "HEAD"],
+            parameters: ["penilaian"],
+        },
+        "adminpenilaian.edit": {
+            uri: "admin/penilaian/{penilaian}/edit",
+            methods: ["GET", "HEAD"],
+            parameters: ["penilaian"],
+        },
+        "adminpenilaian.update": {
+            uri: "admin/penilaian/{penilaian}",
+            methods: ["PUT", "PATCH"],
+            parameters: ["penilaian"],
+        },
+        "adminpenilaian.destroy": {
+            uri: "admin/penilaian/{penilaian}",
+            methods: ["DELETE"],
+            parameters: ["penilaian"],
+        },
+    },
+};
+if (typeof window !== "undefined" && typeof window.Ziggy !== "undefined") {
     Object.assign(Ziggy.routes, window.Ziggy.routes);
 }
 export { Ziggy };

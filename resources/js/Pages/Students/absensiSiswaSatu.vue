@@ -2040,7 +2040,7 @@ onMounted(async () => {
                             </div>
                         </div>
 
-              <!--          <div>
+                        <!--          <div>
                             <button
                                 class="btn btn-primary modal-title fs-5 block sm:inline-block w-full sm:w-auto"
                                 @click="showAddModal"
@@ -2387,38 +2387,99 @@ onMounted(async () => {
                     <!-- Modal untuk memilih status kehadiran -->
                     <div
                         v-if="isModalVisible"
-                        class="modal-overlay"
+                        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
                         @click.self="closeModal"
                     >
-                        <div class="modal-content">
-                            <h3>Masukkan Status Kehadiran</h3>
+                        <!-- Modal Content -->
+                        <div
+                            class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full relative overflow-hidden transform transition-all duration-300 scale-95 hover:scale-100"
+                        >
+                            <!-- Close Icon -->
+                            <button
+                                class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"
+                                @click="closeModal"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="2"
+                                    stroke="currentColor"
+                                    class="w-6 h-6"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+
+                            <!-- Modal Header -->
+                            <div class="text-center mb-6">
+                                <div
+                                    class="w-14 h-14 mx-auto flex items-center justify-center bg-blue-100 rounded-full mb-4"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke-width="2"
+                                        stroke="currentColor"
+                                        class="w-8 h-8 text-blue-600"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M9 12h6m-3-3v6m9-6a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">
+                                    Pilih Status Kehadiran
+                                </h3>
+                                <p class="text-gray-500 text-sm">
+                                    Silakan pilih salah satu status di bawah
+                                    ini.
+                                </p>
+                            </div>
+
                             <!-- Pilihan Status -->
-                            <div class="status-options">
+                            <div class="space-y-4">
                                 <button
                                     v-for="status in statuses"
                                     :key="status"
                                     :class="getButtonClass(status)"
-                                @click="selectStatus(status)"
+                                    class="w-full py-3 px-5 rounded-lg font-semibold text-black transition-all duration-300"
+                                    @click="selectStatus(status)"
                                 >
                                     {{ status }}
                                 </button>
                             </div>
 
-                            <!-- Input untuk Status -->
+                            <!-- Input Custom Status -->
                             <div
                                 v-if="isCustomStatus"
-                                class="custom-status-input"
+                                class="custom-status-input mt-4"
                             >
                                 <input
                                     v-model="customStatus"
                                     type="text"
                                     placeholder="Masukkan status (P, A, S, I)"
                                     @keyup.enter="selectStatus(customStatus)"
+                                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                                 />
                             </div>
-                            <button class="close-btn" @click="closeModal">
-                                Tutup
-                            </button>
+
+                            <!-- Modal Footer -->
+                            <div class="mt-6 text-center">
+                                <button
+                                    class="w-full py-3 bg-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-300 transition-colors"
+                                    @click="closeModal"
+                                >
+                                    Tutup
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

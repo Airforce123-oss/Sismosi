@@ -1,10 +1,11 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import axios from "axios";
 import { initFlowbite } from "flowbite";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import { Link, useForm, usePage, Head } from "@inertiajs/vue3";
-import $ from "jquery";
+import { useForm, usePage, Head } from "@inertiajs/vue3";
+import { Link } from "@inertiajs/vue3"; // <-- correct
+import { Inertia } from "@inertiajs/inertia";
 import "@assets/plugins/simple-calendar/jquery.simple-calendar.js";
 import "@assets/plugins/simple-calendar/simple-calendar.css";
 
@@ -21,42 +22,126 @@ const form = useForm({
 const fetchSessionData = async () => {
     try {
         const response = await axios.get("/api/session-name");
-
         userName.value = response.data.name;
     } catch (error) {
-        console.error("There was an error fetching the session data:", error);
+        console.error("Terjadi kesalahan saat mengambil data session:", error);
     }
 };
 
+// Fungsi untuk mengambil kelas berdasarkan guru
 const fetchClassByTeacher = async () => {
     try {
-        console.log(`Fetching class for User ID: ${props.auth.user?.id}`);
-
         const response = await axios.get("/api/class-by-teacher", {
             params: { name: props.auth.user?.name || "" },
         });
-
         teacherClass.value = response.data.class || "Tidak ada kelas terkait";
-        console.log(
-            `User ID: ${props.auth.user?.id} - Kelas: ${teacherClass.value}`
-        );
     } catch (error) {
-        console.error("Error fetching class by teacher:", error.message);
+        console.error(
+            "Terjadi kesalahan saat mengambil kelas berdasarkan guru:",
+            error.message
+        );
         teacherClass.value = "Error";
     }
 };
 
+// Fungsi yang dipanggil ketika komponen dimuat
 onMounted(() => {
-    // Log informasi tentang pengguna yang login
-    console.log(`User ID: ${props.auth.user?.id}`);
-    console.log(`User Name: ${props.auth.user?.name}`);
-    console.log(`User Role: ${props.auth.user?.role_type}`);
-
     fetchClassByTeacher();
     initFlowbite();
-
-    // Fetch session data
     fetchSessionData();
+});
+
+// Pemilihan Tahun dan Bulan untuk filter
+const selectedYear = ref("2025");
+const selectedMonth = ref("");
+
+const years = ["2025", "2026", "2027"]; // Contoh tahun
+const months = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+];
+
+// Mengelola visibilitas dropdown
+const isYearDropdownOpen = ref(false);
+const isMonthDropdownOpen = ref(false);
+
+const attendanceData = ref([]);
+const errorMessage = ref("");
+
+watch([selectedMonth, selectedYear], async (newValues) => {
+    const [newMonth, newYear] = newValues;
+    if (!newMonth || !newYear) {
+        console.error("Bulan dan tahun harus dipilih.");
+        return; // Prevent further actions if month or year is not selected
+    }
+
+    try {
+        await fetchAttendanceData(newMonth, newYear);
+        updateURL(newMonth, newYear);
+    } catch (error) {
+        console.error("Error during watch callback:", error);
+    }
+});
+
+watch(selectedMonth, (newValue) => {
+    console.log("Selected month changed:", newValue);
+});
+watch(selectedYear, (newValue) => {
+    console.log("Selected year changed:", newValue);
+});
+
+const filteredMonths = computed(() => {
+    return months;
+});
+
+const fetchAttendanceData = async (month, year) => {
+    try {
+        const response = await axios.get("/api/attendance", {
+            params: {
+                month: month,
+                year: year,
+            },
+        });
+        attendanceData.value = response.data; // Menyimpan data absensi
+    } catch (error) {
+        console.error("Terjadi kesalahan saat mengambil data absensi:", error);
+        errorMessage.value = "Gagal mengambil data session.";
+    }
+};
+
+function updateURL() {
+    const url = `/absensiSiswa?month=${month.value}&year=${year.value}`;
+    Inertia.visit(url); // Melakukan navigasi ke URL yang telah diupdate
+}
+
+// Mapping bulan ke route
+const monthToRouteMap = {
+    Januari: "/AbsensiSiswaSatu",
+    Februari: "/AbsensiSiswaDua",
+    Maret: "/AbsensiSiswaTiga",
+    April: "/AbsensiSiswaEmpat",
+    Mei: "/AbsensiSiswaLima",
+    Juni: "/AbsensiSiswaEnam",
+    Juli: "/AbsensiSiswaTujuh",
+    Agustus: "/AbsensiSiswaDelapan",
+    September: "/AbsensiSiswaSembilan",
+    Oktober: "/AbsensiSiswaSepuluh",
+    November: "/AbsensiSiswaSebelas",
+    Desember: "/AbsensiSiswaDuaBelas",
+};
+const monthLink = computed(() => {
+    if (!selectedMonth.value || !selectedYear.value) return "#";
+    return `/absensiSiswa?month=${selectedMonth.value}&year=${selectedYear.value}`;
 });
 </script>
 
@@ -224,6 +309,13 @@ onMounted(() => {
                 Absensi Siswa
             </h2>
 
+            <div
+                v-if="errorMessage"
+                class="alert alert-danger text-red-600 p-4 mb-4"
+            >
+                <strong>Error: </strong>{{ errorMessage }}
+            </div>
+
             <!-- Card Header -->
             <div class="content bg-yellow-100 p-4 py-6 mb-10">
                 <div class="grid grid-cols-1 gap-2">
@@ -251,120 +343,76 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="content p-4 py-6 mb-4">
-                <div class="grid grid-cols-1 gap-2">
-                    <div>
-                        <p>Overview Absensi</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="content bg-gray-100 p-4 py-6">
-                <div class="grid grid-cols-1 gap-2">
-                    <div>
-                        <p>All || In Progress || Future</p>
-                    </div>
-                </div>
-            </div>
-
-            <section class="content py-6">
-                <!-- Card Body -->
-                <div class="p-4">
+            <!-- Dropdown Filter untuk Tahun dan Bulan -->
+            <div class="content bg-gray-200 p-4 py-6 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Dropdown Tahun -->
                     <div
-                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                        class="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6"
                     >
-                        <!-- Month Cards -->
-                        <a
-                            href="AbsensiSiswaSatu"
-                            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
+                        <label
+                            for="year"
+                            class="font-semibold text-lg text-gray-700"
+                            >Pilih Tahun:</label
                         >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Januari 2025</span
-                                >
-                            </div>
-                        </a>
+                        <select
+                            id="year"
+                            v-model="selectedYear"
+                            class="p-2 w-full md:w-36 border rounded-md shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option
+                                v-for="year in years"
+                                :key="year"
+                                :value="year"
+                            >
+                                {{ year }}
+                            </option>
+                        </select>
+                    </div>
 
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaDua"
-                            class="flex items-center bg-green-500 text-white p-4 rounded-md shadow-md hover:bg-green-600 transition"
+                    <!-- Dropdown Bulan -->
+                    <div
+                        class="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6"
+                    >
+                        <label
+                            for="month"
+                            class="font-semibold text-lg text-gray-700"
                         >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Februari 2025</span
-                                >
-                            </div>
-                        </a>
-
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaTiga"
-                            class="flex items-center bg-yellow-500 text-white p-4 rounded-md shadow-md hover:bg-yellow-600 transition"
+                            Pilih Bulan:
+                        </label>
+                        <select
+                            id="month"
+                            v-model="selectedMonth"
+                            class="p-2 w-full md:w-36 border rounded-md shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Maret 2025</span
-                                >
-                            </div>
-                        </a>
-
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaEmpat"
-                            class="flex items-center bg-cyan-500 text-white p-4 rounded-md shadow-md hover:bg-cyan-600 transition"
-                        >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >April 2025</span
-                                >
-                            </div>
-                        </a>
-
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaLima"
-                            class="flex items-center bg-red-500 text-white p-4 rounded-md shadow-md hover:bg-red-600 transition"
-                        >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Mei 2025</span
-                                >
-                            </div>
-                        </a>
-
-                        <!-- Month Cards -->
-                        <a
-                            href="/AbsensiSiswaEnam"
-                            class="flex items-center bg-gray-500 text-white p-4 rounded-md shadow-md hover:bg-gray-600 transition"
-                        >
-                            <span class="text-2xl mr-4">
-                                <i class="fas fa-calendar"></i>
-                            </span>
-                            <div>
-                                <span class="block text-lg font-bold"
-                                    >Juni 2025</span
-                                >
-                            </div>
-                        </a>
+                            <option
+                                v-for="month in filteredMonths"
+                                :key="month"
+                                :value="month"
+                            >
+                                {{ month }}
+                            </option>
+                        </select>
                     </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- Kartu Bulan -->
+            <div v-if="selectedMonth" class="flex justify-center mt-6">
+                <a
+                    :href="monthLink"
+                    class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
+                >
+                    <span class="text-2xl mr-4">
+                        <i class="fas fa-calendar"></i>
+                    </span>
+                    <div>
+                        <span class="block text-lg font-bold">
+                            Absensi Bulan {{ selectedMonth }} {{ selectedYear }}
+                        </span>
+                    </div>
+                </a>
+            </div>
         </main>
 
         <!-- Sidebar -->

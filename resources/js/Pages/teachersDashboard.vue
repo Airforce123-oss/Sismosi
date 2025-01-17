@@ -2,8 +2,8 @@
 import { onMounted, ref } from "vue";
 import { initFlowbite } from "flowbite";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import VueApexCharts from "vue-apexcharts";
-import ApexCharts from "apexcharts";
+import VueApexCharts from "vue3-apexcharts";
+//import ApexCharts from "apexcharts";
 import { Link, useForm, usePage, Head } from "@inertiajs/vue3";
 import $ from "jquery";
 //import "@/assets/plugins/jquery.simple-calendar.js";

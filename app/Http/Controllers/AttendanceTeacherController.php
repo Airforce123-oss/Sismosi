@@ -7,6 +7,7 @@ use App\Models\AttendanceTeacher;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Inertia\Inertia;
 use App\Models\Classes;
 
 class AttendanceTeacherController extends Controller
@@ -15,23 +16,34 @@ class AttendanceTeacherController extends Controller
     {
         // Mengambil data absensi dari database, dengan relasi teacher dan class
         $attendance = AttendanceTeacher::with('teacher', 'class')->get();
-        
+        Log::info('Attendance data:', $attendance->toArray());
+    
         // Mengambil data guru yang memiliki role 'teacher' dengan pagination
-        $teachers = User::whereHas('roles', function($query) {
+        $teachers = User::whereHas('roles', function ($query) {
             $query->where('name', 'teacher'); // Hanya ambil guru
-        })->paginate(5); // Menggunakan pagination, misalnya 5 per halaman
-        
+        })->paginate(5);
+        Log::info('Teachers data:', $teachers->items());
+    
         // Mengambil semua kelas
-        $classes = Classes::all();  
-        
+        $classes = Classes::all();
+        Log::info('Classes data:', $classes->toArray());
+    
+        // Mengambil data wali_kelas
+        $waliKelas = User::whereHas('roles', function ($query) {
+            $query->where('name', 'wali_kelas'); // Hanya ambil wali_kelas
+        })->get();
+        Log::info('Wali Kelas data:', $waliKelas->toArray());
+    
         // Kelompokkan absensi berdasarkan class_id
         $groupedByClass = $attendance->groupBy('class_id');
-        
+        Log::info('Grouped Attendance by Class ID:', $groupedByClass->toArray());
+    
         // Mengirim data absensi, teachers, dan classes ke halaman Inertia
         return inertia('Teachers/AbsensiGuru/index', [
             'attendance' => $groupedByClass,
             'teachers' => $teachers->items(),  // Kirimkan data teacher sebagai array biasa
             'classes' => $classes,  // Pastikan classes dikirim
+            'wali_kelas' => $waliKelas,  // Kirimkan data wali_kelas
             'currentPage' => $teachers->currentPage(),
             'lastPage' => $teachers->lastPage(),
             'total' => $teachers->total(),
@@ -40,7 +52,6 @@ class AttendanceTeacherController extends Controller
     }
     
     
-
     // API Method to fetch attendance data for teachers
     public function getAttendance($teacherId, $attendanceDate)
     {
@@ -53,83 +64,66 @@ class AttendanceTeacherController extends Controller
         }
     
         return response()->json($attendance);
-}
+    }
 
-public function getAttendanceTeachers(Request $request)
-{
-    // Ambil teacher_id dan attendance_date dari query string
-    $teacherId = $request->query('teacher_id');
-    $attendanceDate = $request->query('attendance_date');
+    public function getAttendanceTeachers(Request $request)
+    {
+        // Ambil teacher_id dan attendance_date dari query string
+        $teacherId = $request->query('teacher_id');
+        $attendanceDate = $request->query('attendance_date');
     
-    // Tambahkan log untuk melihat nilai teacher_id dan attendance_date
-    Log::debug("Teacher ID: $teacherId");
-    Log::debug("Attendance Date: $attendanceDate");
-    // Validasi input
-    if (!$teacherId || !$attendanceDate) {
-        return response()->json(['message' => 'Teacher ID and Attendance Date are required'], 400);
+        // Validasi input
+        if (!$teacherId || !$attendanceDate) {
+            return response()->json(['message' => 'Teacher ID and Attendance Date are required'], 400);
+        }
+    
+        // Format tanggal menjadi Y-m-d menggunakan Carbon
+        $attendanceDate = Carbon::parse($attendanceDate)->format('Y-m-d');
+    
+        // Cari absensi berdasarkan teacher_id dan attendance_date
+        $attendance = AttendanceTeacher::where('teacher_id', $teacherId)
+            ->whereDate('attendance_date', $attendanceDate)
+            ->get();
+    
+        // Kirim data melalui Inertia
+        return Inertia::render('Teachers/AbsensiGuru/Index', [
+            'attendance' => $attendance,
+        ]);
     }
-
-    // Format tanggal menjadi Y-m-d menggunakan Carbon (pastikan tanggal valid)
-    $attendanceDate = Carbon::parse($attendanceDate)->format('Y-m-d');
-
-    // Cari absensi berdasarkan teacher_id dan attendance_date
-    $attendance = AttendanceTeacher::where('teacher_id', $teacherId)
-        ->whereDate('attendance_date', $attendanceDate)
-        ->get();
-
-    // Jika absensi tidak ditemukan
-    if ($attendance->isEmpty()) {
-        return response()->json(['message' => 'No attendance record found.'], 404);
-    }
-
-    // Kirimkan data absensi
-    return response()->json($attendance);
-}
-
+    
     
     public function updateAttendance(Request $request)
     {
         // Validasi data yang diterima
         $validated = $request->validate([
-            'teacher_id' => 'required|exists:wali_kelas,id', // Validasi teacher_id di tabel wali_kelas
+            'teacher_id' => 'required|exists:users,id',
             'attendance_date' => 'required|date',
             'status' => 'required|string',
         ]);
-
-        // Menggunakan Carbon untuk memformat tanggal menjadi Y-m-d
+    
+        // Menggunakan Carbon untuk memformat tanggal
         $attendance_date = Carbon::parse($validated['attendance_date'])->format('Y-m-d');
-
-        // Menambahkan log untuk melihat data yang dikirimkan
-        Log::info('Received data for attendance update:', [
-            'teacher_id' => $validated['teacher_id'],
-            'attendance_date' => $attendance_date, // Gunakan tanggal yang telah diformat
-            'status' => $validated['status']
-        ]);
-
+    
         // Mencari absensi berdasarkan teacher_id dan attendance_date
         $attendance = AttendanceTeacher::where('teacher_id', $validated['teacher_id'])
-                                        ->where('attendance_date', $attendance_date) // Gunakan tanggal yang telah diformat
+                                        ->where('attendance_date', $attendance_date)
                                         ->first();
-
-        // Jika tidak ditemukan, kirimkan pesan error
+    
         if (!$attendance) {
             return response()->json(['message' => 'Attendance not found.'], 404);
         }
-
+    
         // Update status absensi
         $attendance->status = $validated['status'];
         $attendance->save();
-
-        // Tambahkan log setelah pembaruan berhasil
-        Log::info('Attendance updated successfully:', [
-            'teacher_id' => $validated['teacher_id'],
-            'attendance_date' => $attendance_date, // Gunakan tanggal yang telah diformat
-            'status' => $validated['status']
+    
+        // Kembalikan data melalui Inertia
+        return Inertia::render('Teachers/AbsensiGuru/Detail', [
+            'attendance' => $attendance,
         ]);
-
-        return response()->json(['message' => 'Attendance updated successfully.', 'data' => $attendance]);
     }
     
+
     public function store(Request $request)
     {
         // Debug data yang diterima
@@ -149,7 +143,6 @@ public function getAttendanceTeachers(Request $request)
             'attendance' => $attendance,
         ], 201);
     }
-    
 
     public function create(Request $request)
     {
@@ -176,29 +169,23 @@ public function getAttendanceTeachers(Request $request)
             'attendance' => $attendance,
         ], 201);
     }
-    
-    
 
-    
     public function show($teacher_id, $date)
-{
-    // Format tanggal menjadi Y-m-d
-    $formattedDate = Carbon::parse($date)->format('Y-m-d');
-    
-    // Cari absensi berdasarkan teacher_id dan tanggal
-    $attendance = AttendanceTeacher::where('teacher_id', $teacher_id)
-        ->whereDate('attendance_date', $formattedDate)
-        ->first();
-    
-    // Jika tidak ditemukan, kirimkan respon 404
-    if (!$attendance) {
-        return response()->json(['message' => 'Attendance not found.'], 404);
+    {
+        // Format tanggal menjadi Y-m-d
+        $formattedDate = Carbon::parse($date)->format('Y-m-d');
+        
+        // Cari absensi berdasarkan teacher_id dan tanggal
+        $attendance = AttendanceTeacher::where('teacher_id', $teacher_id)
+            ->whereDate('attendance_date', $formattedDate)
+            ->first();
+        
+        // Jika tidak ditemukan, kirimkan respon 404
+        if (!$attendance) {
+            return response()->json(['message' => 'Attendance not found.'], 404);
+        }
+        
+        // Kirimkan data absensi sebagai respon JSON
+        return response()->json($attendance);
     }
-    
-    // Kirimkan data absensi sebagai respon JSON
-    return response()->json($attendance);
 }
-
-    
-}
-

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Constraint\IsTrue;
 
 return [
 
@@ -33,7 +34,7 @@ return [
 
     'lifetime' => env('SESSION_LIFETIME', 120),
 
-    'expire_on_close' => false,
+    'expire_on_close' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -46,7 +47,7 @@ return [
     |
     */
 
-    'encrypt' => false,
+    'encrypt' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -59,6 +60,7 @@ return [
     |
     */
 
+    //'files' => storage_path('framework/sessions'),
     'files' => storage_path('framework/sessions'),
 
     /*
@@ -168,7 +170,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+   'secure' => env('SESSION_SECURE_COOKIE', false),
 
     /*
     |--------------------------------------------------------------------------

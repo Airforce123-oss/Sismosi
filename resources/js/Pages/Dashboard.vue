@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick, watch } from "vue";
 import { initFlowbite } from "flowbite";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -7,8 +7,8 @@ import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
 import { Link, useForm, usePage, Head } from "@inertiajs/vue3";
-import VueApexCharts from "vue-apexcharts";
 import ApexCharts from "apexcharts";
+
 import axios from "axios";
 
 const userName = ref("");
@@ -19,104 +19,187 @@ const form = useForm({
     role_type: props.auth.user.role_type,
 });
 
+const apexChartElement = ref(null);
+const barChartElement = ref(null);
+const mainChartElement = ref(null);
+
 defineProps({ total: Number });
-onMounted(() => {
-    initFlowbite();
 
-    // Line Chart Options
-    const lineChartOptions = {
-        chart: { height: 300, type: "line", toolbar: { show: false } },
-        dataLabels: { enabled: false },
-        stroke: { curve: "smooth" },
-        series: [
-            {
-                name: "Guru",
-                color: "#3D5EE1",
-                data: [45, 60, 75, 51, 42, 42, 30],
-            },
-            {
-                name: "Siswa",
-                color: "#70C4CF",
-                data: [24, 48, 56, 32, 34, 52, 25],
-            },
-        ],
-        xaxis: {
-            categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-        },
-    };
-    const lineChart = new ApexCharts(
-        document.querySelector("#apexcharts-area"),
-        lineChartOptions
-    );
-    lineChart.render();
+// Options untuk Chart Utama
+const chartOptions = ref(null);
+const series = ref(null);
 
-    // Bar Chart Options
-    const barChartOptions = {
-        chart: {
-            type: "bar",
-            height: 300,
-            width: "100%",
-            stacked: false,
-            toolbar: { show: false },
-        },
-        dataLabels: { enabled: false },
-        plotOptions: {
-            bar: { columnWidth: "55%", endingShape: "rounded" },
-        },
-        stroke: { show: true, width: 2, colors: ["transparent"] },
-        series: [
-            {
-                name: "Laki-laki",
-                color: "#70C4CF",
-                data: [
-                    420, 532, 516, 575, 519, 517, 454, 392, 262, 383, 446, 551,
-                ],
-            },
-            {
-                name: "Perempuan",
-                color: "#3D5EE1",
-                data: [
-                    336, 612, 344, 647, 345, 563, 256, 344, 323, 300, 455, 456,
-                ],
-            },
-        ],
-        xaxis: {
-            categories: [
-                2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
-                2019, 2020,
-            ],
-            labels: { show: false },
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-        },
-        yaxis: {
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: "#777" } },
-        },
-        title: { text: "", align: "left", style: { fontSize: "18px" } },
-    };
-    const barChart = new ApexCharts(
-        document.querySelector("#bar"),
-        barChartOptions
-    );
-    barChart.render();
-    /*
-      const fetchSessionData = async () => {
-        try {
-            const response = await axios.get("/api/session-data");
-            userName.value = response.data.name;
-        } catch (error) {
-            console.error(
-                "There was an error fetching the session data:",
-                error
+const checkChartElements = () => {
+    try {
+        const apexChartElement = document.querySelector("#apexcharts-area");
+        const barChartElement = document.querySelector("#bar");
+
+        if (apexChartElement && barChartElement) {
+            console.log(
+                "Chart elements found:",
+                apexChartElement,
+                barChartElement
+            );
+        } else {
+            console.warn(
+                "Chart elements not found, waiting for data rendering..."
             );
         }
-    };
+    } catch (error) {
+        console.error("Error in checkChartElements:", error);
+    }
+};
 
-    fetchSessionData();
-     */
+watch([chartOptions, series], async ([newChartOptions, newSeries]) => {
+    try {
+        console.log("chartOptions or series updated:", {
+            newChartOptions,
+            newSeries,
+        });
+
+        // Pastikan data sudah benar sebelum lanjut
+        if (!newChartOptions || !newSeries) {
+            console.warn("Data belum lengkap, menunggu update...");
+            return;
+        }
+
+        await nextTick(); // Tunggu DOM untuk memperbarui
+        if (
+            !document.querySelector("#apexcharts-area") ||
+            !document.querySelector("#bar")
+        ) {
+            console.error("Chart elements not found in DOM.");
+            return;
+        }
+        checkChartElements();
+        checkChartElements(); // Periksa apakah elemen sudah dirender
+    } catch (error) {
+        console.error("Error during watch execution:", error);
+    }
 });
+
+const initializeChart = (selector, options) => {
+    console.log(`Attempting to initialize chart with selector: '${selector}'`);
+
+    const element = document.querySelector(selector);
+    if (!element) {
+        console.error(`Element with selector '${selector}' not found.`);
+        return null;
+    }
+
+    const chart = new ApexCharts(element, options);
+    chart.render();
+    console.log(`Chart initialized:`, chart);
+    return chart;
+};
+
+onMounted(async () => {
+    // Tunggu hingga DOM diperbarui sepenuhnya
+    nextTick(() => {
+        checkChartElements();
+        const apexChart = initializeChart("#apexcharts-area", lineChartOptions);
+        const barChart = initializeChart("#bar", barChartOptions);
+
+        if (apexChart && barChart) {
+            console.log("Charts successfully initialized.");
+        } else {
+            console.error("Failed to initialize charts.");
+        }
+        const apexChartElement = document.querySelector("#apexcharts-area");
+        const barChartElement = document.querySelector("#bar");
+        if (apexChartElement && barChartElement) {
+            console.log(
+                "Chart elements found:",
+                apexChartElement,
+                barChartElement
+            );
+        } else {
+            console.log("Waiting for chart elements...");
+        }
+    });
+});
+
+const observer = new MutationObserver((mutationsList) => {
+    mutationsList.forEach((mutation) => {
+        const apexChartElement = document.querySelector("#apexcharts-area");
+        const barChartElement = document.querySelector("#bar");
+        const mainChartElement = document.querySelector("#chart");
+
+        if (
+            apexChartElement.value.length > 0 &&
+            barChartElement.value.length > 0 &&
+            mainChartElement.value.length > 0
+        ) {
+            setupCharts();
+        } else {
+            console.error("Chart elements still not found.");
+        }
+    });
+});
+
+console.log("Rendering Chart...", apexChartElement.value);
+
+// Setup Charts setelah elemen DOM ditemukan
+function setupCharts() {
+    if (
+        apexChartElement.value.length > 0 &&
+        barChartElement.value.length > 0 &&
+        mainChartElement.value.length > 0
+    ) {
+        createChart(apexChartElement.value[0], lineChartOptions);
+        createChart(barChartElement.value[0], barChartOptions);
+        createChart(mainChartElement.value[0], chartOptions);
+    } else {
+        console.error("Required chart elements still not found in DOM.");
+    }
+}
+
+const createChart = (selector, options) => {
+    console.log("Trying to initialize chart with selector:", selector);
+
+    const chartElement = document.querySelector(selector);
+
+    if (!chartElement) {
+        console.error(`Element with selector '${selector}' not found.`);
+        return null;
+    }
+
+    const chart = new ApexCharts(chartElement, options);
+    chart.render(); // Metode render
+    console.log("Chart initialized:", chart);
+    return chart;
+};
+
+const lineChartOptions = {
+    chart: { height: 300, type: "line", toolbar: { show: false } },
+    dataLabels: { enabled: false },
+    stroke: { curve: "smooth" },
+    series: [
+        { name: "Guru", color: "#3D5EE1", data: [45, 60, 75, 51, 42, 42, 30] },
+    ],
+    xaxis: { categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"] },
+};
+
+// Options untuk Bar Chart
+const barChartOptions = {
+    chart: { type: "bar", height: 300, toolbar: { show: false } },
+    dataLabels: { enabled: false },
+    plotOptions: { bar: { columnWidth: "55%", endingShape: "rounded" } },
+    stroke: { show: true, width: 2, colors: ["transparent"] },
+    series: [
+        {
+            name: "Laki-laki",
+            color: "#70C4CF",
+            data: [420, 532, 516, 575, 519, 517, 454],
+        },
+        {
+            name: "Perempuan",
+            color: "#3D5EE1",
+            data: [336, 612, 344, 647, 345, 563, 256],
+        },
+    ],
+    xaxis: { categories: [2009, 2010, 2011, 2012, 2013, 2014, 2015] },
+};
 </script>
 
 <style scoped>
@@ -281,7 +364,7 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    {{ total }}
+                                    13
                                 </h3>
                                 <p class="font-bold">Data Siswa</p>
                             </div>
@@ -432,6 +515,7 @@ onMounted(() => {
             </p>
             -->
         </main>
+
         <!-- Sidebar -->
         <aside
             class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
@@ -683,3 +767,9 @@ onMounted(() => {
         </aside>
     </div>
 </template>
+
+<script>
+export default {
+    setup() {},
+};
+</script>

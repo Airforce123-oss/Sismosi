@@ -1,10 +1,16 @@
 {
     "compilerOptions": {
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["resources/js/*"],
-            "ziggy-js": ["./vendor/tightenco/ziggy"]
-        }
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["resources/js/*"],
+        "ziggy-js": ["./vendor/tightenco/ziggy"]
+      },
+      "types": ["node"], // Add this line
+      "moduleResolution": "node", // Optional: Helps with resolving Node.js modules
+      "target": "esnext" // Optional: Specifies the ECMAScript target version
     },
-    "exclude": ["node_modules", "public"]
-}
+  "exclude": ["node_modules", "public"]
+  }
+  
+  
+  

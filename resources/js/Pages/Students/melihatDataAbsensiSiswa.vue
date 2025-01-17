@@ -4,7 +4,7 @@ import axios from "axios";
 import { initFlowbite } from "flowbite";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import VueApexCharts from "vue-apexcharts";
+import VueApexCharts from "vue3-apexcharts";
 import ApexCharts from "apexcharts";
 import $ from "jquery";
 

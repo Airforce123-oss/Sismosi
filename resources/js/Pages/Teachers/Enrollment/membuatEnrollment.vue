@@ -102,6 +102,20 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
         console.log("Looking for Student ID:", enrollmentData.student_id);
         console.log("Looking for Course ID:", enrollmentData.mapel_id);
 
+        // Cek data students dan courses sebelum mencari
+        if (!students || students.length === 0) {
+            console.warn("No students data found.");
+        } else {
+            console.log("Students data loaded:", students);
+        }
+
+        if (!courses || courses.length === 0) {
+            console.warn("No courses data found.");
+        } else {
+            console.log("Courses data loaded:", courses);
+        }
+
+        // Mencari student dan course berdasarkan enrollmentData
         const selectedStudent = students.find(
             (student) => student.id === enrollmentData.student_id
         );
@@ -109,11 +123,11 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
             (course) => course.id === enrollmentData.mapel_id
         );
 
-        // Debugging found data
+        // Debugging hasil pencarian
         console.log("Selected Student:", selectedStudent);
         console.log("Selected Course:", selectedCourse);
 
-        // Pastikan data ini sudah terupdate
+        // Memastikan data ini sudah terupdate
         newMark.value.studentId = selectedStudent
             ? selectedStudent.id
             : enrollmentData.student_id;
@@ -159,7 +173,6 @@ const closeAddMarkModal = () => {
         skillPAS: null,
         skillAverage: null,
         finalMark: null,
-        //mark: null,
     };
 
     emit("close");
@@ -168,6 +181,10 @@ const closeAddMarkModal = () => {
 const closeModal = () => {
     isModalVisible.value = false;
     selectedEnrollmentId.value = null; // Reset ID enrollment setelah modal ditutup
+};
+const hideAddModal = () => {
+    console.log("Modal ditutup");
+    isEnrollmentModalVisible.value = false;
 };
 
 const searchQuery = ref("");
@@ -182,40 +199,6 @@ console.log("Enrollments Data:", enrollments.value);
 console.log("Paginated Enrollments:", paginatedEnrollments.value);
 console.log("Total Pages:", totalPages.value);
 console.log("Per Page:", perPage.value);
-
-const fetchDataForPage = async (page) => {
-    try {
-        const response = await axios.get(
-            `/api/enrollments?page=${page}&per_page=${perPage.value}`
-        );
-        console.log("API Response:", response.data);
-
-        if (response.data && Array.isArray(response.data.data)) {
-            enrollments.value = response.data.data;
-            console.log("Updated Enrollments:", enrollments.value);
-
-            // Perbarui total halaman dan total items berdasarkan data yang diterima
-            totalPages.value = response.data.pagination.total_pages;
-            currentPage.value = response.data.pagination.current_page;
-            console.log("Calculated Total Pages:", totalPages.value);
-        }
-    } catch (error) {
-        console.error("Error fetching data:", error);
-    }
-};
-
-const saveEnrollmentsToLocalStorage = () => {
-    localStorage.setItem("enrollments", JSON.stringify(enrollments.value));
-    console.log("Enrollments saved to localStorage");
-};
-
-const loadEnrollmentsFromLocalStorage = () => {
-    const storedEnrollments = localStorage.getItem("enrollments");
-    if (storedEnrollments) {
-        enrollments.value = JSON.parse(storedEnrollments);
-        console.log("Enrollments loaded from localStorage");
-    }
-};
 
 const updatePaginatedEnrollments = () => {
     console.log("Current perPage Value:", perPage.value);
@@ -240,14 +223,66 @@ const updatePaginatedEnrollments = () => {
     saveEnrollmentsToLocalStorage();
 };
 
-const goToPage = async (page) => {
-    if (page < 1 || page > totalPages.value) return; // Cegah pindah ke halaman yang tidak ada
-    currentPage.value = page; // Ubah halaman saat ini
-    console.log("Loading data for page:", page); // Log halaman yang sedang diakses
-    await fetchDataForPage(page); // Ambil data untuk halaman yang baru
+const fetchDataForPage = async (page) => {
+    try {
+        const response = await axios.get("/api/enrollments", {
+            params: { page, perPage: perPage.value },
+        });
+
+        console.log("Data yang diterima dari API:", response.data);
+
+        if (response.data.data.length === 0) {
+            alert("No data available for this page.");
+            return;
+        }
+
+        // Simpan data enrollments untuk digunakan di paginasi
+        enrollments.value = response.data.data; // Data enrollments diupdate di sini
+        console.log("Enrollments setelah diupdate:", enrollments.value);
+
+        // Update paginated data
+        updatePaginatedEnrollments(response.data.pagination);
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+};
+
+const loadEnrollmentsFromLocalStorage = () => {
+    const savedData = localStorage.getItem("enrollments");
+    if (savedData) {
+        enrollments.value = JSON.parse(savedData);
+        console.log("Enrollments loaded from localStorage:", enrollments.value);
+    } else {
+        console.log("No enrollments found in localStorage.");
+    }
+};
+
+const goToPage = (page) => {
+    // Pastikan halaman valid
+    if (page < 1 || page > totalPages.value) {
+        alert("Halaman tidak valid");
+        return;
+    }
+
+    // Update current page
+    currentPage.value = page;
+
+    // Ambil data untuk halaman baru
+    fetchDataForPage(page);
 };
 
 fetchDataForPage(currentPage.value);
+
+const saveEnrollmentsToLocalStorage = () => {
+    console.log(
+        "Enrollments saved to localStorage:",
+        paginatedEnrollments.value
+    );
+    localStorage.setItem(
+        "enrollments",
+        JSON.stringify(paginatedEnrollments.value)
+    );
+};
 
 watch([currentPage, enrollments], () => {
     updatePaginatedEnrollments();
@@ -264,6 +299,14 @@ const formatDate = (date) => {
 const fetchData = async () => {
     await Promise.all([fetchStudents(), fetchCourses(), fetchEnrollments()]);
     getEnrollment();
+};
+
+const changePage = (page) => {
+    currentPage.value = page;
+    console.log("Current Page:", currentPage.value);
+
+    // Memanggil fetchDataForPage untuk mendapatkan data berdasarkan halaman yang dipilih
+    fetchDataForPage(currentPage.value);
 };
 
 const isLoading = ref(false);
@@ -285,7 +328,6 @@ const fetchCourses = async () => {
         console.error("Error fetching courses:", error);
     }
 };
-
 const fetchEnrollments = async () => {
     const token = document
         .querySelector('meta[name="csrf-token"]')
@@ -303,14 +345,24 @@ const fetchEnrollments = async () => {
         });
 
         if (response.status === 200) {
-            const dummyEnrollments = [];
+            // const dummyEnrollments = [];
 
             // Misalkan response.data mengandung properti 'data' yang berisi array enrollments
             const enrollmentsData = response.data.data || [];
 
             // Gabungkan data API dengan data dummy
-            enrollments.value = [...enrollmentsData, ...dummyEnrollments];
-            console.log("Enrollments (API + Dummy):", enrollments.value);
+            ///enrollments.value = [...enrollmentsData, ...dummyEnrollments];
+            //console.log("Enrollments (API + Dummy):", enrollments.value);
+
+            // Save enrollments to localStorage
+            localStorage.setItem(
+                "enrollments",
+                JSON.stringify(enrollments.value)
+            );
+            console.log(
+                "Enrollments saved to localStorage:",
+                enrollments.value
+            );
         } else {
             console.error("Failed to fetch enrollments:", response.status);
         }
@@ -332,10 +384,6 @@ const inactiveEnrollments = computed(
 const isModalVisible = ref(false);
 const showAddModal = () => {
     isEnrollmentModalVisible.value = true;
-};
-const hideAddModal = () => {
-    console.log("Modal ditutup");
-    isEnrollmentModalVisible.value = false;
 };
 const addEnrollmentToDatabase = async (enrollmentData) => {
     try {
@@ -520,18 +568,18 @@ const saveMark = async () => {
             throw new Error("Invalid enrollment ID: Expected a numeric value");
         }
 
-        // Ambil nilai penilaian yang dimasukkan di modal
-        const cognitive1 = Number(newMark.value.cognitive1);
-        const cognitive2 = Number(newMark.value.cognitive2);
-        const cognitivePAS = Number(newMark.value.cognitivePAS);
-        const cognitiveAverage = Number(newMark.value.cognitiveAverage);
+        // Ambil nilai penilaian yang dimasukkan di modal dan set default jika null atau undefined
+        const cognitive1 = newMark.value.cognitive1 ?? 0;
+        const cognitive2 = newMark.value.cognitive2 ?? 0;
+        const cognitivePAS = newMark.value.cognitivePAS ?? 0;
+        const cognitiveAverage = newMark.value.cognitiveAverage ?? 0;
 
-        const skill1 = Number(newMark.value.skill1);
-        const skill2 = Number(newMark.value.skill2);
-        const skillPAS = Number(newMark.value.skillPAS);
-        const skillAverage = Number(newMark.value.skillAverage);
+        const skill1 = newMark.value.skill1 ?? 0;
+        const skill2 = newMark.value.skill2 ?? 0;
+        const skillPAS = newMark.value.skillPAS ?? 0;
+        const skillAverage = newMark.value.skillAverage ?? 0;
 
-        const finalMark = Number(newMark.value.finalMark);
+        const finalMark = newMark.value.finalMark ?? 0;
 
         // Validasi nilai kognitif dan keterampilan
         if (
@@ -558,22 +606,26 @@ const saveMark = async () => {
 
         // Kirim data ke API
         const response = await axios.post("/api/marks", {
-            enrollment_id: numericEnrollmentId,
-            cognitive1,
-            cognitive2,
-            cognitivePAS,
-            cognitiveAverage,
-            skill1,
-            skill2,
-            skillPAS,
-            skillAverage,
-            finalMark,
-            status: newMark.value.status,
-            remark: newMark.value.remark,
-            //teacher_id: newMark.value.teacher_id ?? null,
-            mapel_id: newMark.mapelId ?? 0,
+            enrollment_id: numericEnrollmentId, // ID Enrollment
+            student_id: newMark.value.studentId ?? 0, // ID Siswa
+            mapel_id: newMark.value.mapelId ?? 0, // ID Mata Pelajaran
+            enrollment_date: newMark.value.enrollmentDate ?? "", // Tanggal Enrollment
+            status: newMark.value.status ?? "active", // Status (active/inactive)
+            description: newMark.value.remark ?? "", // Deskripsi / Catatan
+            no_kd: newMark.value.noKd ?? "", // Nomor KD
+            cognitive_1: cognitive1, // Nilai Kognitif 1
+            cognitive_2: cognitive2, // Nilai Kognitif 2
+            cognitive_pas: cognitivePAS, // Nilai Kognitif PAS
+            cognitive_average: cognitiveAverage, // Rata-rata Kognitif
+            skill_1: skill1, // Nilai Skill 1
+            skill_2: skill2, // Nilai Skill 2
+            skill_pas: skillPAS, // Nilai Skill PAS
+            skill_average: skillAverage, // Rata-rata Skill
+            final_mark: finalMark, // Nilai Akhir
+            mark: finalMark, // Mark
         });
 
+        // Log API response untuk debugging
         console.log("API Response:", response.data);
 
         if (response.status === 200) {
@@ -581,18 +633,17 @@ const saveMark = async () => {
             newMark.value = {
                 studentId: null,
                 mapelId: null,
-                cognitive1: "",
-                cognitive2: "",
-                cognitivePAS: "",
-                cognitiveAverage: "",
-                skill1: "",
-                skill2: "",
-                skillPAS: "",
-                skillAverage: "",
-                finalMark: "",
+                cognitive1: 0,
+                cognitive2: 0,
+                cognitivePAS: 0,
+                cognitiveAverage: 0,
+                skill1: 0,
+                skill2: 0,
+                skillPAS: 0,
+                skillAverage: 0,
+                finalMark: 0,
                 status: "active",
                 remark: "",
-                //teacher_id: null,
             };
         }
 
@@ -607,7 +658,9 @@ const saveMark = async () => {
         }
 
         const rawEnrollments = toRaw(enrollments.value);
+        console.log("Raw Enrollments:", rawEnrollments); // Log the raw data of enrollments
         localStorage.setItem("enrollments", JSON.stringify(rawEnrollments));
+        saveEnrollmentsToLocalStorage();
         updatePaginatedEnrollments();
 
         isMarkModalVisible.value = false;
@@ -653,6 +706,12 @@ onMounted(() => {
         console.error("Error fetching data:", error);
     }
 });
+const logChange = (fieldName, value) => {
+    console.log(
+        `[Tambah/Perbarui Data Kognitif & Keterampilan] ${fieldName}:`,
+        value
+    );
+};
 </script>
 
 <style scoped>
@@ -1092,16 +1151,16 @@ button:hover {
                             </label>
                             <textarea
                                 v-model="newMark.noKd"
+                                @input="
+                                    logChange(
+                                        'Keterampilan Dasar',
+                                        $event.target.value
+                                    )
+                                "
                                 id="description"
                                 class="mt-1 block w-full border-gray-300 rounded-md mb-2"
-                                placeholder="Masukkan deskripsi"
+                                placeholder="Masukkan Nomor Kompetensi Dasar"
                             ></textarea>
-                            <label
-                                for="keterangan"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Keterangan: No. Kompetensi Dasar
-                            </label>
                         </div>
 
                         <!-- Status -->
@@ -1136,6 +1195,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.cognitive1"
+                                    @input="
+                                        logChange(
+                                            'Kognitif 1 (TEK)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="cognitive1"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1150,6 +1215,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.cognitive2"
+                                    @input="
+                                        logChange(
+                                            'Kognitif 2 (NIL)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="cognitive2"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1164,16 +1235,16 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.cognitivePAS"
+                                    @input="
+                                        logChange(
+                                            'Kognitif 3 (PAS)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="cognitivePAS"
                                     class="w-full px-3 py-2 border rounded-md"
                                 />
-                                <label
-                                    for="cognitivePAS"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Keterangan: Penilaian Akhir Semester
-                                </label>
                             </div>
                             <div>
                                 <label
@@ -1184,6 +1255,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.cognitiveAverage"
+                                    @input="
+                                        logChange(
+                                            'Kognitif (AVG)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="cognitiveAverage"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1205,6 +1282,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.skill1"
+                                    @input="
+                                        logChange(
+                                            'Keterampilan 2 (Skill1)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="skill1"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1219,6 +1302,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.skill2"
+                                    @input="
+                                        logChange(
+                                            'Keterampilan 2 (Nil1)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="skill2"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1233,16 +1322,16 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.skillPAS"
+                                    @input="
+                                        logChange(
+                                            'Keterampilan 3 (pas1)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="skillPAS"
                                     class="w-full px-3 py-2 border rounded-md"
                                 />
-                                <label
-                                    for="skillPAS"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Keterangan: Penilaian Akhir Semester
-                                </label>
                             </div>
                             <div>
                                 <label
@@ -1253,6 +1342,12 @@ button:hover {
                                 </label>
                                 <input
                                     v-model="newMark.skillAverage"
+                                    @input="
+                                        logChange(
+                                            'Keterampilan 2 (avg)',
+                                            $event.target.value
+                                        )
+                                    "
                                     type="number"
                                     id="skillAverage"
                                     class="w-full px-3 py-2 border rounded-md"
@@ -1270,6 +1365,12 @@ button:hover {
                             </label>
                             <input
                                 v-model="newMark.finalMark"
+                                @input="
+                                    logChange(
+                                        'Keterampilan 2 (NilaiAkhir)',
+                                        $event.target.value
+                                    )
+                                "
                                 type="number"
                                 id="finalMark"
                                 class="w-full px-3 py-2 border rounded-md"
@@ -1487,7 +1588,6 @@ button:hover {
                             </th>
                         </tr>
                     </thead>
-
                     <tbody>
                         <tr
                             v-for="enrollment in paginatedEnrollments"
@@ -1532,9 +1632,9 @@ button:hover {
                                 <span
                                     :class="{
                                         'text-green-500':
-                                            enrollment.status === 'Aktif',
+                                            enrollment.status === 'active',
                                         'text-red-500':
-                                            enrollment.status === 'Tidak Aktif',
+                                            enrollment.status === 'inactive',
                                     }"
                                 >
                                     {{
@@ -1544,40 +1644,38 @@ button:hover {
                                 </span>
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_tek || "-" }}
-                            </td>
-                            <!-- Nilai Kognitif -->
-                            <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_tek || "-" }}
+                                {{ enrollment.no_kd || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_nil || "-" }}
+                                {{ enrollment.cognitive_1 || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_tek || "-" }}
+                                {{ enrollment.cognitive_2 || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai2_tek || "-" }}
+                                {{ enrollment.cognitive_pas || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai2_nil || "-" }}
-                            </td>
-                            <!-- Nilai Keterampilan -->
-                            <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_tek || "-" }}
+                                {{ enrollment.cognitive_average || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai1_nil || "-" }}
+                                {{ enrollment.no_kd || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai2_tek || "-" }}
+                                {{ enrollment.skill_1 || "-" }}
                             </td>
                             <td class="text-center border-r border-gray-300">
-                                {{ enrollment.nilai2_nil || "-" }}
+                                {{ enrollment.skill_2 || "-" }}
                             </td>
-                            <td
-                                class="text-center border-r border-gray-300"
-                            ></td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.skill_pas || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.skill_average || "-" }}
+                            </td>
+                            <td class="text-center border-r border-gray-300">
+                                {{ enrollment.final_mark || "-" }}
+                            </td>
                             <td
                                 class="px-4 py-3 text-sm text-gray-800 border-l border-gray-300"
                             >
@@ -1634,13 +1732,19 @@ button:hover {
 
             <div class="row mt-3 me-3 mb-20">
                 <div class="col-12">
-                    <p class="fw-bold">Status Kehadiran:</p>
+                    <p class="fw-bold">Keterangan:</p>
                     <div class="d-flex">
                         <div class="me-3">
                             <span class="badge bg-info text-black fw-bold"
                                 >Kompetensi Dasar (KD)</span
                             >
                         </div>
+                        <div class="me-3">
+                                    <span
+                                        class="badge bg-primary text-black fw-bold"
+                                        >Teknis\Teknik (TEK)</span
+                                    >
+                                </div>
                         <div class="me-3">
                             <span class="badge bg-danger text-black fw-bold"
                                 >Nilai (NIL)</span

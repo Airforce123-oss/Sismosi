@@ -49,7 +49,6 @@ class EnrollmentController extends Controller
                 'mapel_id' => 'required|exists:master_mapel,id',
                 'enrollment_date' => 'required|date',
                 'status' => 'required|in:active,inactive',
-                //'mark' => 'nullable|numeric',
                 'description' => 'nullable|string',
             ]);
     
@@ -86,33 +85,36 @@ class EnrollmentController extends Controller
         ]
     ]);
 }
+public function getPaginatedEnrollments(Request $request)
+{
+    $page = $request->input('page', 1);
+    $perPage = $request->input('per_page', 10);
     
-    public function getPaginatedEnrollments(Request $request)
-    {
-        $page = $request->input('page', 1);
-        $perPage = $request->input('per_page', 10);
-        
-        $enrollments = Enrollment::with(['student', 'course'])
-            ->paginate($perPage, ['*'], 'page', $page);
-    
-        return response()->json([
-            'data' => $enrollments->items(),
-            'total' => $enrollments->total(),
-            'pagination' => [
-                'current_page' => $enrollments->currentPage(),
-                'total_pages' => $enrollments->lastPage(),
-                'total_items' => $enrollments->total(),
-            ]
-        ]);
-    }
+    $enrollments = Enrollment::with(['student', 'course'])
+        ->paginate($perPage, ['*'], 'page', $page);
 
-    
+        Log::info('Total Enrollments:', ['total' => $enrollments->total()]);
+        Log::info('Total Pages:', ['lastPage' => $enrollments->lastPage()]);
+
+
+    return response()->json([
+        'data' => $enrollments->items(),
+        'total' => $enrollments->total(),
+        'pagination' => [
+            'current_page' => $enrollments->currentPage(),
+            'total_pages' => $enrollments->lastPage(),
+            'total_items' => $enrollments->total(),
+        ]
+    ]);
+}
 
     // Mengambil data mapel berdasarkan id
     public function getMapelById($id)
     {
         // Query ke tabel master_mapel
-        $mapel = DB::table('master_mapel')->find($id);
+        //$mapel = DB::table('master_mapel')->find($id);
+        $mapel = Mapel::find($id);
+
 
         // Kembalikan data mapel
         return response()->json($mapel);
@@ -173,24 +175,27 @@ class EnrollmentController extends Controller
                 Log::warning("Enrollment with ID $id not found.");
                 return response()->json(['message' => 'Enrollment not found'], 404);
             }
-         
-            // Update data enrollment
-            $enrollment->update([
+    
+            // Menggunakan nilai default jika kolom nullable tidak diberikan
+            $dataToUpdate = [
                 'student_id' => $validated['student_id'],
                 'mapel_id' => $validated['mapel_id'],
                 'status' => $validated['status'],
-                'no_kd' => $validated['noKd'],
-                'cognitive_1' => $validated['cognitive1'],
-                'cognitive_2' => $validated['cognitive2'],
-                'cognitive_pas' => $validated['cognitivePAS'],
-                'cognitive_average' => $validated['cognitiveAverage'],
-                'skill_1' => $validated['skill1'],
-                'skill_2' => $validated['skill2'],
-                'skill_pas' => $validated['skillPAS'],
-                'skill_average' => $validated['skillAverage'],
-                'final_mark' => $validated['finalMark'],
-                //'teacher_id' => $validated['teacher_id'],
-            ]);
+                'no_kd' => $validated['noKd'] ?? '', // Default empty string jika tidak ada
+                'cognitive_1' => $validated['cognitive1'] ?? 0, // Default 0 jika tidak ada
+                'cognitive_2' => $validated['cognitive2'] ?? 0, // Default 0 jika tidak ada
+                'cognitive_pas' => $validated['cognitivePAS'] ?? 0, // Default 0 jika tidak ada
+                'cognitive_average' => $validated['cognitiveAverage'] ?? 0, // Default 0 jika tidak ada
+                'skill_1' => $validated['skill1'] ?? 0, // Default 0 jika tidak ada
+                'skill_2' => $validated['skill2'] ?? 0, // Default 0 jika tidak ada
+                'skill_pas' => $validated['skillPAS'] ?? 0, // Default 0 jika tidak ada
+                'skill_average' => $validated['skillAverage'] ?? 0, // Default 0 jika tidak ada
+                'final_mark' => $validated['finalMark'] ?? 0, // Default 0 jika tidak ada
+                //'teacher_id' => $validated['teacher_id'], // Jika diperlukan
+            ];
+    
+            // Update data enrollment
+            $enrollment->update($dataToUpdate);
     
             // Log data setelah berhasil diperbarui
             Log::info('Updated enrollment:', $enrollment->toArray());
@@ -217,6 +222,7 @@ class EnrollmentController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    
     
     
     

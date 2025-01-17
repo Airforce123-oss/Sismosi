@@ -11,9 +11,20 @@ import Swal from "sweetalert2";
 defineProps({
     classes: {
         type: Object,
-        required: true,
+        default: () => null, // Tetapkan default jika tidak ada
     },
 });
+
+const classes = props.classes?.data || [];
+if (!props.classes) {
+    console.log("props.classes:", props.classes); // Cek apakah benar-benar null atau tidak dikirim
+    console.warn("No classes prop provided");
+} else if (!props.classes.data || props.classes.data.length === 0) {
+    console.log("props.classes.data:", props.classes.data); // Cek isinya apa
+    console.warn("No classes data available");
+}
+
+console.log("Classes:", classes);
 
 const waliKelas = ref(props.wali_kelas || { data: [] });
 let pageNumber = ref(1);
@@ -260,6 +271,16 @@ const deleteTeacher = (id) => {
                                     class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                                 />
                             </div>
+                        </div>
+
+                        <!-- Hanya render jika classes sudah valid -->
+                        <div v-if="classes?.data?.length > 0">
+                            <Index
+                                :classes="classes"
+                                errors="{}"
+                                auth="{ user: { role: 'teacher' } }"
+                                wali_kelas="{ data: [], links: {}, meta: {} }"
+                            />
                         </div>
 
                         <div class="mt-8 flex flex-col mr-20">

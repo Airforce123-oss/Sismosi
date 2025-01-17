@@ -1,11 +1,10 @@
 <script setup>
-import { onMounted, ref,  } from "vue";
+import { onMounted, ref } from "vue";
 import axios from "axios";
-import { Head } from '@inertiajs/vue3';
+import { Head } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import { initFlowbite } from "flowbite";
-import VueApexCharts from "vue-apexcharts";
-import ApexCharts from "apexcharts";
+import VueApexCharts from "vue3-apexcharts";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import $ from "jquery";
 import "@assets/plugins/simple-calendar/simple-calendar.css";
@@ -37,7 +36,6 @@ onMounted(() => {
     fetchSessionData();
 });
 </script>
-
 
 <style scoped>
 @import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
@@ -298,7 +296,7 @@ onMounted(() => {
                         </div>
                     </div>
                     -->
-            </div>
+                </div>
             </div>
 
             <div id="apexcharts-area"></div>

@@ -7,7 +7,7 @@ import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { ZiggyVue } from "../../vendor/tightenco/ziggy";
 import { Ziggy } from "./ziggy";
-import VueApexCharts from "vue-apexcharts";
+import ApexCharts from "vue3-apexcharts";
 import Dashboard from "./Pages/dashboard.vue";
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
@@ -79,8 +79,8 @@ const app = createApp({
     },
 });
 
-// Daftarkan komponen VueApexCharts secara global
-app.component("apexchart", VueApexCharts);
+// Daftarkan komponen ApexCharts secara global
+app.component("apexchart", ApexCharts);
 
 //app.component("dashboard", Dashboard);
 

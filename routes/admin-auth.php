@@ -23,7 +23,7 @@ Route::middleware('guest')->prefix('admin')->name('admin')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
                 ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store']); 
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
                 ->name('login');
@@ -33,9 +33,9 @@ Route::middleware('guest')->prefix('admin')->name('admin')->group(function () {
 
 Route::middleware('auth')->prefix('admin')->name('admin')->group(function () {
 
-    Route::get('/dashboard', function () {
+    Route::get('/Dashboard', function () {
         return Inertia::render('Dashboard');
-    })->middleware(['auth', 'verified'])->name('dashboard');
+    })->middleware(['auth', 'verified'])->name('Dashboard');
     
     
     Route::middleware('auth')->group(function () {

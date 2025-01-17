@@ -17,11 +17,12 @@ use Inertia\Response;
 class ProfileController extends Controller
 {
 
-    public function index()
-    {
-        return inertia('Profile/index');
-
+    public function index() {
+        return inertia('Profile/index', [
+            'user' => auth()->user(),
+        ]);
     }
+    
     /**
      * Display the user's profile form.
      */
@@ -31,6 +32,7 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);
+        
     }
 
     public function dashboard()
@@ -38,34 +40,43 @@ class ProfileController extends Controller
         $user = auth()->user();
         $roles = $user->roles->pluck('name');
     
-        Log::info('User roles on dashboard access:', ['roles' => $roles]);
-
-        $totalStudents = Student::count();
-
-        // Tentukan role_type untuk frontend
+        // Logging hanya jika tidak ada peran atau user adalah admin
+        if ($roles->isEmpty() || $roles->contains('admin')) {
+            Log::info('User roles on dashboard access:', ['roles' => $roles]);
+        }
+    
+        // Hitung total siswa dengan cache
+        $totalStudents = cache()->remember('total_students', 60, function () {
+            return Student::count();
+        });
+    
+        // Tentukan role_type
         $roleType = $roles->first() ?? 'guest';
     
-        // Cek berdasarkan peran dengan switch
         switch (true) {
             case $roles->contains('admin'):
                 return Inertia::render('dashboard', [
-                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'total' => $totalStudents,
                     'role_type' => $roleType,
                 ]);
             case $roles->contains('teacher'):
                 return Inertia::render('teachersDashboard', [
-                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'total' => $totalStudents,
                     'role_type' => $roleType,
                 ]);
             case $roles->contains('student'):
                 return Inertia::render('studentsDashboard', [
-                    'total' => $totalStudents, // Mengirimkan total siswa ke Vue
+                    'total' => $totalStudents,
                     'role_type' => $roleType,
                 ]);
             default:
-                return redirect()->route('dashboard');
+                // Halaman error untuk pengguna tanpa peran
+                return Inertia::render('ErrorPage', [
+                    'message' => 'Access denied. Please contact the administrator.',
+                ]);
         }
     }
+    
     
     /**
      * Update the user's profile information.
