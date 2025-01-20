@@ -2112,7 +2112,7 @@ onMounted(async () => {
                                                         date
                                                     )
                                                 )
-                                            )
+                                            ) + ' text-center'
                                         "
                                         @click="
                                             handleStatusChange(
@@ -2435,7 +2435,7 @@ onMounted(async () => {
                                         />
                                     </svg>
                                 </div>
-                                <h3 class="text-2xl font-bold text-gray-800">
+                                <h3 class="text-2xl ft-bold text-gray-800">
                                     Pilih Status Kehadiran
                                 </h3>
                                 <p class="text-gray-500 text-sm">

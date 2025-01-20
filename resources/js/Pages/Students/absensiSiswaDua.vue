@@ -2129,7 +2129,7 @@ onMounted(async () => {
                                                         date
                                                     )
                                                 )
-                                            )
+                                            ) + ' text-center'
                                         "
                                         @click="
                                             handleStatusChange(
