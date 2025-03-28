@@ -10,7 +10,7 @@ class AttendanceTeacherSeeder extends Seeder
     public function run()
     {
         AttendanceTeacher::create([
-            'teacher_id' => 1,
+            'id' => 1,
             'class_id' => 2,
             'attendance_date' => now(),
             'is_present' => true,

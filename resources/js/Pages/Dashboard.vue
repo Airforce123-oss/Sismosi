@@ -364,7 +364,7 @@ const barChartOptions = {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    13
+                                    58
                                 </h3>
                                 <p class="font-bold">Data Siswa</p>
                             </div>

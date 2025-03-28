@@ -14,7 +14,7 @@
         "power-components/livewire-powergrid": "^5.10",
         "santigarcor/laratrust": "^8.3",
         "spatie/laravel-permission": "^6.10",
-        "tightenco/ziggy": "^2.0"
+        "tightenco/ziggy": "^2.5"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.1",

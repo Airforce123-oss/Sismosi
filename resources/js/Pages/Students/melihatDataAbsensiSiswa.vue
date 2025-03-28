@@ -1,8 +1,8 @@
 <script setup>
-import { onMounted, ref, defineProps } from "vue";
+import { onMounted, ref, defineProps, computed } from "vue";
 import axios from "axios";
 import { initFlowbite } from "flowbite";
-import { Link, useForm, usePage } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
 import VueApexCharts from "vue3-apexcharts";
 import ApexCharts from "apexcharts";
@@ -12,50 +12,19 @@ import $ from "jquery";
 import "@assets/plugins/simple-calendar/jquery.simple-calendar.js";
 import "@assets/plugins/simple-calendar/simple-calendar.css";
 
-// Mendefinisikan props yang diterima oleh komponen
-defineProps({
-    attendanceRecords: Array,
-    currentDate: String,
-});
-
-// State
+// Inisialisasi data
+const props = defineProps();
+const data = ref([]); // Inisialisasi data sebagai array kosong
+const loading = ref(true); // Status loading
 const userName = ref("");
+
+// Pastikan props.auth dan props.auth.user terdefinisi sebelum mengaksesnya
 const form = useForm({
-    //name: props.auth.user.name,
-    //email: props.auth.user.email,
-    //role_type: props.auth.user.role_type,
+    name: props.auth?.user?.name || "", // Gunakan optional chaining
+    email: props.auth?.user?.email || "",
+    role_type: props.auth?.user?.role_type || "",
 });
 
-// Fungsi untuk mengambil status absensi siswa untuk tanggal tertentu
-const getAttendanceStatus = (studentId, date) => {
-    const attendance = props.attendanceData.find(
-        (attendance) =>
-            attendance.student_id === studentId &&
-            formattedDate(attendance.tanggal_kehadiran) === date
-    );
-    return attendance ? attendance.status_kehadiran : "Belum diabsen";
-};
-
-// Fungsi untuk menampilkan nama hari berdasarkan tanggal
-const getDayName = (date) => {
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const dayIndex = new Date(date).getDay();
-    return dayNames[dayIndex];
-};
-
-// Fungsi untuk memformat tanggal menjadi yyyy-mm-dd
-const formattedDate = (date) => {
-    const dateObj = new Date(date);
-    const day = dateObj.getDate().toString().padStart(2, "0");
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
-    const year = dateObj.getFullYear();
-    return `${year}-${month}-${day}`;
-};
-
-// Total hari dalam sebulan
-const totalDaysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
-
-// Fungsi untuk mengambil data session
 const fetchSessionData = async () => {
     try {
         const response = await axios.get("/api/session-name");
@@ -65,11 +34,15 @@ const fetchSessionData = async () => {
     }
 };
 
-// Inisialisasi komponen saat halaman dimuat
+// Menggunakan onMounted untuk mengambil data saat komponen dimuat
 onMounted(() => {
-    initFlowbite(); // Inisialisasi Flowbite
-    // Fetch session data
     fetchSessionData();
+    initFlowbite(); // Inisialisasi Flowbite jika diperlukan
+});
+
+// Contoh penggunaan data
+const itemCount = computed(() => {
+    return data.value ? data.value.length : 0; // Menghindari error jika data belum ada
 });
 </script>
 
@@ -252,7 +225,8 @@ onMounted(() => {
                 <h3>
                     Daftar Absensi Siswa Dengan Kehadiran - {{ currentDate }}
                 </h3>
-                <div v-if="attendanceRecords.length > 0">
+                <!--
+                                <div v-if="attendanceRecords.length > 0">
                     <div
                         v-for="record in attendanceRecords"
                         :key="record.student.id"
@@ -268,6 +242,7 @@ onMounted(() => {
                 <div v-else>
                     <p>Tidak ada absensi untuk tanggal ini.</p>
                 </div>
+                -->
             </div>
         </main>
 

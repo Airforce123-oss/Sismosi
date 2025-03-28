@@ -15,7 +15,9 @@ return new class extends Migration
         Schema::create('master_mapel', function (Blueprint $table) {
             $table->id('id'); // Primary key column
             $table->string('kode_mapel', 40);
-            $table->string('mapel', 60);
+            $table->string('teacher_id', 60);
+            $table->string('tahun_ajaran', 60);
+            $table->string('kelas', 60);
             $table->timestamps();
         });
 

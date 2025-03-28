@@ -26,6 +26,7 @@ export default defineConfig({
         alias: {
             "@": path.resolve(__dirname, "resources/js"),
             "@assets": path.resolve(__dirname, "resources/assets"),
+            "vue": "vue/dist/vue.esm-bundler.js", // ✅ Alias Vue ke versi yang mendukung template
         },
     },
 });

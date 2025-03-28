@@ -186,6 +186,10 @@ const hideAddModal = () => {
     console.log("Modal ditutup");
     isEnrollmentModalVisible.value = false;
 };
+const hideMarkModal = () => {
+    console.log("Modal ditutup");
+    isMarkModalVisible.value = false;
+};
 
 const searchQuery = ref("");
 const enrollments = ref([]);
@@ -384,6 +388,9 @@ const inactiveEnrollments = computed(
 const isModalVisible = ref(false);
 const showAddModal = () => {
     isEnrollmentModalVisible.value = true;
+};
+const showMarkModal = () => {
+    isMarkModalVisible.value = true;
 };
 const addEnrollmentToDatabase = async (enrollmentData) => {
     try {
@@ -904,24 +911,41 @@ button:hover {
 
             <div v-if="isLoading" class="spinner"></div>
 
-            <div class="container mx-auto px-4 py-6">
+            <div
+                class="container mx-auto px-4 py-6 bg-gray-100 rounded-lg shadow-md mb-15"
+            >
                 <div
                     class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4"
                 >
-                    <!-- Search filter -->
+                    <!-- Search filter for Student Name -->
                     <input
                         v-model="searchQuery"
                         type="text"
-                        placeholder="Cari Enrollment..."
-                        class="w-full sm:w-auto px-4 py-2 border rounded-md"
+                        placeholder="Nama Kelas"
+                        class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <!-- Search filter for Teacher Name -->
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Nama Guru"
+                        class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <!-- Search filter for Subject -->
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Mata Pelajaran"
+                        class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
-                        class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
                         @click="showAddModal"
                     >
                         <i class="fa fa-plus mr-2"></i> Tambah Enrollment Baru
                     </button>
                 </div>
+                <h2>pake dropdown saja semua</h2>
             </div>
 
             <!-- Modal tambah enrollment -->
@@ -1049,7 +1073,7 @@ button:hover {
                 >
                     <!-- Tombol Close -->
                     <button
-                        @click="closeModal"
+                        @click="hideMarkModal"
                         class="absolute top-3 right-3 text-xl sm:text-2xl font-bold text-gray-700"
                     >
                         X
@@ -1381,7 +1405,7 @@ button:hover {
                         <div class="flex justify-end mt-4">
                             <button
                                 type="button"
-                                @click="closeModal"
+                                @click="hideMarkModal"
                                 class="bg-gray-300 text-gray-700 py-2 px-3 rounded-lg mr-2"
                             >
                                 Batal
@@ -1740,11 +1764,10 @@ button:hover {
                             >
                         </div>
                         <div class="me-3">
-                                    <span
-                                        class="badge bg-primary text-black fw-bold"
-                                        >Teknis\Teknik (TEK)</span
-                                    >
-                                </div>
+                            <span class="badge bg-primary text-black fw-bold"
+                                >Teknis\Teknik (TEK)</span
+                            >
+                        </div>
                         <div class="me-3">
                             <span class="badge bg-danger text-black fw-bold"
                                 >Nilai (NIL)</span

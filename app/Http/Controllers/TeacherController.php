@@ -7,6 +7,7 @@ use App\Http\Resources\TeacherResource;
 use App\Http\Resources\StudentResource;
 use App\Http\Resources\BukuPenghubungResource; // Import BukuPenghubungResource
 use App\Http\Requests\StoreStudentRequest;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateTeacherRequest;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,11 +16,62 @@ use App\Models\Student;
 use App\Models\Classes;
 use App\Models\BukuPenghubung;
 use App\Models\Teacher;
+use App\Models\Mapel;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
 {  
+    public function showAbsensi($kelas, $year, $mapel, $month)              
+    {              
+        // Log parameter yang diterima              
+        Log::info("Received parameters: Year: $year, Mapel: $mapel, Kelas: $kelas, Month: $month");              
+            
+        // Ambil daftar mata pelajaran dari database              
+        $validMapel = DB::table('master_mapel')->pluck('mapel')->toArray();              
+          
+        // Periksa apakah mapel yang diterima valid              
+        if (!in_array($mapel, $validMapel)) {              
+            return redirect()->route('studentsabsensiSiswaSatu');              
+        }              
+          
+        // Ambil daftar kelas dari database              
+        $validKelas = DB::table('classes')->pluck('id')->toArray(); // Ambil ID kelas      
+          
+        // Periksa apakah kelas yang diterima valid              
+        if (!in_array($kelas, $validKelas)) {              
+            return redirect()->route('absensiSiswaSatu');              
+        }              
+          
+        // Memeriksa apakah kombinasi tahun, mapel, dan kelas ada dalam tabel attendances              
+        $isValidCombination = DB::table('attendances')              
+            ->whereYear('tanggal_kehadiran', $year)              
+            ->where('kelas', $kelas)              
+            ->where('mapel', $mapel)              
+            ->exists();              
+          
+        if (!$isValidCombination) {              
+            return redirect()->route('absensiSiswaSatu');              
+        }              
+          
+        // Ambil data absensi untuk ditampilkan              
+        $dataAbsensi = DB::table('attendances')              
+            ->whereYear('tanggal_kehadiran', $year)              
+            ->where('kelas', $kelas)              
+            ->where('mapel', $mapel)              
+            ->get();              
+          
+    // Kembalikan data dalam format JSON untuk API      
+        return response()->json([      
+            'dataAbsensi' => $dataAbsensi,      
+            'year' => $year,      
+            'mapel' => $mapel,      
+            'kelas' => $kelas,      
+            'month' => $month,      
+        ]);      
+    }  
+    
+
     public function bukuPenghubung()
     {
         $classes_for_student = Classes::all();
@@ -35,33 +87,88 @@ class TeacherController extends Controller
 
     public function index(Request $request)
     {
-        $teacherQuery = Teacher::query()->with('class');
+        //$teacherQuery = Teacher::query()->with(['class', 'masterMapel']);
+        $teacherQuery = Teacher::query()->with(['class', 'masterMapel']);
     
         // Apply search filter if present
         $this->applySearch($teacherQuery, $request->search);
     
         // Pagination
-        $wali_kelas = $teacherQuery->paginate(20)->appends($request->only('search'));
-        $itemsPerPage = $request->input('itemsPerPage', 20); // Default to 10 items per page
+        //$wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
+        //$wali_kelas = $teacherQuery->paginate(5)->appends($request->query());
+        $wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
 
-        $currentPage = $request->input('currentPage', 1); // Default
+        //dd($wali_kelas);
+
+        if ($request->wantsJson()) {
+            return response()->json($wali_kelas);
+        }
+    
+       //dd($wali_kelas->items());
+
+        $itemsPerPage = $request->input('itemsPerPage', 20); // Default to 20 items per page
+        $currentPage = $request->input('currentPage', 1); // Default to page 1
     
         // Ambil data classes yang relevan
         $classesQuery = Classes::query();
-
-        
-
+    
+        // Ambil data master_mapel yang relevan
+        $mapelQuery = Mapel::query();
+        $mapelData = $mapelQuery->get();
+    
+        // Ambil data teacher berdasarkan ID jika diberikan dalam request
+        $teacherId = $request->input('teacher_id'); // Ambil ID guru dari request jika ada
+        $teacher = $teacherId ? Teacher::with('masterMapel')->find($teacherId) : null;
+    
+        //Cek apakah data `mapel` ditemukan
+        // dd($mapelData);
+    
         $classes_for_student = $classesQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
-        ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
-        
+            ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
     
-    
+
         return inertia('Teachers/index', [
             'wali_kelas' => TeacherResource::collection($wali_kelas),
             'search' => $request->input('search', ''),
-            'classes_for_student' => $classes_for_student, // Kirim data classes ke vue
+            'classes_for_student' => $classes_for_student ?? [],
+            'mapel' => $mapelData ?? [],
+            'teacher' => $teacher ?? null,
+            'meta' => [
+                'total' => $wali_kelas->total(),
+                'per_page' => $wali_kelas->perPage(),
+                'current_page' => $wali_kelas->currentPage(),
+                'last_page' => $wali_kelas->lastPage(),
+                'links' => array_merge(
+                    [[
+                        'url' => $wali_kelas->url(1),
+                        'label' => 'First',
+                        'active' => $wali_kelas->currentPage() == 1,
+                    ]],
+                    collect(range(1, $wali_kelas->lastPage()))->map(function ($page) use ($wali_kelas) {
+                        return [
+                            'url' => $wali_kelas->url($page),
+                            'label' => $page,
+                            'active' => $wali_kelas->currentPage() == $page,
+                        ];
+                    })->toArray(),
+                    [[
+                        'url' => $wali_kelas->previousPageUrl(),
+                        'label' => 'Previous',
+                        'active' => $wali_kelas->previousPageUrl() !== null,
+                    ],
+                    [
+                        'url' => $wali_kelas->nextPageUrl(),
+                        'label' => 'Next',
+                        'active' => $wali_kelas->nextPageUrl() !== null,
+                    ],
+                    [
+                        'url' => $wali_kelas->url($wali_kelas->lastPage()),
+                        'label' => 'Last',
+                        'active' => $wali_kelas->currentPage() == $wali_kelas->lastPage(),
+                    ]]
+                ),
+            ],
         ]);
-        
     }
     
 
@@ -90,12 +197,66 @@ class TeacherController extends Controller
         });
     }
 
+    /*
+        public function showAbsensiSiswa(Request $request)
+    {
+        // Ambil semua data mata pelajaran
+        $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran
+        // Query untuk mengambil data kelas  
+        $classesQuery = Classes::query();  
+        // Terapkan filter pencarian jika ada
+        $this->applySearch($classesQuery, $request->search);
+        // Urutkan berdasarkan ID kelas  
+        $classesQuery->orderBy('id');  
+        // Pagination, dengan jumlah per halaman 10  
+        $classes = $classesQuery->paginate(20)->appends($request->only('search'));    
+
+        // Kirim data ke komponen Vue
+        return response()->json([  
+            'data' => $mapelList, // Return the mapelList in a data property  
+            'classes' => $classes, // Return the paginated classes 
+        ]); 
+    }
+    */
+
+    public function showAbsensiSiswa(Request $request)  
+{  
+    // Ambil semua data mata pelajaran  
+    $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran  
+  
+    Log::info('Data Mapel:', $mapelList->toArray());
+    // Query untuk mengambil data kelas    
+    $classesQuery = Classes::query();    
+    
+  
+    // Terapkan filter pencarian jika ada  
+    $this->applySearch($classesQuery, $request->search);  
+  
+    // Urutkan berdasarkan ID kelas    
+    $classesQuery->orderBy('id');    
+  
+    // Pagination, dengan jumlah per halaman 20    
+    $classes = $classesQuery->paginate(20)->appends($request->only('search'));     
+    Log::info('Classes Type:', [gettype($classes)]);
+
+  
+    // Kirim data ke komponen Vue  
+    return response()->json([    
+    'data' => $mapelList, // Return the mapelList in a mapel property    
+    'classes' => $classes, // Return the paginated classes   
+    ]);   
+}  
+
+
     public function create()
     {
         $classes = ClassesResource::collection(Classes::all());
-        
+        $mapelQuery = Mapel::query();
+        $mapelData = $mapelQuery->get()->toArray();
+    
         return inertia('Teachers/create', [
             'classes' => $classes,
+           'mapels' => $mapelData,
         ]);
     }
 
@@ -137,15 +298,27 @@ class TeacherController extends Controller
     public function show($id_kelas)
     {
         try {
+            // Ambil data teacher berdasarkan ID kelas
             $teacher = Teacher::findOrFail($id_kelas);
+            
+            // Ambil data wali kelas yang terkait dengan teacher
+            $waliKelas = $teacher->waliKelas;
+            
+            // Ambil data mapel yang terkait dengan teacher
+            $mapels = $teacher->masterMapel; // Menggunakan relasi masterMapel
+        
+            // Kembalikan data ke vue dengan menggunakan Inertia
             return inertia('Teachers/show', [
-                'teacher' => TeacherResource::make($teacher)
+                'teacher' => TeacherResource::make($teacher),
+                'waliKelas' => $waliKelas,  // Kirimkan waliKelas ke frontend
+                'mapels' => $mapels,    // Kirimkan mapels ke frontend
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->route('dashboard')->with('error', 'Teacher not found');
         }
     }
-
+    
+    
     // Menampilkan Buku Penghubung
     public function bukuPenghubungApi()
     {

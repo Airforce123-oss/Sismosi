@@ -13,10 +13,11 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
-use App\Http\Controllers\MataPelajaranController; // Pastikan controller ini diimport
+use App\Http\Controllers\MataPelajaranController; 
+use App\Http\Controllers\ClassController;
 use App\Http\Controllers\TugasController;
 use App\Http\Controllers\TeacherController;
-use App\Http\Controllers\MarkController; // Import MarkController
+use App\Http\Controllers\MarkController; 
 
 // Authentication routes for API
 Route::post('/login', [AuthController::class, 'login']);
@@ -67,8 +68,7 @@ Route::post('/enrollments', [EnrollmentController::class, 'store']);
 Route::post('/marks', [MarkController::class, 'store']);
 Route::get('/tugas', [TugasController::class, 'index']);
 Route::post('/tugas', [TugasController::class, 'store']);
-Route::get('/teachers', [TeacherController::class, 'indexApi']);
-//Route::get('/teachers', [TeacherController::class, 'index']);
+Route::get('/teachers', [TeacherController::class, 'index']);
 
 //Route::middleware('auth:sanctum')->put('/enrollments/{enrollment}', [EnrollmentController::class, 'update']);
 Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);
@@ -105,6 +105,17 @@ Route::get('/attendance-teacher-detail/{teacher_id}/{attendance_date}', [Attenda
 //Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'store'])->name('attendance-teacher-create');
 Route::get('/teachers/attendance', [AttendanceTeacherController::class, 'absensiGuru'])->name('teachers.attendance');
 Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'create']);
+
+Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
+Route::get('/api/mapel', [MataPelajaranController::class, 'getMapel']);
+Route::get('/api/classes', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
+Route::get('/absensi-siswa', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
+Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);  
+Route::get('/api/classes', [ClassController::class, 'index']);
+
+
+
+Route::post('/save-selected-mapel', [AttendanceController::class, 'saveSelectedMapel']);
 
 
 

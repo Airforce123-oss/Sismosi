@@ -19,6 +19,7 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TugasController;
 use App\Http\Controllers\RoleTypeController;
 use App\Http\Controllers\MataPelajaranController;
+use App\Http\Controllers\StudentRoleController;  
 use App\Http\Controllers\FileUploadController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -77,7 +78,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/kelolaAbsensiSiswa', [AttendanceController::class, 'kelolaAbsensiSiswa'])->name('studentkelolaAbsensiSiswa');
     
     // Custom Attendance Views
-    Route::get('/AbsensiSiswaSatu', [AttendanceController::class, 'absensiSiswaSatu'])->name('studentsabsensiSiswaSatu');
+    //Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [TeacherController::class, 'showAbsensi'])->name('absensi');  
+    Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaSatu'])->name('absensiSiswaSatu');
+    //Route::get('/AbsensiSiswaSatu', [AttendanceController::class, 'absensiSiswaSatu'])->name('absensiSiswaSatu');
     Route::get('/AbsensiSiswaDua', [AttendanceController::class, 'absensiSiswaDua'])->name('studentsabsensiSiswaDua');
     Route::get('/AbsensiSiswaTiga', [AttendanceController::class, 'absensiSiswaTiga'])->name('studentsabsensiSiswaTiga');
     Route::get('/AbsensiSiswaEmpat', [AttendanceController::class, 'absensiSiswaEmpat'])->name('studentsabsensiSiswaEmpat');
@@ -90,8 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
-    Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
-
+    Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit'); 
 });
 
 // Admin Routes (with middleware for redirection)
@@ -119,11 +121,21 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/buku-penghubung/{bukuPenghubung1}', [BukuPenghubung1Controller::class, 'destroy']);
 });
 
+
+Route::get('melihatTugas', [StudentRoleController::class, 'melihatTugas'])->name('melihatTugas');  
+Route::get('melihatDataAbsensiSiswa', [StudentRoleController::class, 'melihatDataAbsensiSiswa'])->name('melihatDataAbsensiSiswa');  
+Route::get('melihatJadwalPelajaran', [StudentRoleController::class, 'melihatJadwalPelajaran'])->name('melihatJadwalPelajaran');  
+
+Route::resource('student_roles', StudentRoleController::class);  
+
 Route::post('/user/{userId}/assign-role', [UserController::class, 'assignRole']);
 Route::put('/user/{user}/roles', [UserController::class, 'updateRoles'])->name('user.roles.update');
+
+Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
 
 
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';
 require __DIR__ . '/admin-auth.php';
+

@@ -41,6 +41,7 @@ class AttendanceTeacherController extends Controller
         // Mengirim data absensi, teachers, dan classes ke halaman Inertia
         return inertia('Teachers/AbsensiGuru/index', [
             'attendance' => $groupedByClass,
+            'attendanceRecords' => $attendanceRecords ?? [],
             'teachers' => $teachers->items(),  // Kirimkan data teacher sebagai array biasa
             'classes' => $classes,  // Pastikan classes dikirim
             'wali_kelas' => $waliKelas,  // Kirimkan data wali_kelas
@@ -144,6 +145,30 @@ class AttendanceTeacherController extends Controller
         ], 201);
     }
 
+    public function storeAttendance(Request $request)
+    {
+        // Validasi data yang diterima
+        $validated = $request->validate([
+            'teacher_id' => 'required|exists:users,id',
+            'class_id' => 'required|exists:classes,id|integer|min:1',
+            'attendance_date' => 'required|date',
+            'status' => 'required|string|in:P,A,S,I', // Validasi status
+        ]);
+    
+        // Simpan data ke database
+        $attendance = AttendanceTeacher::create([
+            'teacher_id' => $validated['teacher_id'],
+            'class_id' => $validated['class_id'],
+            'attendance_date' => $validated['attendance_date'],
+            'status' => $validated['status'],
+        ]);
+    
+        // Kembalikan respon JSON
+        return response()->json([
+            'message' => 'Attendance status saved successfully',
+            'attendance' => $attendance,
+        ], 201);
+    }
     public function create(Request $request)
     {
         // Validasi data yang diterima

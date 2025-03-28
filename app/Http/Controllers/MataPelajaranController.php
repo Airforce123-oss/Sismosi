@@ -51,6 +51,16 @@ class MataPelajaranController extends Controller
         ]);
     }
 
+    public function getMapel()
+    {
+        // Mengambil semua data dari tabel master_mapel
+        $mapel = Mapel::all();
+
+        // Mengembalikan data dalam format JSON
+        return response()->json($mapel);
+    }
+
+
     // Menampilkan form untuk membuat mata pelajaran baru
     public function create()
     {
@@ -102,14 +112,6 @@ class MataPelajaranController extends Controller
 
         return redirect()->route('matapelajaran.index')->with('success', 'Data berhasil disimpan!');
     }
-
-    public function getMapel()
-{
-    //$mapel = DB::table('master_mapel')->where('id', 6)->first();
-    //$mapel = Mapel::where('id', 1)->count();
-    $mapel = Mapel::where('id', 1)->first();
-    return response()->json($mapel);
-}
 
     // Mengupdate mata pelajaran yang sudah ada
     public function update(Request $request, $id)

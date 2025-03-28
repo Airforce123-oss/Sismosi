@@ -207,77 +207,7 @@ onMounted(() => {
             <Head title="Dashboard" />
             <div class="text-2xl col-sm-12 mb-10">
                 <div class="page-sub-header">
-                    <div>
-                        <h3 class="page-title">
-                            Selamat Datang {{ $page.props.auth.user.name }}!
-                        </h3>
-                    </div>
-                </div>
-
-                <div class="container mx-auto py-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div
-                            class="bg-primary1 text-white p-4 rounded shadow-md"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-4xl font-bold text-white">
-                                        8
-                                    </h3>
-                                    <p class="font-bold">Absensi Kehadiran</p>
-                                </div>
-                                <i class="ion ion-person-stalker text-4xl"></i>
-                            </div>
-                            <a
-                                href="#"
-                                class="block mt-4 text-sm text-white hover:underline"
-                            >
-                                Lihat detail
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-
-                        <div
-                            class="bg-success text-white p-4 rounded shadow-md"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-4xl font-bold text-white">
-                                        8
-                                    </h3>
-                                    <h3 class="font-bold text-white">Tugas</h3>
-                                </div>
-                                <i class="ion ion-person-stalker text-4xl"></i>
-                            </div>
-                            <a
-                                href="#"
-                                class="block mt-4 text-sm text-white hover:underline"
-                            >
-                                Lihat detail
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-
-                        <!-- Profil Card -->
-                        <div class="bg-cyan text-white p-4 rounded shadow-md">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-4xl font-bold text-white">
-                                        8
-                                    </h3>
-                                    <p class="font-bold">Data Mata Pelajaran</p>
-                                </div>
-                                <i class="ion ion-log-in text-4xl"></i>
-                            </div>
-                            <a
-                                href="/guru/profil"
-                                class="block mt-4 text-sm text-white hover:underline"
-                            >
-                                Lihat detail
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-                    </div>
+        
                 </div>
             </div>
             <div class="row">

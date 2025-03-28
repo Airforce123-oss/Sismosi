@@ -5,28 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * 
- *
- * @property int $id
- * @property string $kode_mapel
- * @property string $mapel
- * @property string|null $created_at
- * @property string|null $updated_at
- * @property-read Mapel|null $course
- * @property-read \App\Models\Section|null $section
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Tugas> $tugas
- * @property-read int|null $tugas_count
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel query()
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel whereKodeMapel($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel whereMapel($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Mapel whereUpdatedAt($value)
- * @mixin \Eloquent
- */
 class Mapel extends Model
 {
     use HasFactory;
@@ -54,6 +32,17 @@ class Mapel extends Model
     public function course() {
         return $this->belongsTo(Mapel::class, 'mapel_id', 'id'); // Kolom yang benar adalah id
     }
+    public function waliKelas()
+    {
+        return $this->belongsToMany(Teacher::class, 'teacher_mapel', 'mapel_id', 'wali_kelas_id')
+                    ->withPivot('id', 'kode_mapel', 'mapel', 'created_at', 'updated_at');
+    }
+    public function teachers()
+    {
+        return $this->belongsToMany(Teacher::class, 'teacher_mapel', 'mapel_id', 'wali_kelas_id');
+    }
+
+    
     
 }
 

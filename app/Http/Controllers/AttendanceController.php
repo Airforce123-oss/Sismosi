@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Resources\AttendancesResources;
 use Illuminate\Http\Request;
 use App\Models\Attendance;
+use App\Models\Mapel;
+use Inertia\Inertia;
 use App\Models\Student;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use stdClass;
+
 
 class AttendanceController extends Controller
 {
@@ -71,10 +75,12 @@ class AttendanceController extends Controller
     private function renderAttendanceView(Request $request, $viewName)
     {
         $attendances = $this->getAttendanceData($request);
+        $selectedMapel = $request->input('selectedMapel');
         return inertia($viewName, [
             'attendances' => $attendances,
             'studentCount' => $attendances->count(),
             'filterParams' => $request->all(),
+            'selectedMapel' => $selectedMapel,
         ]);
     }
 
@@ -114,9 +120,48 @@ class AttendanceController extends Controller
         'filterParams' => $request->all(),
     ]);
 }
+
+public function absensiSiswaApi(Request $request)  
+{  
+    $month = $request->query('month');  
+    $year = $request->query('year');  
+
+    // Logika untuk mengambil data absensi siswa berdasarkan bulan dan tahun  
+    $attendanceData = Attendance::whereMonth('tanggal', $month)  
+        ->whereYear('tanggal', $year)  
+        ->get();  
+
+    return response()->json(['data' => $attendanceData]);  
+}  
+
 public function absensiSiswa()
 {
     return inertia('Students/absensiSiswa');
+}
+
+public function saveSelectedMapel(Request $request)
+{
+    // Validasi data yang diterima
+    $request->validate([
+        'mapel' => 'required|string|max:60',
+        'kelasId' => 'required|integer',
+        // Hapus validasi student_id dan status_kehadiran jika tidak diperlukan
+    ]);
+
+    // Simpan data ke database
+    $attendance = new Attendance();
+    $attendance->mapel = $request->mapel; // Menyimpan nama mapel
+    $attendance->kelas = $request->kelasId; // Menyimpan ID kelas
+    $attendance->tanggal_kehadiran = now(); // Mengatur tanggal kehadiran
+    // Hapus baris ini jika status_kehadiran tidak diperlukan
+    // $attendance->status_kehadiran = $request->status_kehadiran; // Mengambil status kehadiran dari request
+
+    // Simpan ke database
+    if ($attendance->save()) {
+        return response()->json(['message' => 'Data berhasil disimpan'], 200);
+    } else {
+        return response()->json(['message' => 'Gagal menyimpan data'], 500);
+    }
 }
 
 /*
@@ -178,10 +223,55 @@ public function absensiSiswa(Request $request)
 }
 */
 
-    public function absensiSiswaSatu(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaSatu');
+public function absensiSiswaSatu($kelas, $year, $mapel, $month)
+{
+    $decodedMapel = urldecode($mapel);
+
+    // Log untuk debugging
+    Log::info('🔥 Route Absensi Dipanggil:', [
+        'kelas' => $kelas,
+        'year' => $year,
+        'mapel' => $decodedMapel,
+        'month' => $month
+    ]);
+
+    $students = Student::where('class_id', $kelas)->get();
+
+    // Ambil mapel, kalau tidak ada set default object kosong
+    $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
+
+    if (!$selectedMapel) {
+        Log::error("⚠️ Mata pelajaran '{$decodedMapel}' tidak ditemukan di database!");
+        $selectedMapel = (object) [
+            'id' => null,
+            'mapel' => '',
+            'kode_mapel' => '',
+            'created_at' => null,
+            'updated_at' => null,
+        ]; // ✅ Paksa agar tetap berbentuk object dengan struktur yang konsisten
+    } else {
+        $selectedMapel = (object) $selectedMapel->toArray();
     }
+    
+    
+    $data = [
+        'kelas' => $kelas,
+        'year' => $year,
+        'mapel' => $decodedMapel,
+        'month' => $month,
+        'students' => $students,
+        'selectedMapel' => $selectedMapel, // Pastikan ini selalu object
+    ];
+
+    Log::info('📤 Data yang dikirim ke Vue:', $data);
+
+    // Jika request dari API, kirim JSON
+    if (request()->wantsJson()) {
+        return response()->json($data);
+    }
+
+    return Inertia::render('Students/absensiSiswaSatu', $data);
+}
 
     public function absensiSiswaDua(Request $request)
     {
