@@ -102,9 +102,11 @@ Route::middleware('role')->get('/dashboard', function () {
 
 Route::get('/attendance-teacher/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'show']);
 Route::get('/attendance-teacher-detail/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'getAttendance']);
+Route::post('/attendance', [AttendanceTeacherController::class, 'storeAttendance']);
 //Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'store'])->name('attendance-teacher-create');
 Route::get('/teachers/attendance', [AttendanceTeacherController::class, 'absensiGuru'])->name('teachers.attendance');
 Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'create']);
+Route::post('/attendance/update', [AttendanceTeacherController::class, 'updateAttendanceTeachers']);
 
 Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
 Route::get('/api/mapel', [MataPelajaranController::class, 'getMapel']);

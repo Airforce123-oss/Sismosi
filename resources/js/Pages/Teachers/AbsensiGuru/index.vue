@@ -8,6 +8,7 @@ import {
   toRaw,
   nextTick,
   reactive,
+  watchEffect,
 } from 'vue';
 import axios from 'axios';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
@@ -33,6 +34,7 @@ const isCustomStatus = computed(
 );
 
 const { props } = usePage();
+/*
 defineProps({
   attendanceRecords: {
     type: Array,
@@ -40,6 +42,7 @@ defineProps({
   },
 });
 
+ */
 const cleanAttendanceRecords = (records) => {
   // Pastikan records adalah array
   if (!Array.isArray(records)) {
@@ -49,31 +52,82 @@ const cleanAttendanceRecords = (records) => {
 
   return records
     .map((record) => {
+      const rawRecord = toRaw(record); // Dapatkan nilai asli dari record yang terikat reactivity
+
+      // Jika teacher_id adalah array, ambil nilai id dari elemen pertama, jika ada.
+      let teacherId;
+      if (Array.isArray(rawRecord.teacher_id)) {
+        const rawTeacherArray = toRaw(rawRecord.teacher_id);
+        if (
+          rawTeacherArray.length > 0 &&
+          typeof rawTeacherArray[0] === 'object' &&
+          rawTeacherArray[0] !== null &&
+          'id' in rawTeacherArray[0]
+        ) {
+          teacherId = rawTeacherArray[0].id;
+        } else {
+          teacherId = null;
+        }
+      } else {
+        teacherId = rawRecord.teacher_id;
+      }
+
       if (
-        typeof record === 'object' &&
-        record !== null && // Pastikan record bukan null
-        typeof record.teacher_id === 'number' &&
-        typeof record.attendance_date === 'string' &&
-        typeof record.status === 'string' &&
-        ['P', 'A', 'S', 'I'].includes(record.status)
+        typeof rawRecord === 'object' &&
+        rawRecord !== null &&
+        typeof teacherId === 'number' && // Pastikan teacherId adalah number
+        typeof rawRecord.attendance_date === 'string' &&
+        typeof rawRecord.status === 'string' &&
+        ['P', 'A', 'S', 'I'].includes(rawRecord.status)
       ) {
         // Lakukan pembersihan atau transformasi pada record
         return {
-          teacher_id: record.teacher_id,
-          attendance_date: record.attendance_date,
-          status: record.status,
+          teacher_id: teacherId, // Gunakan teacher_id yang telah divalidasi
+          attendance_date: rawRecord.attendance_date,
+          status: rawRecord.status,
         };
       } else {
-        console.warn('Invalid record format:', record);
+        console.warn('Invalid record format:', rawRecord);
         return null; // Kembalikan null untuk record yang tidak valid
       }
     })
     .filter((record) => record !== null); // Hapus record yang null
 };
 
-//const attendanceRecords = ref([]); // Menggunakan ref untuk reaktivitas Vue
-let attendanceRecords = ref([]); // Inisialisasi awal
-//const { attendanceRecords } = usePage().props;
+const attendanceRecords = computed(() => {
+  const records = props.attendance || []; // Pastikan props.attendance ada
+  return Array.isArray(records) ? records : records[''] || []; // Ambil array dari objek jika ada
+});
+
+// Temukan data yang sesuai
+/*
+const foundRecord = props.attendance.find(
+  (item) =>
+    item.teacher_id === selectedTeacherId.value &&
+    item.attendance_date === selectedDate.value
+);
+if (foundRecord) {
+  attendanceRecords.value = attendanceRecords.value.map((record) => {
+    if (
+      record.teacher_id === foundRecord.teacher_id &&
+      record.attendance_date === foundRecord.attendance_date
+    ) {
+      return foundRecord; // Update record yang sesuai
+    }
+    return record; // Biarkan record lainnya tidak berubah
+  });
+}
+*/
+
+console.log('Props Attendance:', props.attendance);
+console.log('Tipe Data:', typeof props.attendance);
+
+if (!Array.isArray(attendanceRecords.value)) {
+  console.warn(
+    'attendanceRecords is not an array. Initializing as an empty array.'
+  );
+  attendanceRecords.value = [];
+}
 
 // Fungsi untuk mengambil dan memvalidasi data dari localStorage
 const fetchAttendanceRecords = () => {
@@ -129,7 +183,7 @@ const fetchAttendanceRecords = () => {
         }
 
         // Validasi status
-        const validStatuses = ['P', 'A', 'S', 'I', 'Belum diabsen', 'Unknown']; // Tambahkan status yang valid
+        const validStatuses = ['P', 'A', 'S', 'I', 'Belum diabsen', 'Unknown'];
         if (
           typeof record.status !== 'string' ||
           !validStatuses.includes(record.status)
@@ -414,66 +468,11 @@ watch(
   },
   { immediate: true }
 );
-/*
-watch(
-    () => props.attendanceRecords,
-    (newRecords) => {
-        // Validasi awal untuk memastikan props.attendanceRecords adalah array
-        if (!Array.isArray(newRecords)) {
-            console.error(
-                "props.attendanceRecords is not an array or is undefined. Skipping watch handler."
-            );
-            return;
-        }
-
-        // Cek apakah data baru sama dengan data lokal
-        if (
-            JSON.stringify(newRecords) ===
-            JSON.stringify(localAttendanceRecords.value)
-        ) {
-            console.log("No changes detected in attendanceRecords.");
-            return;
-        } else {
-            if (
-                JSON.stringify(localAttendanceRecords.value) ===
-                JSON.stringify(newRecords)
-            ) {
-                console.log("No changes detected.");
-            } else {
-                console.log("Changes detected.");
-            }
-        }
-
-        // Logika penambahan data baru
-        const newAttendance = {
-            teacher_id: 1,
-            attendance_date: "2025-01-15",
-        };
-
-        const isDuplicate = newRecords.some(
-            (record) =>
-                record.teacher_id === newAttendance.teacher_id &&
-                record.attendance_date === newAttendance.attendance_date
-        );
-
-        if (!isDuplicate) {
-            localAttendanceRecords.value = [...newRecords, newAttendance];
-            saveToLocalStorage(); // Simpan otomatis
-            console.log(
-                "Attendance records updated:",
-                localAttendanceRecords.value
-            );
-        } else {
-            console.log("Duplicate attendance detected. Skipping add.");
-        }
-    },
-    { deep: true }
-);
-*/
 
 watch(
   () => props.attendanceRecords,
   (newRecords) => {
+    // Pastikan newRecords adalah array sebelum diproses
     if (Array.isArray(newRecords)) {
       console.log('New Attendance Records:', newRecords);
       attendanceRecords.value = cleanAttendanceRecords(newRecords);
@@ -487,14 +486,6 @@ watch(
 
 // Debug computed data
 console.log('Computed Attendance Summary:', attendanceSummary.value);
-
-/*
-const attendanceRecords = [
-    { teacherId: 1, date: "2025-01-06", status: "Hadir" },
-    { teacherId: 2, date: "2025-01-06", status: "Alpa" },
-];
-*/
-
 console.log('Attendance records from props:', toRaw(attendanceRecords.value));
 
 const addOrUpdateAttendanceRecord = (teacherId, attendanceDate, status) => {
@@ -543,7 +534,8 @@ const loadAttendanceRecords = async () => {
     }));
 
     console.log('Type of attendanceRecords:', typeof attendanceRecords.value);
-    console.log('Attendance Records:', attendanceRecords.value);
+    //console.log('Attendance Records:', attendanceRecords.value);
+    console.log('Raw Attendance Records:', toRaw(attendanceRecords.value));
 
     attendanceRecords.value.forEach((record) => {
       console.log(
@@ -606,8 +598,8 @@ const handleTeacherStatusChange = async (id, date) => {
   // Mencari record yang sesuai untuk diperbarui
   const recordToUpdate = props.attendanceRecords.find(
     (record) =>
-      typeof record.id === 'number' && // Pastikan id adalah number
-      record.id === id && // Ganti teacher_id dengan id
+      typeof record.teacher_id === 'number' && // Pastikan id adalah number
+      record.teacher_id === id &&
       formattedDate(new Date(record.attendance_date)) === formattedDateValue &&
       typeof record.status === 'string' &&
       ['Belum diabsen', 'P', 'A', 'S', 'I'].includes(record.status)
@@ -628,15 +620,15 @@ const handleTeacherStatusChange = async (id, date) => {
     };
     props.attendanceRecords.push(newRecord); // Menambahkan record baru
     console.log('Added new attendance record:', newRecord);
-    //addAttendanceRecord(newRecord); // Menambahkan catatan baru ke localAttendanceRecords
-    //console.log("New attendance record added:", newRecord);
+    saveAttendanceRecord(newRecord);
   }
 
   // Simpan perubahan ke localStorage
   localStorage.setItem(
     'attendanceRecords',
-    JSON.stringify(props.attendanceRecords)
+    JSON.stringify(toRaw(props.attendanceRecords))
   );
+
   console.log(
     'Attendance records saved to localStorage:',
     props.attendanceRecords
@@ -680,7 +672,7 @@ const selectStatus = (status) => {
     `Status selected: ${status}, for Teacher: ${selectedTeacherId.value}, Date: ${selectedDate.value}`
   );
 
-  if (!Array.isArray(props.attendance)) {
+  if (!Array.isArray(attendanceArray)) {
     console.error('Attendance data is not an array or is undefined');
     return;
   }
@@ -894,17 +886,8 @@ const changePage = (direction) => {
 };
 
 // Fungsi untuk mengambil data absensi guru
-
 const attendanceMessage = ref('');
-
-//const localAttendanceRecords = ref([]);
-//const localAttendanceRecords = ref([...props.attendanceRecords]);
-//const localAttendanceRecords = ref(
-//  Array.isArray(props.attendanceRecords) ? [...props.attendanceRecords] : []
-//);
 const localAttendanceRecords = ref([]);
-//const rawLocalAttendanceRecords = toRaw(localAttendanceRecords)._rawValue;
-//console.log("Raw Local Attendance Records:", rawLocalAttendanceRecords);
 
 watch(
   localAttendanceRecords,
@@ -923,7 +906,7 @@ watch(
       new: newVal,
     });
     // Simpan perubahan ke localStorage
-    localStorage.setItem('attendanceRecords', JSON.stringify(newVal));
+    localStorage.setItem('attendanceRecords', JSON.stringify(toRaw(newVal)));
   },
   { deep: true }
 );
@@ -945,85 +928,24 @@ const addAttendanceRecord = (newRecord) => {
 };
 
 const handleAttendance = (status) => {
-  console.log(
-    `Status selected: ${status}, for Teacher: ${selectedTeacherId.value}, Date: ${selectedDate.value}`
-  );
+  console.log(`Status selected: ${status}`);
 
-  // Validasi data attendance
-  if (!Array.isArray(props.attendance)) {
-    console.error('Attendance data is not an array or is undefined');
+  if (!['P', 'A', 'S', 'I'].includes(status)) {
+    alert('Status tidak valid!');
     return;
   }
 
-  if (!selectedTeacherId.value || !selectedDate.value) {
-    console.error(
-      'Invalid teacher ID or date:',
-      selectedTeacherId.value,
-      selectedDate.value
-    );
-    return;
-  }
+  const newRecord = {
+    teacher_id: selectedTeacherId.value,
+    class_id: selectedClassId.value, // Pastikan ini ada
+    attendance_date: selectedDate.value,
+    status: status,
+  };
 
-  // Sinkronisasi database utama: hapus semua record dengan status "Unknown"
-  props.attendance = props.attendance.filter(
-    (record) => record.status !== 'Unknown'
-  );
+  console.log('🔄 Mengirim data ke backend:', newRecord);
+  saveAttendanceRecord(newRecord); // <-- Kirim langsung ke backend
 
-  // Cari record yang cocok berdasarkan teacher_id dan attendance_date
-  let attendanceRecords = props.attendance.find(
-    (item) =>
-      item.teacher_id === selectedTeacherId.value &&
-      item.attendance_date === selectedDate.value
-  );
-
-  if (attendanceRecords) {
-    // Update status jika record sudah ada
-    attendanceRecords.status = status;
-    console.log('Attendance updated:', attendanceRecords);
-  } else {
-    // Tambahkan record baru jika tidak ada
-    attendanceRecords = {
-      teacher_id: selectedTeacherId.value,
-      attendance_date: selectedDate.value,
-      status,
-    };
-    props.attendance.push(attendanceRecords);
-    console.log('New attendance record added:', attendanceRecords);
-  }
-
-  // Sinkronisasi ke localAttendanceRecords (hapus "Unknown")
-  localAttendanceRecords.value = localAttendanceRecords.value.filter(
-    (record) => record.status !== 'Unknown'
-  );
-
-  // Tambahkan atau perbarui record di localAttendanceRecords
-  const localIndex = localAttendanceRecords.value.findIndex(
-    (record) =>
-      record.teacher_id === attendanceRecords.teacher_id &&
-      record.attendance_date === attendanceRecords.attendance_date
-  );
-
-  if (localIndex > -1) {
-    // Perbarui record yang ada
-    localAttendanceRecords.value[localIndex] = attendanceRecords;
-  } else {
-    // Tambahkan record baru
-    localAttendanceRecords.value.push(attendanceRecords);
-  }
-
-  console.log('Updated localAttendanceRecords:', localAttendanceRecords.value);
-
-  // Panggil updateAttendance untuk menyimpan perubahan ke props.attendance
-  updateAttendance(props.attendance);
-
-  // Simpan ke localStorage
-  saveToLocalStorage();
-
-  console.log('Data saved to localStorage:', localAttendanceRecords.value);
-
-  // Tutup modal dan reset status
-  isModalVisible.value = false;
-  customStatus.value = '';
+  isModalVisible.value = false; // Tutup modal
 };
 
 const displayAttendanceStatus = (date) => {
@@ -1059,6 +981,8 @@ onMounted(() => {
     console.log('Component mounted, data loading process started.');
 
     fetchAttendanceRecords();
+
+    attendanceRecords.value = loadFromLocalStorage();
 
     // Load data awal dari localStorage
     loadFromLocalStorage();
@@ -1117,9 +1041,9 @@ onMounted(() => {
     console.log('New record initialized:', newRecord);
 
     // Validasi attendanceRecords sebelum menggunakan .filter()
-    if (Array.isArray(attendanceRecords)) {
+    if (Array.isArray(attendanceRecords.value)) {
       console.log('Valid attendanceRecords array');
-      const uniqueRecords = attendanceRecords.filter(
+      const uniqueRecords = attendanceRecords.value.filter(
         (record) =>
           !props.attendanceRecords.some(
             (item) =>
@@ -1133,7 +1057,7 @@ onMounted(() => {
       console.warn(
         'attendanceRecords is not an array. Initializing as an empty array.'
       );
-      attendanceRecords = [newRecord]; // Inisialisasi dengan newRecord
+      attendanceRecords.value = [newRecord]; // Inisialisasi dengan newRecord
     }
 
     console.log(
@@ -1236,11 +1160,19 @@ if (!isValidDate(currentYear, currentMonth, extractedDate)) {
     console.error('attendanceRecords is not an array:', attendanceRecords);
   } else {
     // Mencari data absensi
-    const recordForCurrentDate = attendanceRecords.value.find(
-      (record) =>
+    const recordForCurrentDate = attendanceRecords.value.find((record) => {
+      if (!record || typeof record !== 'object') {
+        console.warn('Invalid record format detected:', record);
+        return false;
+      }
+
+      return (
         formattedDate(new Date(record.attendance_date)) ===
-          formattedDateString && record.teacherId === teacher.id
-    );
+          formattedDateString &&
+        Number(toRaw(record.teacher_id)) ===
+          Number(toRaw(selectedTeacherId.value))
+      );
+    });
 
     // Pengecekan data absensi
     if (recordForCurrentDate) {
@@ -1260,27 +1192,6 @@ console.log(
 );
 
 console.log('Debug formattedDate:', formattedDate);
-console.log('attendance Records:', attendanceRecords.value);
-
-/*
-attendanceRecords.value.forEach((record) => {
-    console.log("Checking record:", record);
-
-    try {
-        const formatted = formattedDate(new Date(record.attendance_date));
-        if (formatted) {
-            console.log("Record Date:", formatted);
-        } else {
-            console.warn("Invalid Date Detected:", record.attendance_date);
-        }
-    } catch (error) {
-        console.error("Error during formattedDate:", error);
-    }
-
-    console.log("Teacher ID:", record.teacher_id);
-    console.log("Status:", record.status);
-});
-*/
 
 // Fungsi untuk memuat data dari localStorage
 const loadFromLocalStorage = () => {
@@ -1381,54 +1292,93 @@ function validateTeacherId(teacherId) {
 // Fungsi untuk menyimpan data ke localStorage
 const saveToLocalStorage = () => {
   try {
+    // Event listener sebelum halaman unload (user meninggalkan halaman)
     window.addEventListener('beforeunload', () => {
+      // Set status default jika kosong
       localAttendanceRecords.value = localAttendanceRecords.value.map(
         (record) => ({
           ...record,
-          status: record.status || 'Unknown', // Beri default jika kosong
+          status: record.status || 'Unknown', // Berikan default jika kosong
         })
       );
 
       const dataToSave = localAttendanceRecords.value.map((record) => {
-        if (record.status !== 'Unknown') {
-          return { ...record, status: record.status }; // Jangan ubah jika bukan 'Unknown'
-        }
-        return { ...record, status: record.status || 'Unknown' }; // Menambahkan default jika status kosong
+        return {
+          ...record,
+          status: record.status !== 'Unknown' ? record.status : 'Unknown', // Simpan status kecuali jika 'Unknown'
+        };
       });
 
-      console.log(
-        'Data to save in localStorage:',
-        localAttendanceRecords.value
-      ); // Tambahan ini
-      localStorage.setItem('attendanceRecords', JSON.stringify(dataToSave));
-      console.log('Attendance data saved to localStorage.');
+      console.log('Data yang akan disimpan ke localStorage:', dataToSave);
+      localStorage.setItem(
+        'attendanceRecords',
+        JSON.stringify(toRaw(dataToSave))
+      );
+      // Simpan data ke localStorage
+
+      console.log('Data absensi disimpan ke localStorage.');
     });
 
-    // Atau Anda bisa menambahkan trigger tambahan jika diperlukan
+    // Simpan setiap 5 menit
     setInterval(() => {
       localAttendanceRecords.value = localAttendanceRecords.value.map(
         (record) => ({
           ...record,
-          status: record.status || 'Unknown', // Beri default jika kosong
+          status: record.status || 'Unknown', // Set status default jika kosong
         })
       );
 
       const dataToSave = localAttendanceRecords.value.map((record) => {
-        if (record.status !== 'Unknown') {
-          return { ...record, status: record.status }; // Jangan ubah jika bukan 'Unknown'
-        }
-        return { ...record, status: record.status || 'Unknown' }; // Menambahkan default jika status kosong
+        return {
+          ...record,
+          status: record.status !== 'Unknown' ? record.status : 'Unknown', // Pastikan status disimpan dengan benar
+        };
       });
 
-      console.log(
-        'Data to save in localStorage:',
-        localAttendanceRecords.value
-      ); // Tambahan ini
-      localStorage.setItem('attendanceRecords', JSON.stringify(dataToSave));
-      console.log('Attendance data saved to localStorage.');
-    }, 300000); // Save every 5 minutes
+      console.log('Data yang akan disimpan ke localStorage:', dataToSave);
+      localStorage.setItem(
+        'attendanceRecords',
+        JSON.stringify(toRaw(dataToSave))
+      );
+      // Simpan data ke localStorage
+
+      console.log('Data absensi disimpan ke localStorage.');
+    }, 300000); // Simpan setiap 5 menit
   } catch (error) {
-    console.error('Error saving to localStorage:', error);
+    console.error('Terjadi kesalahan saat menyimpan ke localStorage:', error);
+  }
+};
+
+const saveAttendanceRecord = async (newRecord) => {
+  const rawRecord = toRaw(newRecord);
+
+  rawRecord.teacher_id = rawRecord.teacher_id || 1;
+  rawRecord.class_id = rawRecord.class_id || 1;
+
+  if (!rawRecord.attendance_date) {
+    console.warn('❌ attendance_date tidak ada!', rawRecord);
+    return;
+  }
+
+  const validStatuses = ['P', 'A', 'S', 'I'];
+  if (!validStatuses.includes(rawRecord.status)) {
+    console.warn('⛔ Status tidak valid atau belum dipilih:', rawRecord.status);
+    return;
+  }
+
+  console.log(
+    '✅ Final data yang dikirim:',
+    JSON.stringify(rawRecord, null, 2)
+  );
+
+  try {
+    const response = await axios.post('/api/attendance', rawRecord);
+    console.log('✅ Attendance record saved:', response.data);
+
+    props.attendanceRecords.push(response.data.attendance);
+  } catch (error) {
+    console.error('❌ Error saving attendance record:', error);
+    console.log(error.response?.data);
   }
 };
 
@@ -1743,13 +1693,28 @@ if (
 watch(
   () => attendanceRecords.value,
   (newValue, oldValue) => {
-    console.log('AttendanceRecords updated:', oldValue, '->', newValue);
+    // Pastikan untuk memeriksa perbedaan data yang lebih dalam
+    const rawNewValue = toRaw(newValue); // Ambil data mentah dari reaktif
+    const rawOldValue = toRaw(oldValue); // Ambil data mentah dari reaktif
+
+    // Bandingkan apakah data berubah
+    if (JSON.stringify(rawNewValue) !== JSON.stringify(rawOldValue)) {
+      console.log('AttendanceRecords updated:', rawOldValue, '->', rawNewValue);
+
+      // Hanya menyimpan ke localStorage jika ada perubahan nyata
+      localStorage.setItem(
+        'attendanceRecords',
+        JSON.stringify(rawNewValue) // Simpan data yang sudah dibersihkan
+      );
+    }
   },
   { immediate: true } // Jalankan segera setelah watch diaktifkan
 );
 
-watch(customStatus, (newValue) => {
-  console.log('customStatus.value updated:', newValue);
+watch([selectedTeacherId, selectedDate], () => {
+  console.log('Selected Teacher ID:', selectedTeacherId.value);
+  console.log('Selected Date:', selectedDate.value);
+  console.log('Attendance Data:', props.attendance);
 });
 </script>
 
@@ -2008,7 +1973,7 @@ watch(customStatus, (newValue) => {
                       getAttendanceClass(
                         teacher.id,
                         formattedDate(new Date(currentYear, currentMonth, date))
-                      )
+                      ) + ' text-center'
                     "
                     @click="
                       handleTeacherStatusChange(
@@ -2143,68 +2108,66 @@ watch(customStatus, (newValue) => {
                 </div>
               </div>
             </div>
+            <!--<pre>{{ attendanceRecords }}</pre>-->
           </div>
+          <div class="p-6 bg-gray-100 min-h-screen">
+            <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
+              <h2 class="text-xl font-semibold text-gray-700 mb-4">
+                Data Kehadiran
+              </h2>
 
-          <!--      <tr
-                        v-for="record in processedRecords"
-                        :key="record.attendance_date"
-                    >
-                        <p>Status Record:</p>
-                        <td>{{ record.teacher_id }}</td>
-                        <td>{{ record.attendance_date }}</td>
-                        <td>{{ record.status }}</td>
+              <!-- Debugging: Menampilkan isi attendanceRecords -->
+              <pre class="text-sm bg-gray-200 p-3 rounded-md overflow-x-auto">{{
+                attendanceRecords
+              }}</pre>
+
+              <div v-if="attendanceRecords.length > 0">
+                <table
+                  class="w-full mt-4 border border-gray-300 rounded-lg overflow-hidden"
+                >
+                  <thead class="bg-blue-500 text-white">
+                    <tr>
+                      <th class="py-2 px-4 text-left">ID</th>
+                      <th class="py-2 px-4 text-left">Teacher ID</th>
+                      <th class="py-2 px-4 text-left">Tanggal</th>
+                      <th class="py-2 px-4 text-left">Status</th>
                     </tr>
--->
-
-          <!--
-                <div
-                        v-if="
-                            props.attendanceRecords &&
-                            props.attendanceRecords.length > 0
-                        "
-                    >
-                        <table>
-                            <tr
-                                v-for="record in props.attendanceRecords"
-                                :key="record.attendance_date"
-                            >
-                                <td>{{ record.teacher_id }}</td>
-                                <td>{{ record.attendance_date }}</td>
-                                <td>{{ record.status }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <p v-else>No attendance records available.</p>
-
-                    -->
-          <!--
+                  </thead>
+                  <tbody>
                     <tr
-                        v-for="record in processedRecords"
-                        :key="record.attendance_date"
+                      v-for="record in attendanceRecords"
+                      :key="record.id"
+                      class="border-b hover:bg-gray-100"
                     >
-                        <td>{{ record.teacher_id }}</td>
-                        <td>{{ record.attendance_date }}</td>
-                        <td>{{ record.status }}</td>
-                    </tr>
-      
-              -->
-          <!--           <tr
-                        v-for="record in formattedRecords"
-                        :key="record.attendance_date"
-                    >
-                        <td>{{ record.teacher_id }}</td>
-                        <td>{{ record.attendance_date }}</td>
-                        <td
-                            :class="
-                                getAttendanceClass(
-                                    record.teacher_id,
-                                    record.attendance_date
-                                )
-                            "
+                      <td class="py-2 px-4">{{ record.id }}</td>
+                      <td class="py-2 px-4">{{ record.teacher_id }}</td>
+                      <td class="py-2 px-4">{{ record.attendance_date }}</td>
+                      <td class="py-2 px-4">
+                        <span
+                          :class="{
+                            'bg-green-500 text-white px-2 py-1 rounded':
+                              record.status === 'P',
+                            'bg-red-500 text-white px-2 py-1 rounded':
+                              record.status === 'A',
+                            'bg-yellow-500 text-white px-2 py-1 rounded':
+                              record.status === 'S',
+                            'bg-gray-500 text-white px-2 py-1 rounded':
+                              record.status === 'I',
+                          }"
                         >
-                            {{ record.status }}
-                        </td>
-                    </tr>-->
+                          {{ record.status }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p v-else class="text-center text-gray-600 mt-4">
+                Tidak ada data kehadiran.
+              </p>
+            </div>
+          </div>
 
           <!-- Modal Tambah Absensi -->
           <div
@@ -2272,6 +2235,7 @@ watch(customStatus, (newValue) => {
                 </p>
               </div>
 
+              <!-- @click="handleAttendance(status)"-->
               <!-- Pilihan Status -->
               <div class="space-y-4">
                 <button

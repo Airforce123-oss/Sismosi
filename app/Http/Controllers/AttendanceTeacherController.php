@@ -16,27 +16,27 @@ class AttendanceTeacherController extends Controller
     {
         // Mengambil data absensi dari database, dengan relasi teacher dan class
         $attendance = AttendanceTeacher::with('teacher', 'class')->get();
-        Log::info('Attendance data:', $attendance->toArray());
+        //Log::info('Attendance data:', $attendance->toArray());
     
         // Mengambil data guru yang memiliki role 'teacher' dengan pagination
         $teachers = User::whereHas('roles', function ($query) {
             $query->where('name', 'teacher'); // Hanya ambil guru
         })->paginate(5);
-        Log::info('Teachers data:', $teachers->items());
+        //Log::info('Teachers data:', $teachers->items());
     
         // Mengambil semua kelas
         $classes = Classes::all();
-        Log::info('Classes data:', $classes->toArray());
+        //Log::info('Classes data:', $classes->toArray());
     
         // Mengambil data wali_kelas
         $waliKelas = User::whereHas('roles', function ($query) {
             $query->where('name', 'wali_kelas'); // Hanya ambil wali_kelas
         })->get();
-        Log::info('Wali Kelas data:', $waliKelas->toArray());
+        //Log::info('Wali Kelas data:', $waliKelas->toArray());
     
         // Kelompokkan absensi berdasarkan class_id
         $groupedByClass = $attendance->groupBy('class_id');
-        Log::info('Grouped Attendance by Class ID:', $groupedByClass->toArray());
+        //Log::info('Grouped Attendance by Class ID:', $groupedByClass->toArray());
     
         // Mengirim data absensi, teachers, dan classes ke halaman Inertia
         return inertia('Teachers/AbsensiGuru/index', [
@@ -84,13 +84,31 @@ class AttendanceTeacherController extends Controller
         // Cari absensi berdasarkan teacher_id dan attendance_date
         $attendance = AttendanceTeacher::where('teacher_id', $teacherId)
             ->whereDate('attendance_date', $attendanceDate)
+            ->with('teacher') // Pastikan relasi teacher dimuat
             ->get();
+    
+        // 🔥 Mapping ulang data agar format lebih bersih dan aman
+        $attendance = $attendance->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'teacher_id' => $item->teacher_id,
+                'class_id' => $item->class_id ?? 'N/A', // Hindari `null`
+                'attendance_date' => $item->attendance_date,
+                'is_present' => (bool) $item->is_present, // Pastikan boolean
+                'status' => $item->status,
+                'teacher' => $item->teacher ? [
+                    'id' => $item->teacher->id,
+                    'name' => $item->teacher->name,
+                ] : null,
+            ];
+        });
     
         // Kirim data melalui Inertia
         return Inertia::render('Teachers/AbsensiGuru/Index', [
             'attendance' => $attendance,
         ]);
     }
+    
     
     
     public function updateAttendance(Request $request)
@@ -128,14 +146,16 @@ class AttendanceTeacherController extends Controller
     public function store(Request $request)
     {
         // Debug data yang diterima
-        Log::info('Request data:', $request->all());
+        //Log::info('Request data:', $request->all());
     
         $validated = $request->validate([
             'teacher_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:classes,id|integer|min:1',
-            'attendance_date' => 'required|date',
+            'class_id' => 'nullable|exists:classes,id|integer|min:1',
+            'attendance_date' => 'required|date_format:Y-m-d H:i:s',
             'is_present' => 'required|boolean',
         ]);
+
+        Log::info('Data yang diterima untuk create attendance:', $validated);
     
         $attendance = AttendanceTeacher::create($validated);
     
@@ -144,13 +164,15 @@ class AttendanceTeacherController extends Controller
             'attendance' => $attendance,
         ], 201);
     }
-
     public function storeAttendance(Request $request)
     {
+        // Cek data yang diterima dari frontend
+        Log::info('Data yang diterima untuk absensi:', $request->all());
+    
         // Validasi data yang diterima
         $validated = $request->validate([
             'teacher_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:classes,id|integer|min:1',
+            'class_id' => 'required|exists:classes,id',
             'attendance_date' => 'required|date',
             'status' => 'required|string|in:P,A,S,I', // Validasi status
         ]);
@@ -169,6 +191,7 @@ class AttendanceTeacherController extends Controller
             'attendance' => $attendance,
         ], 201);
     }
+    
     public function create(Request $request)
     {
         // Validasi data yang diterima
@@ -177,7 +200,7 @@ class AttendanceTeacherController extends Controller
             'class_id' => 'required|exists:classes,id|integer|min:1',
             'attendance_date' => 'required|date',
             'is_present' => 'required|boolean',
-            'status' => 'required|string', // Validasi status
+            'status' => 'required|string|in:P,A,S,I', 
         ]);
         
         // Buat record absensi

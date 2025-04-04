@@ -13,7 +13,7 @@ class AttendanceTeacher extends Model
     protected $table = 'attendance_teachers';
 
     protected $fillable = [
-        'teacher_id', 'tanggal_kehadiran', 'status_kehadiran'
+        'teacher_id', 'attendance_date', 'status', 'class_id'
     ];
 
     protected $guarded = ['id'];
