@@ -69,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
     Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])->name('studentsabsensiSiswa');
+    Route::get('/indexx', [AttendanceTeacherController::class, 'absensiGuru1'])->name('studentsabsensiGuru');
     Route::get('/attendance-teachers', [AttendanceTeacherController::class, 'getAttendanceTeachers']);
     Route::get('/absensiGuru', [AttendanceTeacherController::class, 'absensiGuru'])->name('studentsabsensiGuru');
     Route::post('/absensiGuru', [AttendanceTeacherController::class, 'store']);

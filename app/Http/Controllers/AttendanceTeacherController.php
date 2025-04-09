@@ -12,39 +12,43 @@ use App\Models\Classes;
 
 class AttendanceTeacherController extends Controller
 {
+
+    public function absensiGuru1()
+    {
+        return inertia('Teachers/AbsensiGuru/indexx');
+    }
+
     public function absensiGuru()
     {
         // Mengambil data absensi dari database, dengan relasi teacher dan class
         $attendance = AttendanceTeacher::with('teacher', 'class')->get();
-        //Log::info('Attendance data:', $attendance->toArray());
+    
+        // Konversi data absensi ke bentuk array untuk attendanceRecords
+        $attendanceRecords = $attendance->toArray();
     
         // Mengambil data guru yang memiliki role 'teacher' dengan pagination
         $teachers = User::whereHas('roles', function ($query) {
-            $query->where('name', 'teacher'); // Hanya ambil guru
+            $query->where('name', 'teacher');
         })->paginate(5);
-        //Log::info('Teachers data:', $teachers->items());
     
         // Mengambil semua kelas
         $classes = Classes::all();
-        //Log::info('Classes data:', $classes->toArray());
     
         // Mengambil data wali_kelas
         $waliKelas = User::whereHas('roles', function ($query) {
-            $query->where('name', 'wali_kelas'); // Hanya ambil wali_kelas
+            $query->where('name', 'wali_kelas');
         })->get();
-        //Log::info('Wali Kelas data:', $waliKelas->toArray());
     
         // Kelompokkan absensi berdasarkan class_id
         $groupedByClass = $attendance->groupBy('class_id');
-        //Log::info('Grouped Attendance by Class ID:', $groupedByClass->toArray());
     
-        // Mengirim data absensi, teachers, dan classes ke halaman Inertia
+        // Kirim data ke halaman Inertia
         return inertia('Teachers/AbsensiGuru/index', [
-            'attendance' => $groupedByClass,
-            'attendanceRecords' => $attendanceRecords ?? [],
-            'teachers' => $teachers->items(),  // Kirimkan data teacher sebagai array biasa
-            'classes' => $classes,  // Pastikan classes dikirim
-            'wali_kelas' => $waliKelas,  // Kirimkan data wali_kelas
+            'attendance' => $groupedByClass,  
+            'attendanceRecords' => $attendanceRecords, 
+            'teachers' => $teachers->items(),
+            'classes' => $classes,
+            'wali_kelas' => $waliKelas,
             'currentPage' => $teachers->currentPage(),
             'lastPage' => $teachers->lastPage(),
             'total' => $teachers->total(),
@@ -169,18 +173,16 @@ class AttendanceTeacherController extends Controller
         // Cek data yang diterima dari frontend
         Log::info('Data yang diterima untuk absensi:', $request->all());
     
-        // Validasi data yang diterima
+        // Validasi data yang diterima (tanpa class_id)
         $validated = $request->validate([
             'teacher_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:classes,id',
             'attendance_date' => 'required|date',
             'status' => 'required|string|in:P,A,S,I', // Validasi status
         ]);
     
-        // Simpan data ke database
+        // Simpan data ke database (tanpa class_id)
         $attendance = AttendanceTeacher::create([
             'teacher_id' => $validated['teacher_id'],
-            'class_id' => $validated['class_id'],
             'attendance_date' => $validated['attendance_date'],
             'status' => $validated['status'],
         ]);
@@ -207,7 +209,7 @@ class AttendanceTeacherController extends Controller
         $attendance = AttendanceTeacher::create([
             'teacher_id' => $validated['teacher_id'],
             'class_id' => $validated['class_id'],
-            'attendance_date' => $validated['attendance_date'],
+            //'attendance_date' => $validated['attendance_date'],
             'is_present' => $validated['is_present'],
             'status' => $validated['status'],  // Simpan status
         ]);

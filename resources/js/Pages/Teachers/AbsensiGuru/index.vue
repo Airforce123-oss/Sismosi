@@ -26,12 +26,6 @@ const selectedTeacherId = ref(null);
 const selectedDate = ref(null);
 const statuses = ref(['P', 'A', 'S', 'I']);
 const customStatus = ref('');
-import isEqual from 'fast-deep-equal/es6';
-//const customStatus = "";
-
-const isCustomStatus = computed(
-  () => !statuses.value.includes(customStatus.value)
-);
 
 const { props } = usePage();
 /*
@@ -41,62 +35,36 @@ defineProps({
     default: () => [],
   },
 });
-
  */
+
 const cleanAttendanceRecords = (records) => {
-  // Pastikan records adalah array
-  if (!Array.isArray(records)) {
-    console.warn('Provided records is not an array:', records);
-    return []; // Kembalikan array kosong jika tidak valid
-  }
-
   return records
-    .map((record) => {
-      const rawRecord = toRaw(record); // Dapatkan nilai asli dari record yang terikat reactivity
+    .filter((record) => record.tanggal_kehadiran) // hanya data absensi guru
+    .map((record, index) => {
+      console.log(`📌 [Record ${index + 1}]`, record);
 
-      // Jika teacher_id adalah array, ambil nilai id dari elemen pertama, jika ada.
-      let teacherId;
-      if (Array.isArray(rawRecord.teacher_id)) {
-        const rawTeacherArray = toRaw(rawRecord.teacher_id);
-        if (
-          rawTeacherArray.length > 0 &&
-          typeof rawTeacherArray[0] === 'object' &&
-          rawTeacherArray[0] !== null &&
-          'id' in rawTeacherArray[0]
-        ) {
-          teacherId = rawTeacherArray[0].id;
-        } else {
-          teacherId = null;
-        }
-      } else {
-        teacherId = rawRecord.teacher_id;
+      // Opsional: warning jika teacher_id kosong
+      if (!record.teacher_id) {
+        console.warn(`❌ Record tidak valid untuk absensi guru:`, record);
       }
 
-      if (
-        typeof rawRecord === 'object' &&
-        rawRecord !== null &&
-        typeof teacherId === 'number' && // Pastikan teacherId adalah number
-        typeof rawRecord.attendance_date === 'string' &&
-        typeof rawRecord.status === 'string' &&
-        ['P', 'A', 'S', 'I'].includes(rawRecord.status)
-      ) {
-        // Lakukan pembersihan atau transformasi pada record
-        return {
-          teacher_id: teacherId, // Gunakan teacher_id yang telah divalidasi
-          attendance_date: rawRecord.attendance_date,
-          status: rawRecord.status,
-        };
-      } else {
-        console.warn('Invalid record format:', rawRecord);
-        return null; // Kembalikan null untuk record yang tidak valid
-      }
-    })
-    .filter((record) => record !== null); // Hapus record yang null
+      return {
+        id: record.id,
+        teacher_id: record.teacher_id,
+        tanggal_kehadiran: record.tanggal_kehadiran,
+        status: record.status,
+      };
+    });
 };
 
 const attendanceRecords = computed(() => {
   const records = props.attendance || []; // Pastikan props.attendance ada
-  return Array.isArray(records) ? records : records[''] || []; // Ambil array dari objek jika ada
+
+  const finalRecords = Array.isArray(records) ? records : records[''] || [];
+
+  console.log('Isi attendanceRecords:', finalRecords);
+
+  return finalRecords;
 });
 
 // Temukan data yang sesuai
@@ -132,80 +100,74 @@ if (!Array.isArray(attendanceRecords.value)) {
 // Fungsi untuk mengambil dan memvalidasi data dari localStorage
 const fetchAttendanceRecords = () => {
   try {
-    const data = localStorage.getItem('attendanceRecords'); // Ambil data dari localStorage
+    const data = localStorage.getItem('attendanceRecords');
     if (data) {
       let parsedData;
       try {
-        parsedData = JSON.parse(data); // Parsing data JSON
+        parsedData = JSON.parse(data);
       } catch (error) {
-        console.error('Error parsing JSON from localStorage:', error);
-        return; // Keluar dari fungsi jika parsing gagal
+        console.error('❌ Gagal parsing JSON dari localStorage:', error);
+        return;
       }
 
-      // Memeriksa apakah parsedData adalah array
       if (!Array.isArray(parsedData)) {
-        console.warn('Parsed data is not an array:', parsedData);
-        return; // Keluar dari fungsi jika bukan array
+        console.warn('❌ Parsed data bukan array:', parsedData);
+        return;
       }
 
-      console.log('Parsed data from localStorage:', parsedData);
+      console.log('📦 Parsed data dari localStorage:', parsedData);
 
-      // Validasi setiap record
-      const validRecords = parsedData.filter((record) => {
-        // Pastikan record adalah objek dan tidak null
+      const validRecords = parsedData.filter((record, index) => {
+        // Pastikan record adalah object
         if (typeof record !== 'object' || record === null) {
-          console.warn('Invalid record format:', record);
-          return false; // Skip record jika tidak valid
+          console.warn(`❌ [Record ${index}] Bukan object:`, record);
+          return false;
         }
 
-        // Ambil id
-        let id = record.id;
-
-        // Jika id adalah objek, ambil nilai id
-        if (typeof id === 'object' && id !== null) {
-          id = id.id; // Ambil nilai id dari objek
+        // Validasi: Harus punya teacher_id
+        if (typeof record.teacher_id !== 'number' || record.teacher_id <= 0) {
+          console.warn(
+            `❌ [Record ${index}] teacher_id tidak valid atau tidak ada:`,
+            record
+          );
+          return false;
         }
 
-        // Validasi id
-        if (typeof id !== 'number' || id <= 0) {
-          console.warn('Invalid id:', id);
-          return false; // Skip record jika id tidak valid
-        }
-
-        // Validasi attendance_date
+        // Validasi: attendance_date wajib ada & valid
         if (
           typeof record.attendance_date !== 'string' ||
           record.attendance_date.trim() === '' ||
           isNaN(Date.parse(record.attendance_date))
         ) {
-          console.warn('Invalid attendance_date:', record.attendance_date);
-          return false; // Skip record jika attendance_date tidak valid
+          console.warn(
+            `❌ [Record ${index}] attendance_date tidak valid:`,
+            record
+          );
+          return false;
         }
 
-        // Validasi status
+        // Validasi: status harus salah satu dari daftar
         const validStatuses = ['P', 'A', 'S', 'I', 'Belum diabsen', 'Unknown'];
         if (
           typeof record.status !== 'string' ||
           !validStatuses.includes(record.status)
         ) {
-          console.warn('Invalid status:', record.status);
-          return false; // Skip record jika status tidak valid
+          console.warn(`❌ [Record ${index}] status tidak valid:`, record);
+          return false;
         }
 
-        return true; // Record valid
+        // Debug jika semua valid
+        console.log(`✅ [Record ${index}] Data absensi valid:`, record);
+        return true;
       });
 
-      // Debugging: Cek validRecords sebelum menyimpan
-      console.log('Valid records before saving:', validRecords);
-
-      // Menyimpan record yang valid ke attendanceRecords
       attendanceRecords.value = validRecords;
-      console.log('Valid attendance records:', attendanceRecords.value);
+      console.log('📋 Valid attendance records:', attendanceRecords.value);
     } else {
-      console.warn('No data found in localStorage for attendanceRecords.');
+      console.warn('⚠️ Tidak ada data attendanceRecords di localStorage.');
     }
   } catch (error) {
-    console.error('Error accessing localStorage:', error);
+    console.error('❌ Error saat akses localStorage:', error);
   }
 };
 
@@ -457,14 +419,28 @@ const mockFetchData = async (page, perPage) => {
 watch(
   () => props.attendance,
   (newAttendance) => {
+    // Coba ambil array pertamanya jika datanya berbentuk objek
+    let recordsArray = [];
+
     if (Array.isArray(newAttendance)) {
-      const sanitizedRecords = cleanAttendanceRecords(newAttendance);
-      console.log('Sanitized Records:', sanitizedRecords);
-      attendanceRecords.value = sanitizedRecords;
+      recordsArray = newAttendance;
+    } else if (typeof newAttendance === 'object' && newAttendance !== null) {
+      // Ambil array dari key pertama (misal: attendance = {1: [...]})
+      const firstKey = Object.keys(newAttendance)[0];
+      if (Array.isArray(newAttendance[firstKey])) {
+        recordsArray = newAttendance[firstKey];
+      } else {
+        console.warn(
+          'Attendance key does not contain an array:',
+          newAttendance[firstKey]
+        );
+      }
     } else {
       console.error('Invalid attendance data received:', newAttendance);
-      attendanceRecords.value = [];
     }
+
+    const sanitizedRecords = cleanAttendanceRecords(recordsArray);
+    attendanceRecords.value = sanitizedRecords;
   },
   { immediate: true }
 );
@@ -800,14 +776,6 @@ const getDateRange = (startDate, endDate) => {
 };
 
 // Properti yang digunakan dalam template
-const totalDaysInMonth = Array.from({ length: 31 }, (_, i) => i + 1); // 31 hari dalam sebulan
-const date = new Date();
-// Ekstrak nilai tanggal (1-31) dari objek Date
-const currentYear = new Date().getFullYear();
-const currentMonth = new Date().getMonth() + 1;
-console.log('currentMonth:', currentMonth);
-new Date(currentYear, currentMonth - 1, date);
-console.log('Pre-correction currentMonth:', currentMonth);
 
 const sanitizedTeachers = computed(() => {
   if (!teachers || !Array.isArray(teachers)) {
@@ -842,13 +810,34 @@ const rawTeachers = toRaw(paginatedTeachers.value);
 console.log(rawTeachers.value);
 
 console.log(currentPage.value); // Periksa nilai currentPage
-console.log(itemsPerPage); // Periksa nilai itemsPerPag
+console.log(itemsPerPage); // Periksa nilai itemsPerPage
 
-// Properti modal
-const isAddModalVisible = ref(false);
+// 🎯 Ambil bulan sekarang (1–12)
+const currentMonth = computed(() => new Date().getMonth() + 1);
 
-// Properti yang diperlukan untuk bulan dan tahun
-const currentMonthYear = ref(`${currentYear}-${currentMonth + 1}`);
+// 🎯 Ambil tahun sekarang
+const currentYear = computed(() => new Date().getFullYear());
+
+// 🎯 Ambil tanggal sekarang (1–31)
+const currentDate = computed(() => new Date().getDate());
+
+// 📅 currentMonthYear secara dinamis (real-time setiap halaman dimuat)
+const currentMonthYear = computed(() => {
+  return `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}`;
+});
+
+
+
+// totalDaysInMonth tetap statis
+const totalDaysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+// Debug akhir (setelah komponen ter-render)
+console.log('📅 currentMonthYear:', currentMonthYear.value);
+console.log('📅 currentDate:', currentDate.value);
+
+// 🔍 Logging
+console.log('📅 currentMonthYear:', currentMonthYear.value);
+console.log('📅 currentDate:', currentDate.value);
 
 const changePage = (direction) => {
   let newPage = currentPage.value;
@@ -927,7 +916,7 @@ const addAttendanceRecord = (newRecord) => {
   }
 };
 
-const handleAttendance = (status) => {
+const handleAttendance = async (status) => {
   console.log(`Status selected: ${status}`);
 
   if (!['P', 'A', 'S', 'I'].includes(status)) {
@@ -937,15 +926,42 @@ const handleAttendance = (status) => {
 
   const newRecord = {
     teacher_id: selectedTeacherId.value,
-    class_id: selectedClassId.value, // Pastikan ini ada
+    class_id: selectedClassId.value, // pastikan selectedClassId tersedia
     attendance_date: selectedDate.value,
     status: status,
   };
 
   console.log('🔄 Mengirim data ke backend:', newRecord);
-  saveAttendanceRecord(newRecord); // <-- Kirim langsung ke backend
 
-  isModalVisible.value = false; // Tutup modal
+  try {
+    const response = await axios.post('/api/attendance', newRecord);
+    console.log('✅ Tersimpan:', response.data);
+
+    // Update lokal
+    const index = attendanceRecords.value.findIndex(
+      (r) =>
+        r.teacher_id === newRecord.teacher_id &&
+        r.attendance_date === newRecord.attendance_date
+    );
+
+    if (index !== -1) {
+      attendanceRecords.value[index].status = status;
+    } else {
+      attendanceRecords.value.push(newRecord);
+    }
+
+    // 💾 Simpan ke localStorage setelah update
+    localStorage.setItem(
+      'attendanceRecords',
+      JSON.stringify(attendanceRecords.value)
+    );
+    console.log('📦 Data disimpan ke localStorage.');
+  } catch (error) {
+    console.error('❌ Gagal menyimpan:', error);
+    alert('Gagal menyimpan data kehadiran!');
+  }
+
+  isModalVisible.value = false; // Tutup modal setelah submit
 };
 
 const displayAttendanceStatus = (date) => {
@@ -978,99 +994,66 @@ const displayAttendanceStatus = (date) => {
 
 onMounted(() => {
   try {
-    console.log('Component mounted, data loading process started.');
+    console.log('Component mounted, mulai proses load data...');
 
     fetchAttendanceRecords();
 
-    attendanceRecords.value = loadFromLocalStorage();
-
-    // Load data awal dari localStorage
-    loadFromLocalStorage();
-    const rawData = toRaw(localAttendanceRecords.value);
-
-    console.log('Data loaded from localStorage:', rawData);
-
-    // Validasi rawData dan inisialisasi localAttendanceRecords
-    if (Array.isArray(rawData)) {
-      localAttendanceRecords.value = rawData;
-    } else if (typeof rawData === 'string') {
+    // Load dan validasi localStorage
+    let stored = loadFromLocalStorage();
+    if (typeof stored === 'string') {
       try {
-        const parsedData = JSON.parse(rawData);
-        if (Array.isArray(parsedData)) {
-          localAttendanceRecords.value = parsedData;
-        } else {
-          console.warn(
-            'Parsed data is not an array, initializing as empty array.'
-          );
-          localAttendanceRecords.value = [];
-        }
+        stored = JSON.parse(stored);
       } catch (e) {
-        console.error('Failed to parse localAttendanceRecords string:', e);
-        localAttendanceRecords.value = [];
+        console.error('Gagal parse localStorage string:', e);
+        stored = [];
       }
-    } else {
-      console.warn(
-        'localAttendanceRecords is neither array nor string, initializing as empty array.'
-      );
-      localAttendanceRecords.value = [];
     }
 
+    if (!Array.isArray(stored)) {
+      console.warn(
+        'Data localStorage tidak valid, inisialisasi sebagai array kosong.'
+      );
+      stored = [];
+    }
+
+    localAttendanceRecords.value = stored;
     console.log(
-      'Local Attendance Records after validation:',
+      'Data localAttendanceRecords setelah validasi:',
       localAttendanceRecords.value
     );
 
-    // Update props.attendanceRecords setelah data berhasil divalidasi
-    props.attendanceRecords = Array.isArray(localAttendanceRecords.value)
-      ? [...localAttendanceRecords.value]
-      : [];
-    console.log(
-      'Initialized props.attendanceRecords:',
-      props.attendanceRecords
+    console.log('Sebelum dibersihkan:', toRaw(props.attendance));
+
+    // Inisialisasi props.attendanceRecords
+    props.attendanceRecords = [...localAttendanceRecords.value];
+
+    // Buat record baru
+    const today = formattedDate(new Date());
+    const newRecord = {
+      teacher_id: teachers,
+      attendance_date: today,
+      status: customStatus.value,
+    };
+    console.log('Record baru yang akan dicek:', newRecord);
+
+    // Cek jika record sudah ada
+    const alreadyExists = props.attendanceRecords.some(
+      (record) =>
+        record.teacher_id === newRecord.teacher_id &&
+        record.attendance_date === newRecord.attendance_date
     );
 
-    const formattedDateValue = formattedDate(new Date());
-
-    // Deklarasi newRecord sebelum digunakan
-    let newRecord = {
-      teacher_id: teachers, // Ambil ID guru dari variabel dinamis
-      attendance_date: formattedDateValue, // Gunakan tanggal yang diformat
-      status: customStatus.value, // Ambil status dari variabel atau input
-    };
-
-    console.log('New record initialized:', newRecord);
-
-    // Validasi attendanceRecords sebelum menggunakan .filter()
-    if (Array.isArray(attendanceRecords.value)) {
-      console.log('Valid attendanceRecords array');
-      const uniqueRecords = attendanceRecords.value.filter(
-        (record) =>
-          !props.attendanceRecords.some(
-            (item) =>
-              item.teacher_id === record.teacher_id &&
-              item.attendance_date === record.attendance_date
-          )
-      );
-      props.attendanceRecords = [...props.attendanceRecords, ...uniqueRecords];
+    if (!alreadyExists) {
+      props.attendanceRecords.push(newRecord);
+      console.log('Record baru ditambahkan:', newRecord);
     } else {
-      console.warn('Invalid attendanceRecords array');
-      console.warn(
-        'attendanceRecords is not an array. Initializing as an empty array.'
-      );
-      attendanceRecords.value = [newRecord]; // Inisialisasi dengan newRecord
+      console.log('Record sudah ada, tidak ditambahkan ulang.');
     }
 
-    console.log(
-      'Final props.attendanceRecords after addition:',
-      props.attendanceRecords
-    );
-
-    // Tambahkan ke attendanceRecords
-    props.attendanceRecords.push(newRecord);
-    console.log('Added new attendance record:', newRecord);
-
-    // Simpan data ke localStorage setelah diperbarui
+    // Simpan ke localStorage
+    attendanceRecords.value = props.attendanceRecords;
     saveToLocalStorage();
+    console.log('Data disimpan ke localStorage:', attendanceRecords.value);
 
     // Validasi wali_kelas
     const { wali_kelas } = usePage().props;
@@ -1079,25 +1062,18 @@ onMounted(() => {
         'Data wali kelas tidak ditemukan atau tidak valid.';
       return;
     }
-    console.log('Validated wali_kelas data:', wali_kelas);
+    console.log('Data wali_kelas tervalidasi:', wali_kelas);
 
-    // Debugging dan log status
-    console.log('Formatted Date Function Test:', formattedDate(new Date()));
-
-    if (Array.isArray(attendanceRecords)) {
-      attendanceStatus.value = displayAttendanceStatus(date);
-    } else {
-      console.warn('attendanceRecords is not an array.');
-      attendanceStatus.value = 'Belum diabsen';
-    }
+    // Set status kehadiran
+    attendanceStatus.value = displayAttendanceStatus(date);
+    console.log('Status kehadiran guru:', attendanceStatus.value);
   } catch (error) {
-    console.error('An error occurred during onMounted:', error);
+    console.error('Terjadi error saat onMounted:', error);
     attendanceMessage.value = 'Terjadi kesalahan saat memuat data.';
   }
 });
 
 console.log('Pre-validation currentMonth:', currentMonth);
-console.log('Pre-validation date:', date);
 
 // Fungsi untuk validasi tanggal
 const isValidDate = (year, month, day) => {
@@ -1114,83 +1090,42 @@ const isValidDate = (year, month, day) => {
 };
 
 // Pastikan `date` adalah angka
-let extractedDate = date instanceof Date ? date.getDate() : date;
+//let extractedDate = date instanceof Date ? date.getDate() : date;
 
 // Validasi input dengan menggunakan `isValidDate`
 const formattedDate = (attendance_date) => {
-  // Jika parameter adalah objek Date, ubah menjadi string dengan format YYYY-MM-DD
-  if (attendance_date instanceof Date) {
-    attendance_date = attendance_date.toISOString().split('T')[0];
-  }
+  let date;
 
-  // Validasi apakah attendance_date adalah string dalam format YYYY-MM-DD
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(attendance_date)) {
-    console.error('Invalid date format:', attendance_date);
+  // Jika parameter adalah string dengan waktu (ex: "2025-04-30 00:00:00")
+  if (typeof attendance_date === 'string') {
+    // Ganti spasi dengan 'T' agar bisa diparse oleh new Date()
+    const normalized = attendance_date.replace(' ', 'T');
+    date = new Date(normalized);
+  }
+  // Jika parameter sudah merupakan objek Date
+  else if (attendance_date instanceof Date) {
+    date = attendance_date;
+  } else {
+    console.error('Invalid date input:', attendance_date);
     return null;
   }
 
-  // Konversi menjadi objek Date untuk validasi lebih lanjut
-  const date = new Date(attendance_date);
+  // Validasi objek Date
   if (isNaN(date.getTime())) {
-    console.error('Invalid date object:', attendance_date);
+    console.error('Invalid Date object:', attendance_date);
     return null;
   }
 
-  // Kembalikan tanggal dalam format YYYY-MM-DD
-  return date.toISOString().split('T')[0];
+  // Format ke YYYY-MM-DD
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 };
 
 // Debugging code where `teacher` might not be defined
 console.log('Checking if teacher is defined:', teachers);
-
-if (!isValidDate(currentYear, currentMonth, extractedDate)) {
-  console.error('Invalid date input:', {
-    currentYear,
-    currentMonth,
-    extractedDate,
-  });
-} else {
-  // Format tanggal menjadi "YYYY-MM-DD"
-  const dateToFormat = new Date(currentYear, currentMonth - 1, extractedDate);
-  const formattedDateString = formattedDate(dateToFormat);
-
-  // Pastikan `attendanceRecords` adalah array
-  if (!Array.isArray(attendanceRecords.value)) {
-    console.error('attendanceRecords is not an array:', attendanceRecords);
-  } else {
-    // Mencari data absensi
-    const recordForCurrentDate = attendanceRecords.value.find((record) => {
-      if (!record || typeof record !== 'object') {
-        console.warn('Invalid record format detected:', record);
-        return false;
-      }
-
-      return (
-        formattedDate(new Date(record.attendance_date)) ===
-          formattedDateString &&
-        Number(toRaw(record.teacher_id)) ===
-          Number(toRaw(selectedTeacherId.value))
-      );
-    });
-
-    // Pengecekan data absensi
-    if (recordForCurrentDate) {
-      console.log('Attendance status:', recordForCurrentDate.status);
-    } else {
-      console.log('No attendance found for this date and teacher.');
-    }
-  }
-}
-
-console.log(
-  'Debug formattedDate:',
-  currentYear,
-  currentMonth,
-  date,
-  new Date(currentYear, currentMonth, date)
-);
-
 console.log('Debug formattedDate:', formattedDate);
 
 // Fungsi untuk memuat data dari localStorage
@@ -1362,7 +1297,7 @@ const saveAttendanceRecord = async (newRecord) => {
 
   const validStatuses = ['P', 'A', 'S', 'I'];
   if (!validStatuses.includes(rawRecord.status)) {
-    console.warn('⛔ Status tidak valid atau belum dipilih:', rawRecord.status);
+    // Jangan munculkan warning, cukup keluar diam-diam
     return;
   }
 
@@ -1910,278 +1845,241 @@ watch([selectedTeacherId, selectedDate], () => {
     <main class="p-7 md:ml-64 h-screen pt-20">
       <form @submit.prevent="submitTeacherAttendance">
         <div class="container py-5">
-          <div class="text-3xl d-flex justify-content-between mb-3">
-            <div class="sm:flex sm:items-center">
-              <div class="sm:flex-auto font-semibold">
-                <h1 class="text-3xl font-semibold text-gray-900">
+          <div
+            class="sm:flex sm:items-center bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-3xl shadow-lg w-full"
+          >
+            <div class="sm:flex-auto w-4/5 mx-auto">
+              <!-- Bagian Judul + Bulan -->
+              <div class="sm:flex-auto font-semibold text-center mb-4">
+                <h1 class="text-3xl font-semibold text-white">
                   Tabel Absensi Guru
                 </h1>
-                <p class="text-sm mb-3 fw-bold text-danger">
+                <p class="text-sm mb-3 font-bold text-yellow-200">
                   Bulan {{ currentMonthYear }}
                 </p>
               </div>
+
+              <!-- Info lainnya bisa ditambahkan di bawah sini -->
+              <div>
+                <div class="space-y-2">
+                  <!-- Tempat konten lain -->
+                </div>
+              </div>
             </div>
           </div>
-
-          <!-- Button untuk Tambah Absensi -->
-          <!--
-                                   <button
-                        type="button"
-                        class="btn btn-primary mb-4"
-                        @click="isModalVisible = true"
-                    >
-                        Tambah Absensi
-                    </button>
-                     -->
-
-          <!-- Tabel Absensi -->
-          <div class="overflow-x-auto max-w-full">
-            <table class="table table-bordered table-sm">
-              <thead style="background-color: aliceblue">
-                <tr class="custom-tr">
-                  <th>Tanggal</th>
-                  <th
-                    v-for="(date, index) in totalDaysInMonth"
-                    :key="'date-' + index"
-                    class="text-center w-42"
-                  >
-                    {{ date }}
-                  </th>
-                </tr>
-                <tr class="custom-tr">
-                  <th>Hari</th>
-                  <th
-                    v-for="(day, index) in totalDaysInMonth"
-                    :key="'day-name-' + index"
-                    :class="{
-                      'bg-danger text-white': isSunday(day),
-                    }"
-                  >
-                    {{ getDayName(getValidDate(day)) }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="teacher in paginatedTeachers" :key="teacher.id">
-                  <td>{{ teacher.name }}</td>
-                  <td
-                    v-for="(date, index) in totalDaysInMonth"
-                    :key="`attendance-${teacher.id}-${formattedDate(
-                      new Date(currentYear, currentMonth, date)
-                    )}`"
+        </div>
+        <!-- Tabel Absensi -->
+        <div class="overflow-x-auto max-w-full">
+          <table class="table table-bordered table-sm">
+            <thead style="background-color: aliceblue">
+              <tr class="custom-tr">
+                <th>Tanggal</th>
+                <th
+                  v-for="(date, index) in totalDaysInMonth"
+                  :key="'date-' + index"
+                  class="text-center w-42"
+                >
+                  {{ date }}
+                </th>
+              </tr>
+              <tr class="custom-tr">
+                <th>Hari</th>
+                <th
+                  v-for="(day, index) in totalDaysInMonth"
+                  :key="'day-name-' + index"
+                  :class="{
+                    'bg-danger text-white': isSunday(day),
+                  }"
+                >
+                  {{ getDayName(getValidDate(day)) }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="teacher in paginatedTeachers" :key="teacher.id">
+                <td>{{ teacher.name }}</td>
+                <td
+                  v-for="(date, index) in totalDaysInMonth"
+                  :key="`attendance-${teacher.id}-${formattedDate(
+                    new Date(currentYear, currentMonth, date)
+                  )}`"
+                  :class="
+                    getAttendanceClass(
+                      teacher.id,
+                      formattedDate(new Date(currentYear, currentMonth, date))
+                    ) + ' text-center'
+                  "
+                  @click="
+                    handleTeacherStatusChange(
+                      teacher.id,
+                      formattedDate(new Date(currentYear, currentMonth, date))
+                    )
+                  "
+                >
+                  <span
                     :class="
                       getAttendanceClass(
                         teacher.id,
                         formattedDate(new Date(currentYear, currentMonth, date))
-                      ) + ' text-center'
+                      ) + ' block text-center'
                     "
-                    @click="
-                      handleTeacherStatusChange(
+                  >
+                    {{
+                      getTeacherAttendanceStatus(
                         teacher.id,
                         formattedDate(new Date(currentYear, currentMonth, date))
                       )
-                    "
-                  >
-                    <span
-                      :class="
-                        getAttendanceClass(
-                          teacher.id,
-                          formattedDate(
-                            new Date(currentYear, currentMonth, date)
-                          )
-                        ) + ' block text-center'
-                      "
-                    >
-                      {{
-                        getTeacherAttendanceStatus(
-                          teacher.id,
-                          formattedDate(
-                            new Date(currentYear, currentMonth, date)
-                          )
-                        )
-                      }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          <!-- Pagination -->
-          <div v-if="pagination && pagination.current_page">
-            Current Page: {{ pagination.current_page }}
-          </div>
+        <!-- Pagination -->
+        <div v-if="pagination && pagination.current_page">
+          Current Page: {{ pagination.current_page }}
+        </div>
 
-          <div class="flex flex-col items-center mt-4">
-            <!-- Help text -->
-            <span class="text-sm text-gray-700 dark:text-gray-400">
-              Page
-              <span class="font-semibold text-gray-900 dark:text-white">{{
-                pagination.current_page
-              }}</span>
-              of
-              <span class="font-semibold text-gray-900 dark:text-white">{{
-                pagination.last_page
-              }}</span>
-            </span>
+        <div class="flex flex-col items-center mt-4">
+          <!-- Help text -->
+          <span class="text-sm text-gray-700 dark:text-gray-400">
+            Page
+            <span class="font-semibold text-gray-900 dark:text-white">{{
+              pagination.current_page
+            }}</span>
+            of
+            <span class="font-semibold text-gray-900 dark:text-white">{{
+              pagination.last_page
+            }}</span>
+          </span>
 
-            <div class="inline-flex mt-2 xs:mt-0">
-              <!-- Tombol Previous -->
-              <button
-                @click="handlePageChange(pagination.current_page - 1)"
-                :disabled="pagination.current_page <= 1"
-                class="flex items-center justify-center px-4 h-10 text-base font-medium text-white bg-gray-800 rounded-s hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <svg
-                  class="w-3.5 h-3.5 me-2 rtl:rotate-180"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 14 10"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 5H1m0 0 4 4M1 5l4-4"
-                  />
-                </svg>
-                Previous
-              </button>
-
-              <!-- Tombol Next -->
-              <button
-                @click="handlePageChange(pagination.current_page + 1)"
-                :disabled="pagination.current_page >= pagination.last_page"
-                class="flex items-center justify-center px-4 h-10 text-base font-medium text-white bg-blue-500 border-0 border-s border-gray-700 rounded-e hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-                <svg
-                  class="w-3.5 h-3.5 ms-2 rtl:rotate-180"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 14 10"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M1 5h12m0 0L9 1m4 4L9 9"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Keterangan Status Kehadiran -->
-          <div class="row mt-3 me-3">
-            <div class="col-12">
-              <p class="fw-bold fs-5">Status Kehadiran:</p>
-              <div class="d-flex flex-wrap align-items-center">
-                <div class="me-3 mb-2">
-                  <span class="badge bg-info text-black fw-bold"
-                    >Hadir (P)</span
-                  >
-                </div>
-                <div class="me-3 mb-2">
-                  <span class="badge bg-danger text-black fw-bold"
-                    >Absen (A)</span
-                  >
-                </div>
-                <div class="me-3 mb-2">
-                  <span class="badge bg-warning text-black fw-bold"
-                    >Sakit (S)</span
-                  >
-                </div>
-                <div class="me-3 mb-2">
-                  <span class="badge bg-primary text-black fw-bold"
-                    >Izin (I)</span
-                  >
-                </div>
-                <div class="me-3 mb-2">
-                  <span class="badge bg-light text-dark fw-bold"
-                    >Belum Diabsen</span
-                  >
-                </div>
-              </div>
-            </div>
-            <!--<pre>{{ attendanceRecords }}</pre>-->
-          </div>
-          <div class="p-6 bg-gray-100 min-h-screen">
-            <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
-              <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                Data Kehadiran
-              </h2>
-
-              <!-- Debugging: Menampilkan isi attendanceRecords -->
-              <pre class="text-sm bg-gray-200 p-3 rounded-md overflow-x-auto">{{
-                attendanceRecords
-              }}</pre>
-
-              <div v-if="attendanceRecords.length > 0">
-                <table
-                  class="w-full mt-4 border border-gray-300 rounded-lg overflow-hidden"
-                >
-                  <thead class="bg-blue-500 text-white">
-                    <tr>
-                      <th class="py-2 px-4 text-left">ID</th>
-                      <th class="py-2 px-4 text-left">Teacher ID</th>
-                      <th class="py-2 px-4 text-left">Tanggal</th>
-                      <th class="py-2 px-4 text-left">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="record in attendanceRecords"
-                      :key="record.id"
-                      class="border-b hover:bg-gray-100"
-                    >
-                      <td class="py-2 px-4">{{ record.id }}</td>
-                      <td class="py-2 px-4">{{ record.teacher_id }}</td>
-                      <td class="py-2 px-4">{{ record.attendance_date }}</td>
-                      <td class="py-2 px-4">
-                        <span
-                          :class="{
-                            'bg-green-500 text-white px-2 py-1 rounded':
-                              record.status === 'P',
-                            'bg-red-500 text-white px-2 py-1 rounded':
-                              record.status === 'A',
-                            'bg-yellow-500 text-white px-2 py-1 rounded':
-                              record.status === 'S',
-                            'bg-gray-500 text-white px-2 py-1 rounded':
-                              record.status === 'I',
-                          }"
-                        >
-                          {{ record.status }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <p v-else class="text-center text-gray-600 mt-4">
-                Tidak ada data kehadiran.
-              </p>
-            </div>
-          </div>
-
-          <!-- Modal Tambah Absensi -->
-          <div
-            v-if="isModalVisible"
-            class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-            @click.self="closeModal"
-          >
-            <div
-              class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full relative overflow-hidden transform transition-all duration-300 scale-95 hover:scale-100"
+          <div class="inline-flex mt-2 xs:mt-0">
+            <!-- Tombol Previous -->
+            <button
+              @click="handlePageChange(pagination.current_page - 1)"
+              :disabled="pagination.current_page <= 1"
+              class="flex items-center justify-center px-4 h-10 text-base font-medium text-white bg-gray-800 rounded-s hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <!-- Close Icon -->
-              <button
-                class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"
-                @click="closeModal"
+              <svg
+                class="w-3.5 h-3.5 me-2 rtl:rotate-180"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 14 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 5H1m0 0 4 4M1 5l4-4"
+                />
+              </svg>
+              Previous
+            </button>
+
+            <!-- Tombol Next -->
+            <button
+              @click="handlePageChange(pagination.current_page + 1)"
+              :disabled="pagination.current_page >= pagination.last_page"
+              class="flex items-center justify-center px-4 h-10 text-base font-medium text-white bg-blue-500 border-0 border-s border-gray-700 rounded-e hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+              <svg
+                class="w-3.5 h-3.5 ms-2 rtl:rotate-180"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 14 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M1 5h12m0 0L9 1m4 4L9 9"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Keterangan Status Kehadiran -->
+        <div class="row mt-3 me-3">
+          <div class="col-12">
+            <p class="fw-bold fs-5">Status Kehadiran:</p>
+            <div class="d-flex flex-wrap align-items-center">
+              <div class="me-3 mb-2">
+                <span class="badge bg-info text-black fw-bold">Hadir (P)</span>
+              </div>
+              <div class="me-3 mb-2">
+                <span class="badge bg-danger text-black fw-bold"
+                  >Absen (A)</span
+                >
+              </div>
+              <div class="me-3 mb-2">
+                <span class="badge bg-warning text-black fw-bold"
+                  >Sakit (S)</span
+                >
+              </div>
+              <div class="me-3 mb-2">
+                <span class="badge bg-primary text-black fw-bold"
+                  >Izin (I)</span
+                >
+              </div>
+              <div class="me-3 mb-2">
+                <span class="badge bg-light text-dark fw-bold"
+                  >Belum Diabsen</span
+                >
+              </div>
+            </div>
+          </div>
+          <!--<pre>{{ attendanceRecords }}</pre>-->
+        </div>
+        <!-- Modal Tambah Absensi -->
+        <div
+          v-if="isModalVisible"
+          class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+          @click.self="closeModal"
+        >
+          <div
+            class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full relative overflow-hidden transform transition-all duration-300 scale-95 hover:scale-100"
+          >
+            <!-- Close Icon -->
+            <button
+              class="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition"
+              @click="closeModal"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="w-6 h-6"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  class="stroke-current"
+                  stroke-opacity="0.2"
+                  stroke-width="1.5"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 9l6 6m0-6l-6 6"
+                />
+              </svg>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center mb-6">
+              <div
+                class="w-14 h-14 mx-auto flex items-center justify-center bg-blue-100 rounded-full mb-4"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -2189,75 +2087,45 @@ watch([selectedTeacherId, selectedDate], () => {
                   viewBox="0 0 24 24"
                   stroke-width="2"
                   stroke="currentColor"
-                  class="w-6 h-6"
+                  class="w-8 h-8 text-blue-600"
                 >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    class="stroke-current"
-                    stroke-opacity="0.2"
-                    stroke-width="1.5"
-                  />
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M9 9l6 6m0-6l-6 6"
+                    d="M9 12h6m-3-3v6m9-6a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-800">
+                Pilih Status Kehadiran
+              </h3>
+              <p class="text-gray-500 text-sm">
+                Silakan pilih salah satu status di bawah ini.
+              </p>
+            </div>
+
+            <!-- @click="handleAttendance(status)"-->
+            <!-- Pilihan Status -->
+            <div class="space-y-4">
+              <button
+                v-for="status in statuses"
+                :key="status"
+                :class="getButtonClass(status)"
+                class="w-full py-3 px-5 rounded-lg font-semibold text-black transition-all duration-300"
+                @click="handleAttendance(status)"
+              >
+                {{ status }}
               </button>
+            </div>
 
-              <!-- Modal Header -->
-              <div class="text-center mb-6">
-                <div
-                  class="w-14 h-14 mx-auto flex items-center justify-center bg-blue-100 rounded-full mb-4"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                    class="w-8 h-8 text-blue-600"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M9 12h6m-3-3v6m9-6a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-800">
-                  Pilih Status Kehadiran
-                </h3>
-                <p class="text-gray-500 text-sm">
-                  Silakan pilih salah satu status di bawah ini.
-                </p>
-              </div>
-
-              <!-- @click="handleAttendance(status)"-->
-              <!-- Pilihan Status -->
-              <div class="space-y-4">
-                <button
-                  v-for="status in statuses"
-                  :key="status"
-                  :class="getButtonClass(status)"
-                  class="w-full py-3 px-5 rounded-lg font-semibold text-black transition-all duration-300"
-                  @click="handleAttendance(status)"
-                >
-                  {{ status }}
-                </button>
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="mt-6 text-center">
-                <button
-                  class="w-full py-3 bg-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-300 transition-colors"
-                  @click="closeModal"
-                >
-                  Tutup
-                </button>
-              </div>
+            <!-- Modal Footer -->
+            <div class="mt-6 text-center">
+              <button
+                class="w-full py-3 bg-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-300 transition-colors"
+                @click="closeModal"
+              >
+                Tutup
+              </button>
             </div>
           </div>
         </div>
