@@ -114,6 +114,7 @@ Route::get('/api/classes', [TeacherController::class, 'showAbsensiSiswa'])->name
 Route::get('/absensi-siswa', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
 Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);  
 Route::get('/api/classes', [ClassController::class, 'index']);
+Route::get('/teacher-attendance-report', [AttendanceTeacherController::class, 'getAttendanceReport']);
 
 
 

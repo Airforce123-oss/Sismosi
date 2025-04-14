@@ -65,8 +65,9 @@ class User extends Authenticatable
 
     public function teacher()
     {
-        return $this->hasOne(Teacher::class, 'class_id', 'class_id');
+        return $this->hasOne(Teacher::class, 'user_id', 'id');
     }
+    
 
     public function getRedirectRoute()
     {
@@ -134,5 +135,10 @@ class User extends Authenticatable
     {
         return $this->permissions->contains('name', $permission);
     }
+
+    public function attendanceTeachers()
+{
+    return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
+}
 
 }

@@ -74,6 +74,7 @@ const fetchSessionData = async () => {
 };
 
 // Fungsi untuk mengambil kelas berdasarkan guru
+/*
 const fetchClassByTeacher = async () => {
   // Cek apakah nama guru tersedia
   const teacherName = props.auth.user?.name;
@@ -114,6 +115,7 @@ const fetchClassByTeacher = async () => {
     }
   }
 };
+ */
 
 const fetchData = async () => {
   try {
@@ -355,7 +357,7 @@ onMounted(async () => {
   }
 
   // Panggil fungsi fetching data secara berurutan
-  await fetchClassByTeacher();
+  //await fetchClassByTeacher();
   await fetchAttendanceData();
   initFlowbite();
   await fetchSessionData();

@@ -15,16 +15,21 @@ class Teacher extends Model
         'class_id',
     ];
 
-    // Jika Anda menggunakan relasi
-    //public function class()
-    //{
-      //  return $this->belongsTo(Classes::class, 'class_id');
-   // }
 
    public function class()
     {
         return $this->belongsTo(Classes::class, 'class_id');
     }
+
+    public function attendanceTeachers()
+{
+    return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
+}
+public function user()
+{
+    return $this->belongsTo(User::class);
+}
+
 
     public function attendance()
     {

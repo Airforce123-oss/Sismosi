@@ -26,4 +26,10 @@ class Classes extends Model
     {
         return $this->belongsTo(Teacher::class, 'wali_kelas_id'); // Menghubungkan dengan model Teacher
     }
+
+    public function attendanceTeachers()
+{
+    return $this->hasMany(AttendanceTeacher::class, 'class_id');
+}
+
 }
