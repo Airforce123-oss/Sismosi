@@ -88,7 +88,7 @@ class AttendanceController extends Controller
 {
     // Daftar nama view berdasarkan ID
     $viewNames = [
-        '1' => 'Students/absensiSiswaSatu',
+        '1' => 'Students/absensiSiswaJanuari',
         '2' => 'Students/absensiSiswaDua',
         '3' => 'Students/absensiSiswaTiga',
         '4' => 'Students/absensiSiswaEmpat',
@@ -223,7 +223,7 @@ public function absensiSiswa(Request $request)
 }
 */
 
-public function absensiSiswaSatu($kelas, $year, $mapel, $month)
+public function absensiSiswaJanuari($kelas, $year, $mapel, $month)
 {
     $decodedMapel = urldecode($mapel);
 
@@ -270,63 +270,96 @@ public function absensiSiswaSatu($kelas, $year, $mapel, $month)
         return response()->json($data);
     }
 
-    return Inertia::render('Students/absensiSiswaSatu', $data);
+    return Inertia::render('Students/absensiSiswaJanuari', $data);
 }
 
-    public function absensiSiswaDua(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaDua');
+private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
+{
+    $decodedMapel = urldecode($mapel);
+    $students = Student::where('class_id', $kelas)->get();
+
+    $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
+    if (!$selectedMapel) {
+        $selectedMapel = (object)[
+            'id' => null,
+            'mapel' => '',
+            'kode_mapel' => '',
+        ];
+    } else {
+        $selectedMapel = (object)$selectedMapel->toArray();
     }
 
-    public function absensiSiswaTiga(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaTiga');
-    }
+    return Inertia::render('Students/Absensi' . ucfirst($month), [
+        'kelas' => $kelas,
+        'year' => $year,
+        'mapel' => $decodedMapel,
+        'month' => $month,
+        'students' => $students,
+        'selectedMapel' => $selectedMapel,
+    ]);
+}
 
-    public function absensiSiswaEmpat(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaEmpat');
-    }
+public function absensiJanuari($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'januari');
+}
 
-    public function absensiSiswaLima(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaLima');
-    }
+public function absensiFebruari($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'februari');
+}
 
-    public function absensiSiswaEnam(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaEnam');
-    }
+public function absensiMaret($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'maret');
+}
 
-    public function absensiSiswaTujuh(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaTujuh');
-    }
+public function absensiApril($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'april');
+}
 
-    public function absensiSiswaDelapan(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaDelapan');
-    }
+public function absensiMei($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'mei');
+}
 
-    public function absensiSiswaSembilan(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaSembilan');
-    }
+public function absensiJuni($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juni');
+}
 
-    public function absensiSiswaSepuluh(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaSepuluh');
-    }
+public function absensiJuli($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juli');
+}
 
-    public function absensiSiswaSebelas(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaSebelas');
-    }
+public function absensiAgustus($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'agustus');
+}
 
-    public function absensiSiswaDuaBelas(Request $request)
-    {
-        return $this->renderAttendanceView($request, 'Students/absensiSiswaDuaBelas');
-    }
+public function absensiSeptember($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'september');
+}
+
+public function absensiOktober($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'oktober');
+}
+
+public function absensiNovember($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'november');
+}
+
+public function absensiDesember($kelas, $year, $mapel)
+{
+    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'desember');
+}
+
+
 
     public function kelolaAbsensiSiswa()
     {

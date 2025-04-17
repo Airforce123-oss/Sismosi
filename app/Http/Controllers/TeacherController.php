@@ -40,7 +40,7 @@ class TeacherController extends Controller
           
         // Periksa apakah kelas yang diterima valid              
         if (!in_array($kelas, $validKelas)) {              
-            return redirect()->route('absensiSiswaSatu');              
+            return redirect()->route('absensiSiswaJanuari');              
         }              
           
         // Memeriksa apakah kombinasi tahun, mapel, dan kelas ada dalam tabel attendances              
@@ -51,7 +51,7 @@ class TeacherController extends Controller
             ->exists();              
           
         if (!$isValidCombination) {              
-            return redirect()->route('absensiSiswaSatu');              
+            return redirect()->route('absensiSiswaJanuari');              
         }              
           
         // Ambil data absensi untuk ditampilkan              
@@ -87,8 +87,7 @@ class TeacherController extends Controller
 
     public function index(Request $request)
     {
-        //$teacherQuery = Teacher::query()->with(['class', 'masterMapel']);
-        $teacherQuery = Teacher::query()->with(['class', 'masterMapel']);
+        $teacherQuery = Teacher::query()->with(['class', 'masterMapel', 'user']);
     
         // Apply search filter if present
         $this->applySearch($teacherQuery, $request->search);
@@ -263,30 +262,57 @@ class TeacherController extends Controller
     public function store(StoreTeacherRequest $request)
     {
         try {
-            Teacher::create($request->validated());
+            $data = $request->validated();
+    
+            Teacher::create([
+                'name' => $data['name'],
+                'nip' => $data['nip'] ?? null,
+                'email' => $data['email'] ?? null,
+                'subject_id' => $data['subject_id'] ?? null,
+                'class_id' => $data['class_id'] ?? null,
+            ]);
+    
             return redirect()->route('teachers.index')->with('success', 'Teacher created successfully.');
         } catch (\Exception $e) {
             Log::error('Error creating teacher:', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Failed to create teacher.');
         }
     }
-
+    
     public function edit(Teacher $teacher)
     {
         $classes = ClassesResource::collection(Classes::all());
+
+        $mapelQuery = Mapel::query();
+        $mapelData = $mapelQuery->get();
     
         return inertia('Teachers/edit', [
             'student' => StudentResource::make($teacher),
+            'mapels' => $mapelData ?? [],
             'classes' => $classes,
         ]);
     }
 
     public function update(UpdateTeacherRequest $request, Teacher $teacher)
     {
-        $teacher->update($request->validated());
-
-        return redirect()->route('teachers.index');
+        try {
+            $data = $request->validated();
+    
+            $teacher->update([
+                'name' => $data['name'],
+                'nip' => $data['nip'] ?? null,
+                'email' => $data['email'] ?? null,
+                'subject_id' => $data['subject_id'] ?? null,
+                'class_id' => $data['class_id'] ?? null,
+            ]);
+    
+            return redirect()->route('teachers.index')->with('success', 'Teacher updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error updating teacher:', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Failed to update teacher.');
+        }
     }
+    
 
     public function destroy(Teacher $teacher)
     {

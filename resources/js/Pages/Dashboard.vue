@@ -654,6 +654,14 @@ const barChartOptions = {
                                     >Absensi Guru</a
                                 >
                             </li>
+                            <!-- Dropdown Daftar Absensi Guru -->
+                            <li>
+                                <a
+                                    href="dataAbsensiGuru"
+                                    class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                                    >Data Absensi Guru</a
+                                >
+                            </li>
                         </ul>
                     </li>
 
@@ -758,6 +766,13 @@ const barChartOptions = {
                                     href="mataPelajaran"
                                     class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                                     >Tambah Mata Pelajaran</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                    href="jadwalMataPelajaran"
+                                    class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                                    >Jadwal Mata Pelajaran</a
                                 >
                             </li>
                         </ul>

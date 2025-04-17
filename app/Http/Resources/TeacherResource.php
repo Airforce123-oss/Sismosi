@@ -17,6 +17,7 @@ class TeacherResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name, 
+            'nip' => $this->nip,
             'class' => $this->class, 
             'master_mapel' => MapelResource::collection($this->whenLoaded('masterMapel')),
             'created_at' => $this->created_at ? $this->created_at->toDateTimeString() : null,

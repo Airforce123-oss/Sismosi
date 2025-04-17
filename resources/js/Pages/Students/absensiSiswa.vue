@@ -18,7 +18,7 @@ import '@assets/plugins/simple-calendar/jquery.simple-calendar.js';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 import { createRouter, createWebHistory, useRoute } from 'vue-router';
 import AbsensiSiswa from './absensiSiswa.vue';
-import AbsensiSiswaSatu from './absensiSiswaSatu.vue';
+import AbsensiSiswaJanuari from './absensiSiswaJanuari.vue';
 
 const routes = [
   {
@@ -327,7 +327,7 @@ const onMapelChange = async (event) => {
 
   console.log('📤 Setelah nextTick, selectedMapel:', selectedMapel.value);
 
-  Inertia.visit(route('absensiSiswaSatu'), {
+  Inertia.visit(route('absensiSiswaJanuari'), {
     method: 'get',
     data: { selectedMapel: newValue },
     preserveState: false,
@@ -473,7 +473,7 @@ const generateUrl = (year, month, mapel, kelas) => {
   }
 
   // Gunakan Ziggy untuk membuat URL
-  const url = route('absensiSiswaSatu', {
+  const url = route('absensiSiswaJanuari', {
     kelas: kelasId,
     year,
     mapel: cleanMapel,
@@ -836,6 +836,12 @@ watch(selectedKelas, (newVal, oldVal) => {
                   <td class="font-semibold">{{ selectedYear }}</td>
                   <!-- Menampilkan selectedYear di sini -->
                 </tr>
+                <tr>
+                  <td class="font-bold">Mata Pelajaran</td>
+                  <td class="px-2">:</td>
+                  <td class="font-semibold">{{ selectedMapel }}</td>
+          
+                </tr>
               </tbody>
             </table>
           </div>
@@ -882,7 +888,8 @@ watch(selectedKelas, (newVal, oldVal) => {
           </div>
 
           <!-- Dropdown Mata Pelajaran -->
-          <div class="flex flex-col space-y-2">
+           <!--
+                   <div class="flex flex-col space-y-2">
             <label for="mapel" class="font-semibold text-lg text-gray-700">
               Pilih Mata Pelajaran:
             </label>
@@ -901,9 +908,10 @@ watch(selectedKelas, (newVal, oldVal) => {
               </option>
             </select>
           </div>
+           -->
 
           <!-- Dropdown Kelas -->
-          <div class="flex flex-col space-y-2">
+           <!--         <div class="flex flex-col space-y-2">
             <label for="kelas" class="font-semibold text-lg text-gray-700">
               Pilih Kelas:
             </label>
@@ -916,7 +924,7 @@ watch(selectedKelas, (newVal, oldVal) => {
                 {{ kelas.name }}
               </option>
             </select>
-          </div>
+          </div>-->
         </div>
       </div>
       <div :selectedMapel="selectedMapel"></div>

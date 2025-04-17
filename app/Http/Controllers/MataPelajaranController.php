@@ -51,6 +51,69 @@ class MataPelajaranController extends Controller
         ]);
     }
 
+    public function JadwalMataPelajaran(Request $request)
+    {
+        // 1. Ambil pagination & filter params
+        $itemsPerPage  = $request->input('itemsPerPage', 20);
+        $currentPage   = $request->input('currentPage', 1);
+        $jurusan       = $request->input('jurusan');
+        $tingkat       = $request->input('tingkat');
+        $kelas         = $request->input('kelas');
+    
+        // 2. Build query dasar untuk Mapel
+        $mapelQuery = Mapel::query();
+        if ($jurusan) { $mapelQuery->where('jurusan', $jurusan); }
+        if ($tingkat) { $mapelQuery->where('tingkat', $tingkat); }
+        if ($kelas)   { $mapelQuery->where('kelas',   $kelas);   }
+    
+        // 3. Clone query untuk jadwal (tanpa paginate)
+        $allMapel = (clone $mapelQuery)->get();
+    
+        // 4. Paginate untuk master_mapel
+        $master_mapel = $mapelQuery
+            ->paginate($itemsPerPage, ['*'], 'page', $currentPage)
+            ->appends($request->only('search','jurusan','tingkat','kelas','itemsPerPage','currentPage'));
+    
+        // 5. Susun struktur jadwal per hari & jam_ke
+        $days   = ['senin','selasa','rabu','kamis','jumat','sabtu'];
+        $jadwal = [];
+    
+        for ($i = 1; $i <= 10; $i++) {
+            $row = [
+                'jam_ke' => $i,
+                'jam'    => $this->getJamRangeInline($i),
+                'jadwal' => [],
+            ];
+            foreach ($days as $day) {
+                $found = $allMapel->first(function($item) use($day,$i) {
+                    return strtolower($item->hari) === $day && $item->jam_ke == $i;
+                });
+                $row['jadwal'][$day] = $found ? $found->nama_mapel : '';
+            }
+            $jadwal[] = $row;
+        }
+    
+        // 6. Return ke Inertia dengan dua payload
+        return inertia('MataPelajaran/jadwalMataPelajaran', [
+            'master_mapel' => MapelResource::collection($master_mapel),
+            'jadwal'       => $jadwal,
+            'filter'       => compact('jurusan','tingkat','kelas'),
+        ]);
+    }
+    
+    /**
+     * Fungsi helper di-inline saja (private)
+     */
+    private function getJamRangeInline($jamKe)
+    {
+        $start    = strtotime("07:00");
+        $offset   = 60 * ($jamKe - 1);
+        $begin    = date('H:i', $start + $offset);
+        $end      = date('H:i', $start + $offset + 60);
+        return "$begin - $end";
+    }
+    
+
     public function getMapel()
     {
         // Mengambil semua data dari tabel master_mapel

@@ -18,7 +18,47 @@ class AttendanceTeacherController extends Controller
     {
         return inertia('Teachers/AbsensiGuru/indexx');
     }
+    public function dataAbsensiGuru(Request $request)
+    {
+        $bulan = $request->input('bulan', now()->format('m'));
+        $tahun = $request->input('tahun', now()->format('Y'));
+        
+        // Ambil semua absensi berdasarkan bulan & tahun
+        $attendance = AttendanceTeacher::with('teacher.waliKelas') // pastikan 'waliKelas' di-relasi-kan
+            ->whereMonth('attendance_date', $bulan)
+            ->whereYear('attendance_date', $tahun)
+            ->get();
+        
+        // Kelompokkan absensi berdasarkan teacher_id
+        $groupedAttendance = $attendance->groupBy('teacher_id');
+        
+        // Format hasil akhir
+        $result = $groupedAttendance->map(function ($records, $teacherId) {
+            $teacher = $records->first()->teacher; // Ambil data guru
+            $waliKelas = $teacher->waliKelas; // Ambil data wali_kelas
+            
+            // Ambil data absensi per tanggal
+            $attendanceMap = collect($records)->mapWithKeys(function ($item) {
+                return [Carbon::parse($item->attendance_date)->format('Y-m-d') => $item->status];
+            });
+            
+            return [
+                'id' => $teacher->id,
+                'teacher_id' => $teacher->id,
+                'name' => $teacher->name,
+                'nip' => optional($waliKelas)->nip ?? '-',
+                'attendance' => $attendanceMap,
+            ];
+        })->values(); // convert ke array biasa (indexed)
+    
+        return inertia('Teachers/AbsensiGuru/dataAbsensiGuru', [
+            'teachers' => $result,
+        ]);
+    }
 
+
+
+    
     public function absensiGuru()
     {
         // Ambil semua absensi guru dengan relasi teacher dan class

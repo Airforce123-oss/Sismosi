@@ -70,6 +70,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
     Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])->name('studentsabsensiSiswa');
     Route::get('/indexx', [AttendanceTeacherController::class, 'absensiGuru1'])->name('studentsabsensiGuru');
+    Route::get('/dataAbsensiGuru', [AttendanceTeacherController::class, 'dataAbsensiGuru'])->name('teachersabsensiGuru');
     Route::get('/attendance-teachers', [AttendanceTeacherController::class, 'getAttendanceTeachers']);
     Route::get('/absensiGuru', [AttendanceTeacherController::class, 'absensiGuru'])->name('studentsabsensiGuru');
     Route::post('/absensiGuru', [AttendanceTeacherController::class, 'store']);
@@ -80,17 +81,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Custom Attendance Views
     //Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [TeacherController::class, 'showAbsensi'])->name('absensi');  
-    Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaSatu'])->name('absensiSiswaSatu');
-    //Route::get('/AbsensiSiswaSatu', [AttendanceController::class, 'absensiSiswaSatu'])->name('absensiSiswaSatu');
-    Route::get('/AbsensiSiswaDua', [AttendanceController::class, 'absensiSiswaDua'])->name('studentsabsensiSiswaDua');
-    Route::get('/AbsensiSiswaTiga', [AttendanceController::class, 'absensiSiswaTiga'])->name('studentsabsensiSiswaTiga');
-    Route::get('/AbsensiSiswaEmpat', [AttendanceController::class, 'absensiSiswaEmpat'])->name('studentsabsensiSiswaEmpat');
-    Route::get('/AbsensiSiswaLima', [AttendanceController::class, 'absensiSiswaLima'])->name('studentsabsensiSiswaLima');
-    Route::get('/AbsensiSiswaEnam', [AttendanceController::class, 'absensiSiswaEnam'])->name('studentsabsensiSiswaEnam');
-    
+    Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaJanuari'])->name('absensiSiswaJanuari');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/januari', [AttendanceController::class, 'absensiJanuari'])->name('absensiSiswaJanuari');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/februari', [AttendanceController::class, 'absensiFebruari'])->name('absensiSiswaFebruari');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/maret', [AttendanceController::class, 'absensiMaret'])->name('absensiSiswaMaret');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/april', [AttendanceController::class, 'absensiApril'])->name('absensiSiswaApril');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/mei', [AttendanceController::class, 'absensiMei'])->name('absensiSiswaMei');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/juni',  [AttendanceController::class, 'absensiJuni'])->name('absensiSiswaJuni');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/juli', [AttendanceController::class, 'absensiJuli'])->name('absensiSiswaJuli');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/agustus', [AttendanceController::class, 'absensiAgustus'])->name('absensiSiswaAgustus');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/september', [AttendanceController::class, 'absensiSeptember'])->name('absensiSiswaSeptember');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/oktober', [AttendanceController::class, 'absensiOktober'])->name('absensiSiswaOktober');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/november', [AttendanceController::class, 'absensiNovember'])->name('absensiSiswaNovember');
+    Route::get('/absensi/{kelas}/{year}/{mapel}/desember', [AttendanceController::class, 'absensiDesember'])->name('absensiSiswaDesember');
     // Other Routes
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');
+    Route::get('/jadwalMataPelajaran', [MataPelajaranController::class, 'JadwalMataPelajaran'])->name('JadwalMataPelajaran.jadwalMataPelajaran');
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');

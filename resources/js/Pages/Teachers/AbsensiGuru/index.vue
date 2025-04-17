@@ -181,6 +181,19 @@ const fetchAttendanceRecords = () => {
   }
 };
 
+const mergedTeachers = computed(() => {
+  return paginatedTeachers.value.map((teacher) => {
+    const matched = teacherAttendanceData.value.find(
+      (t) => t.teacher_id === teacher.id
+    );
+
+    return {
+      ...teacher,
+      attendance: matched?.attendance || {},
+    };
+  });
+});
+
 // Debugging: Tampilkan hasil akhir inisialisasi
 console.log('Initialized attendanceRecords:', attendanceRecords.value);
 function validateRecord(record) {
@@ -480,29 +493,30 @@ watch(
 watch(
   () => props.attendanceRecords,
   (newRecords) => {
-    // Akses data mentah dari objek reaktif
+    // Log mentah dari props.attendanceRecords
+    console.log(
+      '📦 props.attendanceRecords:',
+      JSON.parse(JSON.stringify(newRecords))
+    );
+
     const rawRecords = toRaw(newRecords);
 
-    // Periksa apakah data rawRecords memiliki struktur yang tidak diinginkan
     if (rawRecords && typeof rawRecords === 'object') {
-      // Pemetaan ulang data jika memiliki kunci numerik atau kosong
       const cleanedRecords = Object.keys(rawRecords).map((key) => {
         const record = rawRecords[key];
         if (record && typeof record === 'object') {
-          // Pastikan record memiliki status yang valid
           return { ...record, status: record[''] || 'Belum Absen' };
         }
         return record;
       });
 
-      // Jika data sudah sesuai, update attendanceRecords
       attendanceRecords.value = cleanAttendanceRecords(cleanedRecords);
     } else {
       console.error('Invalid attendance data received:', rawRecords);
       attendanceRecords.value = [];
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 // Debug computed data
@@ -902,6 +916,22 @@ const totalDaysInMonth = computed(() => {
 
 const teacherAttendanceData = ref([]);
 
+watch(
+  () => teacherAttendanceData.value,
+  (newVal) => {
+    console.log('🧾 teacherAttendanceData:', toRaw(newVal));
+  },
+  { deep: true }
+);
+
+watch(
+  () => teacherAttendanceData.value,
+  (newVal) => {
+    console.log('🧾 teacherAttendanceData:', toRaw(newVal));
+  },
+  { deep: true }
+);
+
 // Debug akhir (setelah komponen ter-render)
 console.log('📅 currentMonthYear:', currentMonthYear.value);
 console.log('📅 currentDate:', currentDate.value);
@@ -1114,6 +1144,8 @@ const fetchAttendanceReport = async () => {
       },
     });
 
+    console.log('Struktur data teacher dari API:', response.data);
+
     if (Array.isArray(response.data)) {
       teacherAttendanceData.value = response.data.map((teacher) => ({
         teacher_id: teacher.teacher_id,
@@ -1158,13 +1190,18 @@ const status = (teacher, day) => {
 
 const getStatus = (teacher, day) => {
   const year = Number(currentYear.value);
-  const month = Number(currentMonth.value); // Sudah 0-based, jadi TIDAK DIKURANGI
+  const month = Number(currentMonth.value);
   const dayNum = Number(day);
 
   const date = new Date(year, month, dayNum);
-  const formatted = formattedDate(date); // Output seperti '2025-04-01'
+  const dayOfWeek = date.getDay(); // 0: Sunday, 6: Saturday
 
-  const teacherStatus = teacher.attendance[formatted] || 'Belum Absen';
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return 'Libur';
+  }
+
+  const formatted = formattedDate(date); // Misal: '2025-04-01'
+  const teacherStatus = teacher.attendance[formatted] || 'Belum Diisi';
   return teacherStatus;
 };
 
@@ -1549,29 +1586,25 @@ const isSunday = (day) => {
 
 // Fungsi untuk mendapatkan status kehadiran guru
 const getTeacherAttendanceStatus = (teacherId, date) => {
-  //console.log("Fetching attendance status for:", teacherId, "on date:", date);
+  // Cek apakah hari tersebut Sabtu (6) atau Minggu (0)
+  const dayOfWeek = new Date(date).getDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return 'Libur';
+  }
 
+  // Cek jika data kehadiran tersedia
   if (attendanceRecords.value && attendanceRecords.value.length > 0) {
-    //console.log("Attendance records available:", attendanceRecords.value);
-
     const record = attendanceRecords.value.find((r) => {
       const recordDate = formattedDate(new Date(r.attendance_date));
-      //console.log("Checking record:", r);
-      //console.log("Record Date:", recordDate);
-      //console.log("Comparing with:", date);
-
       return r.teacher_id === teacherId && recordDate === date;
     });
 
     if (record) {
-      //console.log('Matching record found:', record);
       return record.status;
     } else {
-      //console.warn("No matching record found for teacherId:", teacherId, "on date:", date);
       return 'Belum diabsen';
     }
   } else {
-    //console.warn("Attendance records are empty or not loaded.");
     return 'Belum diabsen';
   }
 };
@@ -2208,6 +2241,9 @@ watch([selectedTeacherId, selectedDate], () => {
                     <th class="px-3 py-2 border border-gray-300 text-left">
                       Nama Guru
                     </th>
+                    <th class="px-3 py-2 border border-gray-300 text-left">
+                      NIP
+                    </th>
                     <th
                       v-for="(date, index) in totalDaysInMonth"
                       :key="'day-header-' + index"
@@ -2219,14 +2255,19 @@ watch([selectedTeacherId, selectedDate], () => {
                 </thead>
                 <tbody>
                   <tr
-                    v-for="teacher in teacherAttendanceData"
-                    :key="teacher.teacher_id"
+                    v-for="teacher in mergedTeachers"
+                    :key="teacher.id"
                     class="hover:bg-gray-50 transition"
                   >
                     <td
                       class="px-3 py-2 border border-gray-300 font-medium text-left whitespace-nowrap"
                     >
                       {{ teacher.name }}
+                    </td>
+                    <td
+                      class="px-3 py-2 border border-gray-300 text-left text-sm text-gray-700"
+                    >
+                      {{ teacher.nip || '-' }}
                     </td>
                     <td
                       v-for="(date, index) in totalDaysInMonth"
@@ -2246,6 +2287,8 @@ watch([selectedTeacherId, selectedDate], () => {
                             getStatus(teacher, date) === 'S',
                           'bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-xs':
                             getStatus(teacher, date) === 'I',
+                          'bg-gray-300 text-gray-700 italic px-2 py-1 rounded-full text-xs':
+                            getStatus(teacher, date) === 'Libur',
                           'text-gray-400':
                             getStatus(teacher, date) === 'Belum Diisi',
                         }"
@@ -2258,23 +2301,6 @@ watch([selectedTeacherId, selectedDate], () => {
               </table>
             </div>
           </div>
-
-          <!--tobdy1-->
-          <tr v-for="(teacher, index) in paginatedTeachers" :key="teacher.id">
-            {{
-              console.log('tbody 1 - index:', index, 'name:', teacher.name)
-            }}
-          </tr>
-          <!--tbody 2-->
-          <tr
-            v-for="(teacher, index) in teacherAttendanceData"
-            :key="teacher.teacher_id"
-          >
-            {{
-              console.log('tbody 2 - index:', index, 'name:', teacher.name)
-            }}
-          </tr>
-
           <!--
                     <pre class="text-left text-xs text-gray-700 mt-4">
   {{ JSON.stringify(teacherAttendanceData, null, 2) }}

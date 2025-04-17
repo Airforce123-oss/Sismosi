@@ -12,6 +12,7 @@ class Teacher extends Model
     protected $table = 'wali_kelas';
     protected $fillable = [
         'name',
+        'nip',
         'class_id',
     ];
 
@@ -21,17 +22,16 @@ class Teacher extends Model
         return $this->belongsTo(Classes::class, 'class_id');
     }
 
-    public function attendanceTeachers()
-{
-    return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
-}
-public function user()
-{
-    return $this->belongsTo(User::class);
-}
+        public function attendanceTeachers()
+    {
+        return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
-
-    public function attendance()
+    public function attendances()
     {
         return $this->hasMany(AttendanceTeacher::class, 'teacher_id', 'id');
     }
@@ -42,10 +42,12 @@ public function user()
     }
     
      // Relasi dengan WaliKelas (One to Many / Many to One)
-    public function waliKelas()
-    {
-        return $this->hasMany(WaliKelas::class, 'teacher_id');
-    }
+     public function waliKelas()
+     {
+         return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
+     }
+     
+     
     
 
 }

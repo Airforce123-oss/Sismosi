@@ -138,7 +138,12 @@ class User extends Authenticatable
 
     public function attendanceTeachers()
 {
-    return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
+return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
+}
+
+public function waliKelas()
+{
+    return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
 }
 
 }

@@ -855,43 +855,38 @@ watch(selectedKelas, (newVal, oldVal) => {
 
       <!-- Kartu Bulan -->
       <div class="flex justify-center mt-15">
-  <div v-if="selectedYear && selectedKelas && selectedMonth">
-    <a
-      :href="
-        generateUrl(
-          selectedYear,
-          selectedMonth,
-          toRaw(selectedKelas)
-        )
-      "
-      class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
-    >
-      <span class="text-2xl mr-4">
-        <i class="fas fa-calendar"></i>
-      </span>
-      <div>
-        <span class="block text-lg font-bold">
-          Absensi Bulan {{ selectedMonth }} {{ selectedYear }}
-        </span>
+        <div v-if="selectedYear && selectedKelas && selectedMonth">
+          <a
+            :href="
+              generateUrl(selectedYear, selectedMonth, toRaw(selectedKelas))
+            "
+            class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
+          >
+            <span class="text-2xl mr-4">
+              <i class="fas fa-calendar"></i>
+            </span>
+            <div>
+              <span class="block text-lg font-bold">
+                Absensi Bulan {{ selectedMonth }} {{ selectedYear }}
+              </span>
+            </div>
+          </a>
+        </div>
+
+        <div v-else class="text-gray-500">
+          <span class="flex justify-center text-lg font-bold mt-20">
+            <img
+              src="/images/attendance.png"
+              class="mr-3 h-40 max-h-full w-auto"
+              alt=""
+            />
+          </span>
+          <span class="block text-lg font-bold text-center">
+            Silakan pilih tahun ajaran, bulan ajaran, dan kelas untuk melihat
+            absensi.
+          </span>
+        </div>
       </div>
-    </a>
-  </div>
-
-  <div v-else class="text-gray-500">
-    <span class="flex justify-center text-lg font-bold mt-20">
-      <img
-        src="/images/attendance.png"
-        class="mr-3 h-40 max-h-full w-auto"
-        alt=""
-      />
-    </span>
-    <span class="block text-lg font-bold text-center">
-      Silakan pilih tahun ajaran, bulan ajaran, dan kelas
-      untuk melihat absensi.
-    </span>
-  </div>
-</div>
-
     </main>
     :selectedKelas="selectedKelas"
 
@@ -1030,6 +1025,14 @@ watch(selectedKelas, (newVal, oldVal) => {
                   href="absensiGuru"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Absensi Guru</a
+                >
+              </li>
+              <!-- Dropdown Daftar Absensi Guru -->
+              <li>
+                <a
+                  href="dataAbsensiGuru"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Absensi Guru</a
                 >
               </li>
             </ul>

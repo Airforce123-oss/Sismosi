@@ -108,8 +108,6 @@ const getTeacherMapel = (teacher) => {
     .join(', '); // Gabungkan hasil menjadi string
 };
 
-
-
 onMounted(() => {
   initFlowbite();
 });
@@ -427,6 +425,12 @@ watch(pageNumber, (newPage) => {
                             scope="col"
                             class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                           >
+                            NIP
+                          </th>
+                          <th
+                            scope="col"
+                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                          >
                             Mapel
                           </th>
                           <th
@@ -435,14 +439,12 @@ watch(pageNumber, (newPage) => {
                           >
                             Jabatan
                           </th>
-
                           <th
                             scope="col"
                             class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
                           >
                             Action
                           </th>
-
                           <th
                             scope="col"
                             class="relative py-3.5 pl-3 pr-4 sm:pr-6"
@@ -462,21 +464,23 @@ watch(pageNumber, (newPage) => {
                             {{ teacher.name }}
                           </td>
                           <td
+                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6"
+                          >
+                            {{ teacher.nip ?? '-' }}
+                          </td>
+                          <td
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
                             <span>{{ getTeacherMapel(teacher) }}</span>
                           </td>
-
                           <td
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
                             {{ teacher.class.name }}
                           </td>
-
                           <td
                             class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
                           >
-                            <!-- Link untuk Edit -->
                             <Link
                               :href="route('teachers.edit', teacher.id)"
                               class="text-indigo-600 hover:text-indigo-900"
@@ -502,7 +506,7 @@ watch(pageNumber, (newPage) => {
                     }"
                     :updatedPageNumber="updatedPageNumber"
                   />
-                 <!-- <pre>{{ wali_kelas.meta.links }}</pre>-->
+                  <!-- <pre>{{ wali_kelas.meta.links }}</pre>-->
                 </div>
               </div>
             </div>
@@ -662,6 +666,14 @@ watch(pageNumber, (newPage) => {
                   href="absensiGuru"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Absensi Guru</a
+                >
+              </li>
+              <!-- Dropdown Daftar Absensi Guru -->
+              <li>
+                <a
+                  href="dataAbsensiGuru"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Absensi Guru</a
                 >
               </li>
             </ul>

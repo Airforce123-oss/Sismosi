@@ -1,223 +1,147 @@
 <script setup>
+import { ref, onMounted, computed, watch } from 'vue';
 import { initFlowbite } from 'flowbite';
-import Pagination from '../../Components/Pagination1.vue';
-import { Link, useForm, usePage, router } from '@inertiajs/vue3';
-import Swal from 'sweetalert2';
-import { onMounted, ref, computed, watch, defineProps } from 'vue';
-import { Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import MagnifyingGlass from '../../Components/Icons/MagnifyingGlass.vue';
-// Define props passed to the component
-const props = defineProps({
-  classes_for_student: {
-    type: Object,
-    required: true,
-  },
-});
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Link, useForm, usePage, Head, router } from '@inertiajs/vue3';
+import ApexCharts from 'apexcharts';
 
-// Mengambil data dari props
-console.log('Props:', props);
-console.log('Classes for Student:', props.classes_for_student);
-if (!props.classes_for_student.meta) {
-  console.warn('Meta tidak tersedia, pastikan data dikirim dengan benar.');
-}
+import axios from 'axios';
 
-const pageNumber = ref(1); // Inisialisasi dengan nilai default
-const perPage = ref(5); // Inisialisasi dengan nilai default
-
-console.log('Page Number:', pageNumber.value);
-console.log('Per Page:', perPage.value);
-
-// Mengambil meta dengan validasi
-const meta = computed(() => {
-  return props.classes_for_student ? props.classes_for_student.meta : null;
-});
-console.log(
-  'Meta:',
-  props.classes_for_student
-    ? props.classes_for_student.meta
-    : 'Meta tidak tersedia'
-);
-console.log('Classes for Student:', props.classes_for_student);
-
-const logWaliKelas = () => {
-  console.log(
-    'Data Kelas:',
-    JSON.stringify(props.classes_for_student, null, 2)
-  );
-
-  props.classes_for_student.data.forEach((classForStudent) => {
-    // Pastikan untuk memeriksa apakah wali_kelas ada
-    if (classForStudent.wali_kelas) {
-      console.log('Wali Kelas:', classForStudent.wali_kelas.name); // Akses nama wali kelas
-    } else {
-      console.log('Wali Kelas: Tidak ada wali kelas untuk kelas ini');
-    }
-  });
-};
-
-// Define form and page-related variables
+const userName = ref('');
+const { props } = usePage();
 const form = useForm({
-  id_kelas: '',
-  kode_kelas: '',
-  classes: '',
+  name: props.auth.user.name,
+  email: props.auth.user.email,
+  role_type: props.auth.user.role_type,
 });
 
-// Memanggil fetchClasses dengan currentPage
+const filterTeacherName = ref('');
+const filterNIP = ref('');
+const selectedTeacher = ref('');
+const searchNIP = ref('');
 
-console.log('pageNumber:', pageNumber.value);
+const months = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+const currentDate = new Date();
+const selectedMonth = ref(currentDate.getMonth());
+const selectedYear = ref(currentDate.getFullYear());
 
-// URL for mapels (subjects) with pagination and search parameters
-const mapelsUrl = computed(() => {
-  const url = new URL(route('kelas.index'));
-  url.searchParams.set('page', pageNumber.value); // Ensure pageNumber is included
-  return url;
+const years = Array.from({ length: 6 }, (_, i) => 2020 + i);
+
+const monthForDisplay = computed(() => months[selectedMonth.value]);
+const currentYear = computed(() => selectedYear.value);
+
+const totalDaysInMonth = computed(() => {
+  const days = new Date(
+    currentYear.value,
+    selectedMonth.value + 1,
+    0
+  ).getDate();
+  return Array.from({ length: days }, (_, i) => i + 1);
 });
 
-// Form for deletion
-const deleteForm = useForm({});
+const mergedTeachers = ref(props.teachers || []);
+const today = new Date();
+const selectedDate = ref(today.toISOString().split('T')[0]);
+const dateObj = new Date(selectedDate.value);
+const formattedDate = (dateObj) => {
+  //console.log('Checking dateObj:', dateObj);
+  const date = new Date(dateObj);
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date:', dateObj);
+    return 'invalid-date';
+  }
+  return date.toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+};
 
-const deleteClass = (id) => {
-  Swal.fire({
-    title: 'Apakah Anda yakin?',
-    text: 'Data Kelas ini akan dihapus dan tidak dapat dikembalikan!',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Ya, hapus!',
-    cancelButtonText: 'Batal',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      deleteForm.delete(route('kelas.destroy', id), {
-        preserveScroll: true,
-        onSuccess: () => {
-          pageNumber.value = 1;
-          router.visit(mapelsUrl.value.toString(), {
-            replace: true,
-            preserveState: true,
-            preserveScroll: true,
-          });
-        },
-      });
+const getKey = (teacherId, date) => {
+  //console.log('Tanggal loop:', date);
+  const dateObj = new Date(currentYear.value, selectedMonth.value, date);
+  return `status-${teacherId}-${formattedDate(dateObj)}`;
+};
 
-      Swal.fire('Terhapus!', 'Data kelas telah berhasil dihapus.', 'success');
+const getStatus = (teacher, date) => {
+  const year = Number(currentYear.value);
+  const month = Number(selectedMonth.value); // 0-based index
+  const day = Number(date);
+
+  const dateObj = new Date(year, month, day);
+  const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return 'Libur';
+  }
+
+  const dateKey = formattedDate(dateObj); // e.g. "2025-04-01"
+  return teacher.attendance?.[dateKey] || 'Belum Diabsen';
+};
+
+const filteredTeachers = computed(() => {
+  return mergedTeachers.value.filter((teacher) => {
+    const nameMatch = teacher.name
+      .toLowerCase()
+      .includes(filterTeacherName.value.toLowerCase());
+    const nipMatch = teacher.nip
+      ? teacher.nip.toLowerCase().includes(filterNIP.value.toLowerCase())
+      : true;
+    return nameMatch && nipMatch;
+  });
+});
+
+const fetchData = () => {
+  router.get(
+    '/dataAbsensiGuru',
+    {
+      bulan: selectedMonth.value + 1, // karena bulan di JS dimulai dari 0
+      tahun: selectedYear.value,
+    },
+    {
+      preserveState: true,
+      preserveScroll: true,
     }
-  });
+  );
 };
 
-pageNumber.value = 1;
-console.log(`Current page number is: ${pageNumber.value}`); // Akses dengan .value
-let searchTerm = ref(props.search ?? '');
-
-const updatedPageNumber = (link) => {
-  console.log('Received link:', link);
-
-  if (!link || !link.url) {
-    console.warn('Link or link.url is undefined, skipping navigation.');
-    return; // Exit function if the link is invalid
-  }
-
-  const page = new URL(link.url).searchParams.get('page');
-  if (page) {
-    pageNumber.value = page;
-    router.visit(`/kelas?page=${pageNumber.value}`, {
-      preserveScroll: true,
-    });
-  } else {
-    console.error('Page number not found in URL');
-  }
-};
-
-const classesUrl = computed(() => {
-  const url = new URL(route('kelas.index')); // Ganti dengan rute yang sesuai
-  url.searchParams.set('page', pageNumber.value); // Pastikan pageNumber ada
-  if (searchTerm.value) {
-    url.searchParams.set('search', searchTerm.value); // Jika ada pencarian
-  }
-  return url;
+onMounted(async () => {
+  fetchData();
 });
 
-watch(
-  () => classesUrl.value,
-  (updatedClassesUrl) => {
-    console.log('Navigating to URL:', updatedClassesUrl.toString());
-    router.visit(updatedClassesUrl.toString(), {
-      preserveScroll: true,
-    });
-  }
-);
-
-const kelasUrl = computed(() => {
-  const url = new URL(route('kelas.index'));
-  url.searchParams.set('page', pageNumber.value); // pastikan pageNumber ada
-  if (searchTerm.value) {
-    url.searchParams.set('search', searchTerm.value);
-  }
-  return url;
-});
-
-watch(
-  () => kelasUrl.value,
-  (updatedKelasUrl) => {
-    console.log('Navigating to URL:', updatedKelasUrl.toString());
-    router.visit(updatedKelasUrl.toString(), {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    });
-  }
-);
-
-const loadDataForPage = (page) => {
-  const url = new URL(route('kelas.index')); // Ganti dengan rute yang sesuai
-  url.searchParams.set('page', page); // Set parameter halaman
-
-  // Navigasi ke URL baru
-  router.visit(url.toString(), {
-    preserveScroll: true,
-    preserveState: true,
-  });
-};
-console.log(props.classes_for_student);
-
-// On mounted, initialize Flowbite
-onMounted(() => {
-  initFlowbite();
-  logWaliKelas();
-});
-
-// Example of using Ziggy to generate the route for editing a class
-const editClassRoute = (classId) => {
-  // Pastikan classId diberikan sebagai parameter untuk route kelas.edit
-  return route('kelas.edit', { classId });
-};
-
-// Watch for changes in mapelsUrl and trigger page navigation
-watch(
-  () => mapelsUrl.value,
-  (updatedMapelsUrl) => {
-    router.visit(updatedMapelsUrl.toString(), {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    });
-  }
-);
-
-watch(
-  () => props.classes_for_student.data,
-  (newClasses) => {
-    console.log('Data kelas yang diterima:', newClasses);
-  },
-  { immediate: true } // Jalankan segera saat komponen dimuat
-);
-
-watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
-  console.log('Updated Page Number:', newPageNumber);
-  console.log('Updated Per Page:', newPerPage);
+watch([selectedTeacher, searchNIP], () => {
+  fetchData();
 });
 </script>
+
+<style scoped>
+@import url('https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css');
+.bg-primary1 {
+  background-color: #0e70cc;
+}
+
+.bg-success {
+  background-color: #28a745;
+}
+
+.bg-warning {
+  background-color: #ffc107;
+}
+
+.bg-cyan {
+  background-color: #10b0cc;
+}
+</style>
 
 <template>
   <div class="antialiased bg-gray-50 dark:bg-gray-900">
@@ -267,6 +191,12 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
           </a>
         </div>
         <div class="flex items-center lg:order-2">
+          <!-- Apps -->
+          <button
+            type="button"
+            class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+          ></button>
+
           <button
             type="button"
             class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
@@ -292,10 +222,9 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
               />
             </svg>
           </button>
-
           <!-- Dropdown menu -->
           <div
-            class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+            class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
             id="dropdown"
           >
             <div class="py-3 px-3">
@@ -313,7 +242,8 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                 </span>
                 <span
                   class="block text-sm text-gray-900 truncate dark:text-white"
-                ></span>
+                  >{{ form.role_type }}</span
+                >
               </div>
             </div>
             <div class="mt-3 space-y-1">
@@ -333,145 +263,123 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
       </div>
     </nav>
 
-    <main class="p-4 md:ml-64 h-auto pt-20">
-      <Head title="Teachers" />
+    <!-- Main -->
+    <main class="p-7 md:ml-64 h-screen pt-20">
+      <Head title="Data Absensi Guru" />
+      <div class="p-6 bg-white rounded-2xl shadow-md border border-gray-200">
+        <!-- Heading -->
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">
+          📊 Laporan Absensi Guru - {{ monthForDisplay }} {{ currentYear }}
+        </h2>
 
-      <div class="flex-1 p-6">
-        <div class="mx-auto max-w-7xl sm:items-center">
-          <div class="px-4 py-4 sm:px-6 lg:px-8">
-            <div class="sm:flex sm:items-center">
-              <div class="sm:flex-auto">
-                <h1 class="text-3xl font-semibold text-gray-900">Kelas</h1>
-                <p class="mt-2 text-sm text-gray-700">Daftar Semua Kelas</p>
-              </div>
-
-              <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                <Link
-                  :href="route('kelas.create')"
-                  class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        <!-- Filter -->
+        <div
+          class="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6"
+        >
+          <div
+            class="flex flex-col md:flex-row md:items-end md:justify-between gap-4"
+          >
+            <!-- Filter Nama dan NIP Guru -->
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 w-full"
+            >
+              <!-- Nama Guru -->
+              <div class="flex flex-col">
+                <label
+                  for="nama-guru"
+                  class="text-sm font-medium text-gray-700 mb-1"
                 >
-                  <i class="fa fa-plus mr-2"></i> Tambah Kelas
-                </Link>
-              </div>
-            </div>
-
-            <div class="flex flex-col justify-between sm:flex-row mt-6">
-              <div class="relative text-sm text-gray-800 col-span-3">
-                <div
-                  class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
-                >
-                  <MagnifyingGlass />
-                </div>
-
+                  Nama Guru
+                </label>
                 <input
+                  id="nama-guru"
                   type="text"
-                  placeholder="Cari Data Kelas.."
-                  id="search"
-                  class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  v-model="filterTeacherName"
+                  placeholder="Masukkan nama guru"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <!-- Nomor Induk Pegawai (NIP) -->
+              <div class="flex flex-col">
+                <label for="nip" class="text-sm font-medium text-gray-700 mb-1">
+                  Nomor Induk Pegawai (NIP)
+                </label>
+                <input
+                  id="nip"
+                  type="text"
+                  v-model="filterNIP"
+                  placeholder="Masukkan NIP"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-
-            <div class="mt-8 flex flex-col mr-20">
-              <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                <div
-                  class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8"
-                >
-                  <div
-                    class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg relative"
-                  >
-                    <table class="min-w-full bg-white">
-                      <thead class="divide-y divide-gray-200 bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-1/4"
-                          >
-                            ID
-                          </th>
-                          <th
-                            scope="col"
-                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-1/3"
-                          >
-                            Nama Kelas
-                          </th>
-                          <th
-                            scope="col"
-                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-1/4"
-                          >
-                            Wali Kelas
-                          </th>
-                          <th
-                            scope="col"
-                            class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-1/4"
-                          >
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-gray-200 bg-white">
-                        <tr
-                          v-for="(classForStudent, index) in props
-                            .classes_for_student.data"
-                          :key="classForStudent.id"
-                        >
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                          >
-                            <span v-if="pageNumber && perPage">
-                              {{
-                                (Number(pageNumber) - 1) * Number(perPage) +
-                                Number(index) +
-                                1
-                              }}
-                            </span>
-                            <span v-else>Loading...</span>
-                          </td>
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                          >
-                            {{ classForStudent.name }}
-                          </td>
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                          >
-                            {{ classForStudent.wali_kelas.name }}
-                          </td>
-                          <td
-                            class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                          >
-                            <div class="flex justify-end space-x-4">
-                              <Link
-                                :href="editClassRoute(classForStudent.id)"
-                                class="text-indigo-600 hover:text-indigo-900"
-                              >
-                                Edit
-                              </Link>
-                              <button
-                                @click="deleteClass(classForStudent.id)"
-                                class="text-indigo-600 hover:text-indigo-900"
-                              >
-                                Hapus
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <!-- Pagination -->
-                  <Pagination
-                    v-if="classes_for_student && classes_for_student.meta"
-                    :data="{
-                      meta: classes_for_student.meta,
-                      items: classes_for_student.data,
-                    }"
-                    :updatedPageNumber="updatedPageNumber"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-auto rounded-lg border border-gray-200">
+          <table class="min-w-full text-sm text-center border-collapse">
+            <thead class="bg-blue-100 text-gray-700 sticky top-0">
+              <tr>
+                <th
+                  class="px-4 py-3 border border-gray-300 text-left bg-blue-200 font-semibold"
+                >
+                  Nama Guru
+                </th>
+                <th class="px-3 py-2 border border-gray-300 text-left">NIP</th>
+                <th
+                  v-for="(date, index) in totalDaysInMonth"
+                  :key="'day-header-' + index"
+                  class="px-3 py-2 border border-gray-300 bg-blue-50"
+                >
+                  {{ date }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="teacher in filteredTeachers"
+                :key="teacher.id"
+                class="hover:bg-gray-50 transition-colors duration-150"
+              >
+                <td
+                  class="px-4 py-2 border border-gray-300 text-left font-medium whitespace-nowrap"
+                >
+                  {{ teacher.name }}
+                </td>
+                <td
+                  class="px-3 py-2 border border-gray-300 text-left text-sm text-gray-700"
+                >
+                  {{ teacher.nip || '-' }}
+                </td>
+                <td
+                  v-for="(date, index) in totalDaysInMonth"
+                  :key="getKey(teacher.teacher_id, date)"
+                  class="px-2 py-1 border border-gray-300"
+                >
+                  <span
+                    :class="{
+                      'bg-green-200 text-green-800 px-2 py-1 rounded-full text-xs font-semibold':
+                        getStatus(teacher, date) === 'P',
+                      'bg-red-200 text-red-800 px-2 py-1 rounded-full text-xs font-semibold':
+                        getStatus(teacher, date) === 'A',
+                      'bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold':
+                        getStatus(teacher, date) === 'S',
+                      'bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-xs font-semibold':
+                        getStatus(teacher, date) === 'I',
+                      'bg-gray-300 text-gray-700 italic px-2 py-1 rounded-full text-xs':
+                        getStatus(teacher, date) === 'Libur',
+                      'text-gray-500 italic text-xs':
+                        getStatus(teacher, date) === 'Belum Diabsen',
+                    }"
+                  >
+                    {{ getStatus(teacher, date) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
@@ -515,6 +423,7 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
               class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
               aria-controls="dropdown-pages"
               data-collapse-toggle="dropdown-pages"
+              aria-expanded="true"
             >
               <svg
                 viewBox="0 0 256 256"
@@ -530,7 +439,6 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
 
               <span class="flex-1 ml-3 text-left whitespace-nowrap">Siswa</span>
               <svg
-                inert
                 class="w-6 h-6"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -598,15 +506,14 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
               <!-- Dropdown Absensi Guru -->
               <li>
                 <a
-                  href="absensiGuru"
+                  href="indexx"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Absensi Guru</a
                 >
               </li>
-              <!-- Dropdown Daftar Absensi Guru -->
               <li>
                 <a
-                  href="dataAbsensiGuru"
+                  href="indexx"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Data Absensi Guru</a
                 >
@@ -642,7 +549,6 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
               </svg>
               <span class="flex-1 ml-3 text-left whitespace-nowrap">Kelas</span>
               <svg
-                inert
                 class="w-6 h-6"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -690,7 +596,6 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                 >Mata Pelajaran</span
               >
               <svg
-                inert
                 class="w-6 h-6"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -718,6 +623,10 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
       </div>
     </aside>
   </div>
-
-  <!-- -----  -->
 </template>
+
+<script>
+export default {
+  setup() {},
+};
+</script>

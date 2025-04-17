@@ -219,6 +219,7 @@ onMounted(() => {
                       Gunakan Form ini untuk mengisi data guru
                     </p>
                   </div>
+
                   <div class="grid grid-cols-6 gap-6">
                     <!-- Nama -->
                     <div class="col-span-6 sm:col-span-3">
@@ -239,11 +240,32 @@ onMounted(() => {
                             formData.errors.name,
                         }"
                       />
-
                       <InputError
                         class="mt-2"
                         :message="formData.errors.name"
                       />
+                    </div>
+
+                    <!-- NIP -->
+                    <div class="col-span-6 sm:col-span-3">
+                      <label
+                        for="nip"
+                        class="block text-sm font-medium text-gray-700"
+                      >
+                        NIP
+                      </label>
+                      <input
+                        v-model="formData.nip"
+                        type="text"
+                        id="nip"
+                        placeholder="Masukkan NIP"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        :class="{
+                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                            formData.errors.nip,
+                        }"
+                      />
+                      <InputError class="mt-2" :message="formData.errors.nip" />
                     </div>
 
                     <!-- Mapel -->
@@ -264,7 +286,6 @@ onMounted(() => {
                         }"
                       >
                         <option value="">Pilih Mapel</option>
-
                         <option
                           v-for="item in mapels"
                           :key="item.id"
@@ -272,12 +293,10 @@ onMounted(() => {
                         >
                           {{ item.mapel }}
                         </option>
-
                         <option v-if="mapels.length === 0" disabled>
                           No Mapel Available
                         </option>
                       </select>
-
                       <InputError
                         class="mt-2"
                         :message="formData.errors.class_id"
@@ -310,7 +329,6 @@ onMounted(() => {
                           {{ item.name }}
                         </option>
                       </select>
-
                       <InputError
                         class="mt-2"
                         :message="formData.errors.class_id"
@@ -318,6 +336,7 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
+
                 <div
                   class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
                 >
