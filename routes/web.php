@@ -97,11 +97,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Other Routes
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');
-    Route::get('/jadwalMataPelajaran', [MataPelajaranController::class, 'JadwalMataPelajaran'])->name('JadwalMataPelajaran.jadwalMataPelajaran');
+    Route::get('/settingJadwalMataPelajaran', [MataPelajaranController::class, 'settingJadwalMataPelajaran'])->name('matapelajaran.settingJadwalMataPelajaran');
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
-    Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit'); 
+    Route::get('/matapelajaran/{mapel}/edit', [MataPelajaranController::class, 'edit'])->name('matapelajaran.edit');
+    Route::post('/jadwal-mata-pelajaran', [MataPelajaranController::class, 'storeJadwal'])
+     ->name('jadwal.store');
+     Route::get('/jadwal', [MataPelajaranController::class, 'getJadwal'])->name('jadwal.get');
+
+
+
+ 
 });
 
 // Admin Routes (with middleware for redirection)

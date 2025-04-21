@@ -12,7 +12,12 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  classes_for_student: {
+    type: Object,
+    required: true,
+  },
 });
+console.log('Classes for Student:', props.classes_for_student);
 const form = useForm({
   name: props.auth?.user?.name || '',
   email: props.auth?.user?.email || '',
@@ -31,6 +36,24 @@ const kelasUrl = computed(() => {
   return url;
 });
 
+const laporanJadwal = computed(() => {
+  const hasil = [];
+  schedule.value.forEach((slot) => {
+    days.forEach((day) => {
+      const item = slot.jadwal[day];
+      if (item && (typeof item === 'object' ? item.mapel : item)) {
+        hasil.push({
+          hari: day,
+          jam_ke: slot.jam_ke,
+          jam: slot.jam,
+          mapel: typeof item === 'object' ? item.mapel : item,
+        });
+      }
+    });
+  });
+  return hasil;
+});
+
 watch(
   () => kelasUrl.value,
   (updatedKelasUrl) => {
@@ -42,91 +65,89 @@ watch(
     });
   }
 );
-const deleteForm = useForm({}); // Deklarasi deleteForm
 // FILTER DATA
-const jurusanList = ['Elektro', 'TKJ', 'RPL'];
+const jurusanList = ['Ilmu Pengetahuan Alam', 'Ilmu Pengetahuan Sosial'];
 const tingkatList = ['X', 'XI', 'XII'];
 const kelasList = ['1', '2', '3'];
 
 const selectedJurusan = ref('');
 const selectedTingkat = ref('');
 const selectedKelas = ref('');
+const selectedMapelFilter = ref(null);
 
 // HARI
-const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
 
 // DATA JADWAL (DUMMY)
 const schedule = ref([]);
 
-const loadSchedule = () => {
-  // dummy data (bisa diganti dari API)
-  schedule.value = [
-    {
-      jam_ke: 1,
-      jam: '07:00 - 08:00',
-      jadwal: {
-        senin: '',
-        selasa: '',
-        rabu: '',
-        kamis: '',
-        jumat: '',
-        sabtu: '',
+const loadSchedule = async () => {
+  if (!selectedKelas.value) {
+    console.warn('❗ kelas_id masih kosong. Jadwal tidak dimuat.');
+    return;
+  }
+
+  try {
+    console.log('Selected Kelas:', selectedKelas.value);
+
+    const response = await axios.get(route('jadwal.get'), {
+      params: {
+        kelas_id: selectedKelas.value,
       },
-    },
-    {
-      jam_ke: 2,
-      jam: '08:00 - 09:00',
-      jadwal: {
-        senin: '',
-        selasa: '',
-        rabu: '',
-        kamis: '',
-        jumat: '',
-        sabtu: '',
-      },
-    },
-    {
-      jam_ke: 3,
-      jam: '09:00 - 10:00',
-      jadwal: {
-        senin: '',
-        selasa: '',
-        rabu: 'Olahraga',
-        kamis: '',
-        jumat: '',
-        sabtu: '',
-      },
-    },
-    {
-      jam_ke: 4,
-      jam: '10:00 - 11:00',
-      jadwal: {
-        senin: '',
-        selasa: '',
-        rabu: '',
-        kamis: '',
-        jumat: '',
-        sabtu: '',
-      },
-    },
-    {
-      jam_ke: 5,
-      jam: '11:00 - 12:00',
-      jadwal: {
-        senin: '',
-        selasa: '',
-        rabu: '',
-        kamis: '',
-        jumat: '',
-        sabtu: '',
-      },
-    },
-  ];
+    });
+
+    schedule.value = response.data;
+
+    localStorage.setItem('jadwal_mingguan', JSON.stringify(schedule.value));
+    console.log('✅ Jadwal berhasil disimpan ke localStorage');
+  } catch (error) {
+    console.error(
+      '❌ Gagal memuat atau menyimpan jadwal:',
+      error.response?.data || error
+    );
+  }
 };
+
+console.log('DEBUG — schedule:', schedule.value);
+console.log('DEBUG — days:', days);
+
+const entries = computed(() => {
+  return schedule.value.flatMap((slot) =>
+    days
+      .map((day) => {
+        const item = slot.jadwal[day];
+        if (!item) return null;
+
+        const mapelId =
+          typeof item === 'string'
+            ? Number(item)
+            : typeof item === 'number'
+            ? item
+            : item?.mapel_id || item?.id;
+
+        if (!mapelId) return null;
+
+        return {
+          hari: day,
+          jam_ke: slot.jam_ke,
+          jam: slot.jam || '', // ✅ Tambahkan ini
+          mapel_id: mapelId,
+        };
+      })
+      .filter(Boolean)
+  );
+});
 
 // MODAL STATE
 const showModal = ref(false);
 const selectedMapel = ref('');
+const selectedMapelModal = ref('');
+console.log(
+  'Selected Mapel:',
+  selectedMapelModal.value,
+  typeof selectedMapelModal.value
+);
+
 const editingSlot = ref({ jamKe: null, hari: '' });
 
 const openEditModal = (jamKe, hari) => {
@@ -140,32 +161,136 @@ const closeModal = () => {
   editingSlot.value = { jamKe: null, hari: '' };
 };
 
-const saveJadwal = () => {
-  const index = schedule.value.findIndex(
-    (item) => item.jam_ke === editingSlot.value.jamKe
-  );
-  if (index !== -1) {
-    schedule.value[index].jadwal[editingSlot.value.hari] = selectedMapel.value;
+const fetchSchedule = async () => {
+  try {
+    const response = await axios.get(
+      route('jadwal.get', {
+        kelas_id: selectedKelas.value,
+      })
+    );
+    schedule.value = response.data;
+    console.log('Fetched schedule:', schedule.value);
+  } catch (error) {
+    console.error('Gagal mengambil jadwal:', error);
   }
-  closeModal();
 };
 
-const updatedPageNumber = (link) => {
-  console.log('Form is submitting:', isSubmitting.value); // Debugging isSubmitting
+const mapelLabelById = (id) => {
+  return props.master_mapel[id] ?? 'Tidak diketahui';
+};
 
-  if (isSubmitting.value) return; // Cek apakah form sedang disubmit
+const updateLocalSchedule = () => {
+  entries.value.forEach((entry) => {
+    const slot = schedule.value.find((s) => s.jam_ke === entry.jam_ke);
+    if (slot) {
+      slot.jadwal = {
+        ...slot.jadwal,
+        [entry.hari]: {
+          mapel: mapelLabelById(entry.mapel_id),
+        },
+      };
+    }
+  });
+};
 
-  const url = new URL(link.url);
-  const pageNumber = url.searchParams.get('page');
+const saveJadwal = async () => {
+  console.log('selectedMapelModal:', selectedMapelModal.value);
+  console.log('editingSlot.jamKe:', editingSlot.value.jamKe);
+  console.log('editingSlot.hari:', editingSlot.value.hari);
+  console.log('selectedKelas:', selectedKelas.value);
+  console.log(
+    'Selected MapelModal:',
+    selectedMapelModal.value,
+    typeof selectedMapelModal.value
+  );
 
-  if (pageNumber) {
-    currentPage.value = parseInt(pageNumber, 10);
-  } else {
-    console.error('Page number not found in the URL.');
+  if (
+    !selectedMapelModal.value ||
+    !editingSlot.value.jamKe ||
+    !editingSlot.value.hari ||
+    !selectedKelas.value
+  ) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Form belum lengkap!',
+      text: 'Lengkapi semua field sebelum menyimpan.',
+    });
+    return;
   }
+
+  const jam =
+    schedule.value.find((s) => s.jam_ke === editingSlot.value.jamKe)?.jam || '';
+
+  entries.value.push({
+    hari: editingSlot.value.hari,
+    jam_ke: editingSlot.value.jamKe,
+    jam: jam,
+    mapel_id: selectedMapelModal.value,
+  });
+
+  showModal.value = false;
+
+  console.log('entries payload:', entries.value);
+
+  try {
+    await axios.post(route('jadwal.store'), {
+      kelas_id: selectedKelas.value,
+      entries: entries.value,
+    });
+
+    updateLocalSchedule();
+
+    await fetchSchedule();
+    entries.value = [];
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil!',
+      text: 'Jadwal berhasil disimpan.',
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  } catch (error) {
+    updateLocalSchedule();
+    console.error('POST error:', error.response?.data || error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal menyimpan',
+      text: 'Terjadi kesalahan saat menyimpan jadwal.',
+    });
+  }
+};
+
+const hasJadwalForDay = (day) => {
+  return schedule.value.some((slot) => {
+    const item = slot.jadwal[day];
+    // bila item adalah objek, pakai mapel; bila string langsung pakai item
+    return item && (typeof item === 'object' ? item.mapel : item);
+  });
+};
+
+const getMapelForSlot = (slot, day) => {
+  const item = slot.jadwal[day];
+  return typeof item === 'object' ? item.mapel : item;
+};
+
+const getMapelName = (jamKe, hari) => {
+  const slot = entries.value.find((e) => e.jam_ke === jamKe && e.hari === hari);
+  if (!slot) return '-';
+  const mapel = props.master_mapel.data.find((m) => m.id === slot.mapel_id);
+  return mapel ? mapel.mapel : '-';
 };
 
 onMounted(() => {
+  const savedSchedule = localStorage.getItem('jadwal_mingguan');
+  if (savedSchedule) {
+    try {
+      schedule.value = JSON.parse(savedSchedule);
+    } catch (e) {
+      console.error('Jadwal tidak valid:', e);
+    }
+  }
+  loadSchedule();
   initFlowbite();
 });
 </script>
@@ -296,49 +421,83 @@ onMounted(() => {
         <div class="px-4 py-4 sm:px-6 lg:px-8">
           <div class="p-6 space-y-6">
             <!-- FILTER -->
-            <div class="flex flex-wrap items-center gap-4">
-              <div class="flex flex-col">
-                <label class="text-sm font-medium">Jurusan</label>
-                <select
-                  v-model="selectedJurusan"
-                  class="form-select rounded border-gray-300"
-                >
-                  <option value="">Pilih Jurusan</option>
-                  <option v-for="j in jurusanList" :key="j" :value="j">
-                    {{ j }}
-                  </option>
-                </select>
+            <div
+              class="bg-white shadow-md rounded-xl p-6 w-full max-w-4xl mx-auto mb-6"
+            >
+              <h2 class="text-xl text-center font-semibold mb-4 text-gray-700">
+                FILTER JADWAL MATA PELAJARAN
+              </h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Jurusan (opsional, untuk filter tampilan) -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-600 mb-1">
+                    Jurusan
+                  </label>
+                  <select
+                    v-model="selectedJurusan"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Pilih Jurusan</option>
+                    <option
+                      v-for="jurusan in jurusanList"
+                      :key="jurusan"
+                      :value="jurusan"
+                    >
+                      {{ jurusan }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Mata Pelajaran -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-600 mb-1">
+                    Mata Pelajaran
+                  </label>
+                  <select
+                    v-model="selectedMapelModal"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Pilih Mata Pelajaran</option>
+                    <option
+                      v-for="mapel in props.master_mapel.data"
+                      :key="mapel.id"
+                      :value="mapel.id"
+                    >
+                      {{ mapel.mapel }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Kelas -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-600 mb-1">
+                    Kelas
+                  </label>
+                  <select
+                    v-model="selectedKelas"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Pilih Kelas</option>
+                    <option
+                      v-for="c in props.classes_for_student.data"
+                      :key="c.id"
+                      :value="c.id"
+                    >
+                      {{ c.name }}
+                    </option>
+                  </select>
+                </div>
               </div>
-              <div class="flex flex-col">
-                <label class="text-sm font-medium">Tingkat Kelas</label>
-                <select
-                  v-model="selectedTingkat"
-                  class="form-select rounded border-gray-300"
+
+              <!-- Tombol -->
+              <div class="mt-6 flex justify-end">
+                <button
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition duration-200"
+                  @click="loadSchedule"
                 >
-                  <option value="">Pilih Tingkat</option>
-                  <option v-for="t in tingkatList" :key="t" :value="t">
-                    {{ t }}
-                  </option>
-                </select>
+                  Lihat Jadwal
+                </button>
               </div>
-              <div class="flex flex-col">
-                <label class="text-sm font-medium">Kelas</label>
-                <select
-                  v-model="selectedKelas"
-                  class="form-select rounded border-gray-300"
-                >
-                  <option value="">Pilih Kelas</option>
-                  <option v-for="k in kelasList" :key="k" :value="k">
-                    {{ k }}
-                  </option>
-                </select>
-              </div>
-              <button
-                class="mt-5 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                @click="loadSchedule"
-              >
-                Lihat
-              </button>
             </div>
 
             <!-- TABEL JADWAL -->
@@ -368,21 +527,93 @@ onMounted(() => {
                     <td class="border p-2">{{ slot.jam_ke }}</td>
                     <td class="border p-2">{{ slot.jam }}</td>
                     <td v-for="day in days" :key="day" class="border p-2">
+                      <span
+                        v-if="day === 'sabtu' || day === 'minggu'"
+                        class="text-red-500 font-semibold"
+                      >
+                        Libur
+                      </span>
                       <button
+                        v-else
                         class="w-full h-full px-2 py-1 text-sm rounded transition-all duration-150"
                         :class="
-                          slot.jadwal[day]
+                          slot.jadwal[day]?.mapel
                             ? 'bg-blue-500 text-white'
                             : 'bg-yellow-400 text-white'
                         "
                         @click="openEditModal(slot.jam_ke, day)"
                       >
-                        {{ slot.jadwal[day] || '✖' }}
+                        {{ slot.jadwal[day]?.mapel || '✖' }}
                       </button>
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!--LAPORAN JADWAL-->
+
+            <div class="mt-10">
+              <h2 class="text-xl font-bold text-gray-800 mb-4">
+                Laporan Jadwal Mingguan
+              </h2>
+
+              <div
+                v-for="day in days"
+                :key="day"
+                class="mb-8 border border-gray-300 rounded-lg overflow-hidden"
+              >
+                <div
+                  class="bg-gray-100 px-4 py-2 text-lg text-center font-semibold capitalize border-b"
+                >
+                  {{ day }}
+                </div>
+
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="p-3 border">Jam Ke</th>
+                      <th class="p-3 border">Waktu</th>
+                      <th class="p-3 border">Mata Pelajaran</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Jika hari Sabtu atau Minggu, langsung tampilkan satu baris Libur -->
+                    <tr v-if="day === 'sabtu' || day === 'minggu'">
+                      <td
+                        colspan="3"
+                        class="p-3 border text-center text-red-500 font-semibold"
+                      >
+                        Libur
+                      </td>
+                    </tr>
+
+                    <!-- Bila ada jadwal, loop slot -->
+                    <tr
+                      v-else-if="hasJadwalForDay(day)"
+                      v-for="slot in schedule"
+                      :key="`${day}-${slot.jam_ke}`"
+                      v-show="getMapelForSlot(slot, day)"
+                    >
+                      <td class="p-3 border">{{ slot.jam_ke }}</td>
+                      <td class="p-3 border">{{ slot.jam }}</td>
+                      <td class="p-3 border">
+                        {{ getMapelForSlot(slot, day) }}
+                      </td>
+                    </tr>
+
+                    <!-- Bila tidak ada sama sekali -->
+                    <tr v-else>
+                      <td
+                        colspan="3"
+                        class="p-3 border text-center text-gray-500 italic"
+                      >
+                        Tidak ada jadwal
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- MODAL -->
@@ -398,12 +629,17 @@ onMounted(() => {
                   Jam ke: {{ editingSlot.jamKe }}, Hari: {{ editingSlot.hari }}
                 </p>
 
-                <input
-                  v-model="selectedMapel"
-                  type="text"
-                  placeholder="Masukkan nama mapel"
-                  class="w-full border border-gray-300 rounded px-3 py-2"
-                />
+                <!-- Dropdown Mapel -->
+                <select v-model="selectedMapel" class="form-select w-full">
+                  <option value="">Pilih Mapel</option>
+                  <option
+                    v-for="mapel in props.master_mapel.data"
+                    :key="mapel.id"
+                    :value="mapel"
+                  >
+                    {{ mapel.mapel }}
+                  </option>
+                </select>
 
                 <div class="flex justify-end gap-2">
                   <button
@@ -665,7 +901,7 @@ onMounted(() => {
               </li>
               <li>
                 <a
-                  href="jadwalMataPelajaran"
+                  href="settingJadwalMataPelajaran"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Jadwal Mata Pelajaran</a
                 >

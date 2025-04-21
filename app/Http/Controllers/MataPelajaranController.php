@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Mapel;
 use App\Models\Tugas;
+use App\Models\Classes;
+use App\Models\JadwalMataPelajaran;
 use App\Http\Resources\MapelResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -51,7 +53,7 @@ class MataPelajaranController extends Controller
         ]);
     }
 
-    public function JadwalMataPelajaran(Request $request)
+    public function settingJadwalMataPelajaran(Request $request)
     {
         // 1. Ambil pagination & filter params
         $itemsPerPage  = $request->input('itemsPerPage', 20);
@@ -68,7 +70,8 @@ class MataPelajaranController extends Controller
     
         // 3. Clone query untuk jadwal (tanpa paginate)
         $allMapel = (clone $mapelQuery)->get();
-    
+        $classesQuery = Classes::with('waliKelas');
+        $classes_for_student = $classesQuery->paginate(20)->appends($request->only('search'));
         // 4. Paginate untuk master_mapel
         $master_mapel = $mapelQuery
             ->paginate($itemsPerPage, ['*'], 'page', $currentPage)
@@ -94,12 +97,51 @@ class MataPelajaranController extends Controller
         }
     
         // 6. Return ke Inertia dengan dua payload
-        return inertia('MataPelajaran/jadwalMataPelajaran', [
+        return inertia('MataPelajaran/settingJadwalMataPelajaran', [
             'master_mapel' => MapelResource::collection($master_mapel),
             'jadwal'       => $jadwal,
             'filter'       => compact('jurusan','tingkat','kelas'),
+            'classes_for_student' => [
+                'data' => $classes_for_student->items(), // Mengambil koleksi item dari paginator
+                'meta' => [
+                    'total' => $classes_for_student->total(),
+                    'per_page' => $classes_for_student->perPage(),
+                    'current_page' => $classes_for_student->currentPage(),
+                    'last_page' => $classes_for_student->lastPage(),
+                    'links' => array_merge(
+                        [[
+                            'url' => $classes_for_student->url(1),
+                            'label' => 'First',
+                            'active' => $classes_for_student->currentPage() == 1,
+                        ]],
+                        collect(range(1, $classes_for_student->lastPage()))->map(function ($page) use ($classes_for_student) {
+                            return [
+                                'url' => $classes_for_student->url($page),
+                                'label' => $page,
+                                'active' => $classes_for_student->currentPage() == $page,
+                            ];
+                        })->toArray(),
+                        [[
+                            'url' => $classes_for_student->previousPageUrl(),
+                            'label' => 'Previous',
+                            'active' => $classes_for_student->previousPageUrl() !== null,
+                        ],
+                        [
+                            'url' => $classes_for_student->nextPageUrl(),
+                            'label' => 'Next',
+                            'active' => $classes_for_student->nextPageUrl() !== null,
+                        ],
+                        [
+                            'url' => $classes_for_student->url($classes_for_student->lastPage()),
+                            'label' => 'Last',
+                            'active' => $classes_for_student->currentPage() == $classes_for_student->lastPage(),
+                        ]]
+                    ),
+                ],
+            ],
         ]);
     }
+
     
     /**
      * Fungsi helper di-inline saja (private)
@@ -122,7 +164,76 @@ class MataPelajaranController extends Controller
         // Mengembalikan data dalam format JSON
         return response()->json($mapel);
     }
-
+    public function storeJadwal(Request $request)
+    {
+        $validatedData = $request->validate([
+            'kelas_id'          => 'required|integer',
+            'entries'           => 'required|array',
+            'entries.*.hari'    => 'required|string|in:senin,selasa,rabu,kamis,jumat,sabtu',
+            'entries.*.jam_ke'  => 'required|integer',
+            'entries.*.jam'     => 'required|string', // ✅ validasi jam ditambahkan
+            'entries.*.mapel_id'=> 'required|integer|exists:master_mapel,id',
+        ]);
+    
+        try {
+            foreach ($validatedData['entries'] as $entry) {
+                JadwalMataPelajaran::create([
+                    'hari'     => $entry['hari'],
+                    'jam_ke'   => $entry['jam_ke'],
+                    'jam'      => $entry['jam'],
+                    'mapel_id' => $entry['mapel_id'],
+                    'kelas_id' => $validatedData['kelas_id'],
+                ]);
+            }
+    
+            return response()->json(['message' => 'Jadwal berhasil disimpan!'], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error saving jadwal:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Gagal menyimpan jadwal',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function getJadwal(Request $request)
+    {
+        $request->validate([
+            'kelas_id' => 'required|integer',
+        ], [], [
+            'kelas_id' => 'kelas_id', // 🛠️ override agar tidak berubah jadi 'kelas id'
+        ]);
+    
+        $jadwals = JadwalMataPelajaran::with('mapel')
+            ->where('kelas_id', $request->kelas_id)
+            ->get();
+    
+        $struktur = [];
+    
+        foreach ($jadwals as $jadwal) {
+            $jamKe = $jadwal->jam_ke;
+            $hari = strtolower($jadwal->hari);
+    
+            if (!isset($struktur[$jamKe])) {
+                $struktur[$jamKe] = [
+                    'jam_ke' => $jamKe,
+                    'jam' => $jadwal->jam ?? '',
+                    'jadwal' => [],
+                ];
+            }
+    
+            $struktur[$jamKe]['jadwal'][$hari] = [
+                'mapel' => $jadwal->mapel->mapel ?? '-',
+                'mapel_id' => $jadwal->mapel_id,
+            ];
+        }
+    
+        ksort($struktur);
+    
+        return response()->json(array_values($struktur));
+    }
+    
+    
 
     // Menampilkan form untuk membuat mata pelajaran baru
     public function create()
