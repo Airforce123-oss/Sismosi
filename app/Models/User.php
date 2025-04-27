@@ -2,9 +2,8 @@
 namespace App\Models;
 
 use Laratrust\Models\Role;
-//use Laratrust\Traits\LaratrustUserTrait; // Gunakan LaratrustUserTrait saja
-//use Laratrust\Traits\HasRoles;
-use Spatie\Permission\Traits\HasRoles as TraitsHasRoles; // Dari Spatie, jika Anda menggunakan Spatie's permission package
+use Laratrust\Models\LaratrustUserTrait;
+use Spatie\Permission\Traits\HasRoles as TraitsHasRoles; 
 use Laratrust\Models\Permission;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -18,6 +17,8 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;// Gunakan LaratrustUserTrait saja
 
     use TraitsHasRoles;
+
+    //use LaratrustUserTrait;
 
     protected $fillable = [
         'user_id',
@@ -145,5 +146,17 @@ public function waliKelas()
 {
     return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
 }
+
+public function student()
+{
+    return $this->hasOne(\App\Models\Student::class, 'user_id');
+}
+
+public function class()
+{
+    return $this->belongsTo(Classes::class, 'class_id');
+}
+
+
 
 }

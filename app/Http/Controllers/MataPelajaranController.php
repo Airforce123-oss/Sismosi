@@ -198,43 +198,45 @@ class MataPelajaranController extends Controller
     
     public function getJadwal(Request $request)
     {
-        $request->validate([
-            'kelas_id' => 'required|integer',
-        ], [], [
-            'kelas_id' => 'kelas_id', // 🛠️ override agar tidak berubah jadi 'kelas id'
+        // 1. Validasi bahwa kelas_id wajib, integer, dan harus ada di tabel classes
+        $validated = $request->validate([
+            'kelas_id' => 'required|integer|exists:classes,id',
         ]);
     
-        $jadwals = JadwalMataPelajaran::with('mapel')
-            ->where('kelas_id', $request->kelas_id)
+        $kelasId = $validated['kelas_id'];
+    
+        // 2. Ambil semua jadwal untuk kelas itu, eager-load mapel & kelas
+        $jadwals = JadwalMataPelajaran::with(['mapel', 'kelas'])
+            ->where('kelas_id', $kelasId)
             ->get();
     
+        // 3. Susun ulang menjadi array per jam_ke
         $struktur = [];
-    
         foreach ($jadwals as $jadwal) {
             $jamKe = $jadwal->jam_ke;
-            $hari = strtolower($jadwal->hari);
+            $hari  = strtolower($jadwal->hari);
     
             if (!isset($struktur[$jamKe])) {
                 $struktur[$jamKe] = [
                     'jam_ke' => $jamKe,
-                    'jam' => $jadwal->jam ?? '',
+                    'jam'    => $jadwal->jam ?? '', 
                     'jadwal' => [],
                 ];
             }
     
             $struktur[$jamKe]['jadwal'][$hari] = [
-                'mapel' => $jadwal->mapel->mapel ?? '-',
+                'mapel'    => $jadwal->mapel->mapel ?? '-',    // nama mapel
                 'mapel_id' => $jadwal->mapel_id,
+                'kelas'    => $jadwal->kelas->name ?? '-',     // nama kelas
             ];
         }
     
         ksort($struktur);
     
+        // 4. Kembalikan sebagai JSON
         return response()->json(array_values($struktur));
     }
     
-    
-
     // Menampilkan form untuk membuat mata pelajaran baru
     public function create()
     {

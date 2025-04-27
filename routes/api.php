@@ -11,6 +11,7 @@ use App\Models\Mapel;
 use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\MataPelajaranController; 
@@ -116,6 +117,8 @@ Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);
 Route::get('/api/classes', [ClassController::class, 'index']);
 Route::get('/teacher-attendance-report', [AttendanceTeacherController::class, 'getAttendanceReport']);
 
+Route::middleware('auth:sanctum')->get('/logged-in-student', [StudentController::class, 'getLoggedInStudent']);
+Route::get('/students-dashboard', [ProfileController::class, 'dashboard']);
 
 
 Route::post('/save-selected-mapel', [AttendanceController::class, 'saveSelectedMapel']);

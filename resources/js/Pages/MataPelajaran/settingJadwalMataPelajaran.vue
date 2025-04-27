@@ -17,6 +17,13 @@ const props = defineProps({
     required: true,
   },
 });
+
+const getKelasForMapel = (mapelId) => {
+  if (!mapelId) return '-';
+  const m = props.master_mapel.data.find((m) => m.id === mapelId);
+  return m?.kelas || '-';
+};
+
 console.log('Classes for Student:', props.classes_for_student);
 const form = useForm({
   name: props.auth?.user?.name || '',
@@ -29,6 +36,7 @@ const searchTerm = ref('');
 
 const kelasUrl = computed(() => {
   const url = new URL(route('matapelajaran.index'));
+  console.log('URL manual:', url);
   url.searchParams.set('page', currentPage.value); // Gunakan currentPage
   if (searchTerm.value) {
     url.searchParams.set('search', searchTerm.value);
@@ -65,6 +73,7 @@ watch(
     });
   }
 );
+
 // FILTER DATA
 const jurusanList = ['Ilmu Pengetahuan Alam', 'Ilmu Pengetahuan Sosial'];
 const tingkatList = ['X', 'XI', 'XII'];
@@ -77,34 +86,84 @@ const selectedMapelFilter = ref(null);
 
 // HARI
 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
-
-// DATA JADWAL (DUMMY)
 const schedule = ref([]);
 
 const loadSchedule = async () => {
-  if (!selectedKelas.value) {
-    console.warn('❗ kelas_id masih kosong. Jadwal tidak dimuat.');
+  const id = parseInt(selectedKelas.value, 10);
+
+  if (isNaN(id) || id <= 0) {
+    console.warn('❗ kelas_id tidak valid. Jadwal tidak dimuat.');
+    schedule.value = Array.from({ length: 8 }, (_, i) => ({
+      jam_ke: i + 1,
+      jam: `${String(7 + i).padStart(2, '0')}:00 - ${String(7 + i)}:45`,
+      jadwal: {
+        senin: null,
+        selasa: null,
+        rabu: null,
+        kamis: null,
+        jumat: null,
+        sabtu: null,
+        minggu: null,
+      },
+    }));
     return;
   }
 
   try {
-    console.log('Selected Kelas:', selectedKelas.value);
-
     const response = await axios.get(route('jadwal.get'), {
-      params: {
-        kelas_id: selectedKelas.value,
-      },
+      params: { kelas_id: id },
     });
 
-    schedule.value = response.data;
+    const rawData = response.data; // Data mentah dari API
 
-    localStorage.setItem('jadwal_mingguan', JSON.stringify(schedule.value));
-    console.log('✅ Jadwal berhasil disimpan ke localStorage');
-  } catch (error) {
-    console.error(
-      '❌ Gagal memuat atau menyimpan jadwal:',
-      error.response?.data || error
+    // Transformasi data mentah menjadi struktur tabel
+    const transformed = Array.from({ length: 8 }, (_, i) => {
+      const jamKe = i + 1;
+      const jamLabel = `${String(7 + i).padStart(2, '0')}:00 - ${String(
+        7 + i
+      )}:45`;
+
+      const jadwalPerHari = {};
+      days.forEach((day) => {
+        // Menyaring data berdasarkan jam_ke dan hari
+        const entry = rawData.find(
+          (item) => item.jam_ke === jamKe && item.jadwal?.[day]
+        );
+
+        // Menentukan jadwal per hari berdasarkan data yang ditemukan
+        jadwalPerHari[day] = entry
+          ? {
+              mapel:
+                entry.jadwal[day]?.mapel ||
+                `Mapel ID: ${entry.jadwal[day]?.mapel_id}`,
+              mapel_id: entry.jadwal[day]?.mapel_id,
+              kelas: entry.jadwal[day]?.kelas || '-',
+            }
+          : null;
+      });
+
+      return { jam_ke: jamKe, jam: jamLabel, jadwal: jadwalPerHari };
+    });
+
+    schedule.value = transformed;
+
+    // Menyimpan data mapel di modal jika sedang dalam mode edit
+    if (editingSlot.value.jamKe && editingSlot.value.hari) {
+      const matchedSlot = schedule.value.find(
+        (s) => s.jam_ke === editingSlot.value.jamKe
+      );
+      if (matchedSlot) {
+        const mapelDiSlot = matchedSlot.jadwal[editingSlot.value.hari];
+        selectedMapelModal.value = mapelDiSlot ? mapelDiSlot.mapel_id : null;
+      }
+    }
+
+    console.log(
+      '✅ Jadwal berhasil dimuat dan ditransformasi:',
+      schedule.value
     );
+  } catch (error) {
+    console.error('❌ Gagal mengambil jadwal:', error.response?.data || error);
   }
 };
 
@@ -218,8 +277,25 @@ const saveJadwal = async () => {
     return;
   }
 
-  const jam =
-    schedule.value.find((s) => s.jam_ke === editingSlot.value.jamKe)?.jam || '';
+  // Mendapatkan nilai jam untuk jam_ke tertentu
+  const jamKeNumber = parseInt(editingSlot.value.jamKe);
+  const jam = schedule.value.find((s) => s.jam_ke === jamKeNumber)?.jam || '';
+  console.log('editingSlot.jamKe:', editingSlot.value.jamKe);
+  console.log('Schedule:', schedule.value);
+  console.log(
+    'Matched slot:',
+    schedule.value.find((s) => s.jam_ke === parseInt(editingSlot.value.jamKe))
+  );
+
+  // Validasi jika jam kosong
+  if (!jam) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Jam belum terisi!',
+      text: 'Pastikan jadwal untuk jam ini sudah ada.',
+    });
+    return;
+  }
 
   entries.value.push({
     hari: editingSlot.value.hari,
@@ -271,7 +347,10 @@ const hasJadwalForDay = (day) => {
 
 const getMapelForSlot = (slot, day) => {
   const item = slot.jadwal[day];
-  return typeof item === 'object' ? item.mapel : item;
+  if (!item) {
+    return '✖';
+  }
+  return typeof item === 'object' ? item.mapel ?? '✖' : item;
 };
 
 const getMapelName = (jamKe, hari) => {
@@ -282,6 +361,7 @@ const getMapelName = (jamKe, hari) => {
 };
 
 onMounted(() => {
+  console.log('Schedule on mount:', schedule.value);
   const savedSchedule = localStorage.getItem('jadwal_mingguan');
   if (savedSchedule) {
     try {
@@ -292,6 +372,14 @@ onMounted(() => {
   }
   loadSchedule();
   initFlowbite();
+});
+
+watch(selectedKelas, (newVal) => {
+  console.log('Selected Kelas updated:', newVal, typeof newVal);
+  if (newVal) loadSchedule();
+});
+watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
+  loadSchedule();
 });
 </script>
 
@@ -416,245 +504,256 @@ onMounted(() => {
     </nav>
     <!-- start1 -->
 
-    <main class="p-4 md:ml-64 h-auto pt-20">
-      <div class="container mx-auto p-4">
-        <div class="px-4 py-4 sm:px-6 lg:px-8">
-          <div class="p-6 space-y-6">
-            <!-- FILTER -->
-            <div
-              class="bg-white shadow-md rounded-xl p-6 w-full max-w-4xl mx-auto mb-6"
-            >
-              <h2 class="text-xl text-center font-semibold mb-4 text-gray-700">
-                FILTER JADWAL MATA PELAJARAN
-              </h2>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Jurusan (opsional, untuk filter tampilan) -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-600 mb-1">
-                    Jurusan
-                  </label>
-                  <select
-                    v-model="selectedJurusan"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+    <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="p-6 space-y-6">
+          <!-- FILTER -->
+          <div
+            class="bg-white shadow-md rounded-xl p-6 w-full max-w-4xl mx-auto mb-6"
+          >
+            <h2 class="text-xl text-center font-semibold mb-4 text-gray-700">
+              PENGATURAN JADWAL MATA PELAJARAN
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Jurusan (opsional, untuk filter tampilan) -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">
+                  Jurusan
+                </label>
+                <select
+                  v-model="selectedJurusan"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">Pilih Jurusan</option>
+                  <option
+                    v-for="jurusan in jurusanList"
+                    :key="jurusan"
+                    :value="jurusan"
                   >
-                    <option value="">Pilih Jurusan</option>
-                    <option
-                      v-for="jurusan in jurusanList"
-                      :key="jurusan"
-                      :value="jurusan"
-                    >
-                      {{ jurusan }}
-                    </option>
-                  </select>
-                </div>
-
-                <!-- Mata Pelajaran -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-600 mb-1">
-                    Mata Pelajaran
-                  </label>
-                  <select
-                    v-model="selectedMapelModal"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="">Pilih Mata Pelajaran</option>
-                    <option
-                      v-for="mapel in props.master_mapel.data"
-                      :key="mapel.id"
-                      :value="mapel.id"
-                    >
-                      {{ mapel.mapel }}
-                    </option>
-                  </select>
-                </div>
-
-                <!-- Kelas -->
-                <div>
-                  <label class="block text-sm font-semibold text-gray-600 mb-1">
-                    Kelas
-                  </label>
-                  <select
-                    v-model="selectedKelas"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="">Pilih Kelas</option>
-                    <option
-                      v-for="c in props.classes_for_student.data"
-                      :key="c.id"
-                      :value="c.id"
-                    >
-                      {{ c.name }}
-                    </option>
-                  </select>
-                </div>
+                    {{ jurusan }}
+                  </option>
+                </select>
               </div>
 
-              <!-- Tombol -->
-              <div class="mt-6 flex justify-end">
+              <!-- Mata Pelajaran -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">
+                  Mata Pelajaran
+                </label>
+                <select
+                  v-model="selectedMapelModal"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">Pilih Mata Pelajaran</option>
+                  <option
+                    v-for="mapel in props.master_mapel.data"
+                    :key="mapel.id"
+                    :value="mapel.id"
+                  >
+                    {{ mapel.mapel }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Kelas -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">
+                  Kelas
+                </label>
+                <select
+                  v-model.number="selectedKelas"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">Pilih Kelas</option>
+                  <option
+                    v-for="c in props.classes_for_student.data"
+                    :key="c.id"
+                    :value="c.id"
+                  >
+                    {{ c.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Tombol -->
+            <!--    <div class="mt-6 flex justify-end">
                 <button
                   class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition duration-200"
                   @click="loadSchedule"
                 >
                   Lihat Jadwal
                 </button>
-              </div>
-            </div>
+              </div>-->
+          </div>
 
-            <!-- TABEL JADWAL -->
-            <div class="overflow-x-auto bg-white shadow-lg rounded-lg">
-              <table
-                class="min-w-full text-sm text-center border border-gray-200"
-              >
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th class="border p-2">Jam Ke</th>
-                    <th class="border p-2">Jam</th>
-                    <th
-                      v-for="day in days"
-                      :key="day"
-                      class="border p-2 capitalize"
+          <!-- TABEL JADWAL -->
+          <div class="overflow-x-auto bg-white shadow-lg rounded-lg">
+            <table
+              class="min-w-full text-sm text-center border border-gray-200"
+            >
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="border p-2">Jam Ke</th>
+                  <th class="border p-2">Jam</th>
+                  <th
+                    v-for="day in days"
+                    :key="day"
+                    class="border p-2 capitalize"
+                  >
+                    {{ day }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Jika schedule kosong, tetap tampilkan row kosong -->
+                <tr v-if="schedule.length === 0">
+                  <td
+                    colspan="100%"
+                    class="border p-2 text-gray-500 text-center"
+                  >
+                    Tidak ada data jadwal
+                  </td>
+                </tr>
+
+                <!-- Render data jadwal jika ada -->
+                <tr
+                  v-for="(slot, index) in schedule"
+                  :key="index"
+                  :class="{ 'bg-gray-50': index % 2 === 0 }"
+                >
+                  <td class="border p-2">{{ slot.jam_ke }}</td>
+                  <td class="border p-2">{{ slot.jam }}</td>
+                  <td v-for="day in days" :key="day" class="border p-2">
+                    <span
+                      v-if="day === 'sabtu' || day === 'minggu'"
+                      class="text-red-500 font-semibold"
                     >
-                      {{ day }}
-                    </th>
+                      Libur
+                    </span>
+                    <button
+                      v-else
+                      class="w-full h-full px-2 py-1 text-sm rounded transition-all duration-150"
+                      :class="
+                        slot.jadwal[day]?.mapel
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-yellow-400 text-white'
+                      "
+                      @click="openEditModal(slot.jam_ke, day, slot)"
+                    >
+                      {{ slot.jadwal[day]?.mapel || '✖' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!--LAPORAN JADWAL-->
+
+          <div class="mt-10">
+            <h2 class="text-xl text-center font-bold text-gray-800 mb-4">
+              Laporan Jadwal Mingguan
+            </h2>
+
+            <div
+              v-for="day in days"
+              :key="day"
+              class="mb-8 border border-gray-300 rounded-lg overflow-hidden"
+            >
+              <div
+                class="bg-gray-100 px-4 py-2 text-lg text-center font-semibold capitalize border-b"
+              >
+                {{ day }}
+              </div>
+
+              <table class="w-full text-sm text-left">
+                <thead class="bg-gray-200">
+                  <tr>
+                    <th class="p-3 border">Jam Ke</th>
+                    <th class="p-3 border">Waktu</th>
+                    <th class="p-3 border">Mata Pelajaran</th>
+                    <th class="p-3 border">Kelas</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- Jika hari Sabtu atau Minggu, langsung tampilkan satu baris Libur -->
+                  <tr v-if="day === 'sabtu' || day === 'minggu'">
+                    <td
+                      colspan="3"
+                      class="p-3 border text-center text-red-500 font-semibold"
+                    >
+                      Libur
+                    </td>
+                  </tr>
+
+                  <!-- Bila ada jadwal, loop slot -->
                   <tr
-                    v-for="(slot, index) in schedule"
-                    :key="index"
-                    :class="{ 'bg-gray-50': index % 2 === 0 }"
+                    v-else-if="hasJadwalForDay(day)"
+                    v-for="slot in schedule"
+                    :key="`${day}-${slot.jam_ke}`"
+                    v-show="getMapelForSlot(slot, day)"
                   >
-                    <td class="border p-2">{{ slot.jam_ke }}</td>
-                    <td class="border p-2">{{ slot.jam }}</td>
-                    <td v-for="day in days" :key="day" class="border p-2">
-                      <span
-                        v-if="day === 'sabtu' || day === 'minggu'"
-                        class="text-red-500 font-semibold"
-                      >
-                        Libur
-                      </span>
-                      <button
-                        v-else
-                        class="w-full h-full px-2 py-1 text-sm rounded transition-all duration-150"
-                        :class="
-                          slot.jadwal[day]?.mapel
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-yellow-400 text-white'
-                        "
-                        @click="openEditModal(slot.jam_ke, day)"
-                      >
-                        {{ slot.jadwal[day]?.mapel || '✖' }}
-                      </button>
+                    <td class="p-3 border">{{ slot.jam_ke }}</td>
+                    <td class="p-3 border">{{ slot.jam }}</td>
+                    <td class="p-3 border">
+                      {{ getMapelForSlot(slot, day) }}
+                    </td>
+                    <td class="p-3 border">
+                      {{ slot.jadwal[day]?.kelas || '-' }}
+                    </td>
+                  </tr>
+
+                  <!-- Bila tidak ada sama sekali -->
+                  <tr v-else>
+                    <td
+                      colspan="3"
+                      class="p-3 border text-center text-gray-500 italic"
+                    >
+                      Tidak ada jadwal
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </div>
 
-            <!--LAPORAN JADWAL-->
+          <!-- MODAL -->
+          <div
+            v-if="showModal"
+            class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center"
+          >
+            <div class="bg-white p-6 rounded-lg w-[90%] md:w-[400px] space-y-4">
+              <h2 class="text-lg font-semibold">Edit Jadwal</h2>
+              <p class="text-sm text-gray-600">
+                Jam ke: {{ editingSlot.jamKe }}, Hari: {{ editingSlot.hari }}
+              </p>
 
-            <div class="mt-10">
-              <h2 class="text-xl font-bold text-gray-800 mb-4">
-                Laporan Jadwal Mingguan
-              </h2>
-
-              <div
-                v-for="day in days"
-                :key="day"
-                class="mb-8 border border-gray-300 rounded-lg overflow-hidden"
-              >
-                <div
-                  class="bg-gray-100 px-4 py-2 text-lg text-center font-semibold capitalize border-b"
+              <!-- Dropdown Mapel -->
+              <select v-model="selectedMapel" class="form-select w-full">
+                <option value="">Pilih Mapel</option>
+                <option
+                  v-for="mapel in props.master_mapel.data"
+                  :key="mapel.id"
+                  :value="mapel"
                 >
-                  {{ day }}
-                </div>
+                  {{ mapel.mapel }}
+                </option>
+              </select>
 
-                <table class="w-full text-sm text-left">
-                  <thead class="bg-gray-200">
-                    <tr>
-                      <th class="p-3 border">Jam Ke</th>
-                      <th class="p-3 border">Waktu</th>
-                      <th class="p-3 border">Mata Pelajaran</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- Jika hari Sabtu atau Minggu, langsung tampilkan satu baris Libur -->
-                    <tr v-if="day === 'sabtu' || day === 'minggu'">
-                      <td
-                        colspan="3"
-                        class="p-3 border text-center text-red-500 font-semibold"
-                      >
-                        Libur
-                      </td>
-                    </tr>
-
-                    <!-- Bila ada jadwal, loop slot -->
-                    <tr
-                      v-else-if="hasJadwalForDay(day)"
-                      v-for="slot in schedule"
-                      :key="`${day}-${slot.jam_ke}`"
-                      v-show="getMapelForSlot(slot, day)"
-                    >
-                      <td class="p-3 border">{{ slot.jam_ke }}</td>
-                      <td class="p-3 border">{{ slot.jam }}</td>
-                      <td class="p-3 border">
-                        {{ getMapelForSlot(slot, day) }}
-                      </td>
-                    </tr>
-
-                    <!-- Bila tidak ada sama sekali -->
-                    <tr v-else>
-                      <td
-                        colspan="3"
-                        class="p-3 border text-center text-gray-500 italic"
-                      >
-                        Tidak ada jadwal
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- MODAL -->
-            <div
-              v-if="showModal"
-              class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center"
-            >
-              <div
-                class="bg-white p-6 rounded-lg w-[90%] md:w-[400px] space-y-4"
-              >
-                <h2 class="text-lg font-semibold">Edit Jadwal</h2>
-                <p class="text-sm text-gray-600">
-                  Jam ke: {{ editingSlot.jamKe }}, Hari: {{ editingSlot.hari }}
-                </p>
-
-                <!-- Dropdown Mapel -->
-                <select v-model="selectedMapel" class="form-select w-full">
-                  <option value="">Pilih Mapel</option>
-                  <option
-                    v-for="mapel in props.master_mapel.data"
-                    :key="mapel.id"
-                    :value="mapel"
-                  >
-                    {{ mapel.mapel }}
-                  </option>
-                </select>
-
-                <div class="flex justify-end gap-2">
-                  <button
-                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                    @click="closeModal"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    @click="saveJadwal"
-                  >
-                    Simpan
-                  </button>
-                </div>
+              <div class="flex justify-end gap-2">
+                <button
+                  class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  @click="closeModal"
+                >
+                  Batal
+                </button>
+                <button
+                  class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  @click="saveJadwal"
+                >
+                  Simpan
+                </button>
               </div>
             </div>
           </div>

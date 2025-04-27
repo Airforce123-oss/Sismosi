@@ -15,30 +15,87 @@ class AuthController extends Controller
     {
         // Validasi input
         $credentials = $request->only('email', 'password');
-
+        
         // Cek kredensial dan autentikasi
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-
-            // Menentukan pengalihan berdasarkan role
-            if ($user->hasRole('student')) {
-                // Jika user adalah student, redirect ke student dashboard
-                return redirect()->route('student.dashboard');
-            } elseif ($user->hasRole('teacher')) {
-                // Jika user adalah teacher, redirect ke teacher dashboard
-                return redirect()->route('teacher.dashboard');
+    
+            // Ambil student_id dari request
+            $studentId = $request->student_id;
+    
+            // Debugging: Log student_id yang diterima
+            Log::info('Login Request Data:', [
+                'email' => $request->email,
+                'student_id' => $studentId,
+            ]);
+    
+            // Cek role_name pada user
+            $roleName = $user->role_name; // Mengambil role_name dari user
+    
+            // Debugging: Log role user
+            Log::info('Authenticated User:', [
+                'user_id' => $user->id,
+                'role_name' => $roleName,
+            ]);
+    
+            // Jika user adalah student
+            if ($roleName === 'student') {
+                $student = \App\Models\Student::where('user_id', $user->id)->first();
+            
+                if ($student) {
+                    // Pastikan student_id yang dikirim valid
+                    if ($studentId != $student->id) {
+                        return redirect()->route('login')->withErrors([
+                            'student_id' => 'Student ID tidak valid untuk pengguna ini.',
+                        ]);
+                    }
+            
+                    // Simpan student_id ke session
+                    session(['student_id' => $studentId]);
+                    return redirect()->route('student.dashboard');
+                } else {
+                    // Jika user tidak terdaftar sebagai student
+                    return redirect()->route('login')->withErrors([
+                        'email' => 'Email tidak terdaftar sebagai siswa.',
+                    ]);
+                }
             }
             
-            // Pengalihan default, jika tidak ada role yang cocok
-            return redirect()->route('default.dashboard'); 
+    
+            // Jika user adalah teacher
+            if ($roleName === 'teacher') {
+                // Pastikan teacher terdaftar di tabel teachers (jika perlu)
+                $teacher = \App\Models\Teacher::where('user_id', $user->id)->first();
+                if ($teacher) {
+                    // Jika terdaftar sebagai teacher
+                    return redirect()->route('teacher.dashboard');
+                } else {
+                    // Jika user tidak terdaftar sebagai teacher
+                    return redirect()->route('login')->withErrors([
+                        'email' => 'Email tidak terdaftar sebagai guru.',
+                    ]);
+                }
+            }
+    
+            // Jika user adalah admin
+            if ($roleName === 'admin') {
+                return redirect()->route('admin.dashboard');
+            }
+            
+    
+            // Jika role tidak dikenali
+            return redirect()->route('login')->withErrors([
+                'email' => 'Role tidak ditemukan untuk pengguna ini.',
+            ]);
         }
-
+    
         // Jika login gagal
         throw ValidationException::withMessages([
             'email' => ['The provided credentials are incorrect.'],
         ]);
     }
-
+    
+    
     // (Optional) Metode untuk menangani logout
     public function logout(Request $request)
     {

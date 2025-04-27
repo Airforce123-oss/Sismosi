@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
   
 use Illuminate\Http\Request;  
 use App\Models\Student;  
+use App\Models\JadwalMataPelajaran;
+
 use Inertia\Inertia;  
+
   
 class StudentRoleController extends Controller  
 { 
@@ -82,12 +85,47 @@ class StudentRoleController extends Controller
     {    
         return Inertia::render('Students/melihatDataAbsensiSiswa'); // Menggunakan huruf kecil  
     }  
-
-    public function melihatJadwalPelajaran()      
-    {      
-        return Inertia::render('Students/melihatJadwalPelajaran'); // Menggunakan huruf kecil  
-    }  
+    public function melihatJadwalPelajaran()
+    {
+        // 1. Ambil semua jadwal, eager-load relasi mapel & kelas
+        $schedule = JadwalMataPelajaran::with(['mapel', 'kelas'])
+            ->get()
+            ->groupBy('jam_ke')
+            ->map(function ($group) {
+                $jamKe = $group[0]->jam_ke;
+                $jam   = $group[0]->jam; // kolom 'jam' di tabel jadwal_mata_pelajaran
     
-  
- 
+                // Inisialisasi struktur per jam_ke
+                $data = [
+                    'jam_ke' => $jamKe,
+                    'jam'    => $jam,
+                    'jadwal' => [],        // akan diisi per hari
+                ];
+    
+                // Isi jadwal per hari
+                foreach ($group as $jadwal) {
+                    $hari = strtolower($jadwal->hari);
+                    $data['jadwal'][$hari] = [
+                        'mapel'   => $jadwal->mapel->mapel ?? '-',   
+                        'kelas'   => $jadwal->kelas->name  ?? '-',     
+                        'kelas_id' => $jadwal->kelas_id, // tambahkan kelas_id
+                    ];
+                }
+    
+                return $data;
+            })
+            ->values(); // reset key numeric
+    
+        // 2. Ambil daftar kelas untuk dropdown: [id => name]
+        $kelasList = \App\Models\Classes::pluck('name', 'id')->toArray();
+    
+        // 3. Kirim ke Inertia
+        return Inertia::render('Students/melihatJadwalPelajaran', [
+            'schedule'  => $schedule,
+            'kelasList' => $kelasList,
+        ]);
+    }
+    
+    
+    
 }  

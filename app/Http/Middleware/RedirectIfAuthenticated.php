@@ -20,7 +20,20 @@ class RedirectIfAuthenticated
         $guards = empty($guards) ? [null] : $guards;
 
         foreach ($guards as $guard) {
+            // Cek apakah pengguna sudah terautentikasi
             if (Auth::guard($guard)->check()) {
+                $user = Auth::user();
+
+                // Pengalihan berdasarkan peran pengguna
+                if ($user->role_name === 'student') {
+                    return redirect()->route('student.dashboard');
+                } elseif ($user->role_name === 'teacher') {
+                    return redirect()->route('teacher.dashboard');
+                } elseif ($user->role_name === 'admin') {
+                    return redirect()->route('dashboard');  // Ganti dengan rute yang sesuai untuk admin
+                }
+
+                // Jika tidak ada role yang cocok, arahkan ke home
                 return redirect(RouteServiceProvider::HOME);
             }
         }

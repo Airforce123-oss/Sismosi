@@ -359,7 +359,6 @@ onMounted(async () => {
   // Panggil fungsi fetching data secara berurutan
   //await fetchClassByTeacher();
   await fetchAttendanceData();
-  initFlowbite();
   await fetchSessionData();
   await fetchData();
   await fetchKelas(); // Pastikan fetchKelas tidak menimpa selectedKelas dari localStorage
@@ -377,6 +376,7 @@ onMounted(async () => {
       selectedKelas.value
     );
   }
+  initFlowbite();
 });
 
 const years = ['2025', '2026', '2027', '2028']; // Hanya tahun tunggal
@@ -464,7 +464,7 @@ const generateUrl = (year, month, kelas) => {
     return '#';
   }
 
-  // Gunakan Ziggy untuk membuat URL
+  // Gunakan Ziggy untuk membuat URL 
   const url = route('studentsabsensiGuru', {
     kelas: kelasId,
     year,
@@ -1132,6 +1132,13 @@ watch(selectedKelas, (newVal, oldVal) => {
                   href="mataPelajaran"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Tambah Mata Pelajaran</a
+                >
+              </li>
+              <li>
+                <a
+                  href="settingJadwalMataPelajaran"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Jadwal Mata Pelajaran</a
                 >
               </li>
             </ul>

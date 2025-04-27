@@ -6,6 +6,8 @@ use App\Http\Controllers\ClassController;
 use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceTeacherController;
+use App\Models\Student;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Inertia\Inertia;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
@@ -35,15 +37,67 @@ Route::get('/', function () {
     ]);
 });
 
+Route::middleware([
+    'web',
+    EnsureFrontendRequestsAreStateful::class,
+    'auth:sanctum',
+])->get('/api/logged-in-student', function () {
+    return Auth::user();
+});
+
 // Authentication Routes
 Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 // Dashboard Routes
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [ProfileController::class, 'dashboard'])->name('dashboard');
-    Route::get('/teachersDashboard', fn() => Inertia::render('teachersDashboard'))->name('teachersdashboard');
-    Route::get('/studentsDashboard', fn() => Inertia::render('studentsDashboard'))->name('studentsdashboard');
+// Dashboard Admin
+Route::get('/dashboard', function () {
+    $user = Auth::user();
+
+    if (!$user) {
+        return redirect()->route('login');
+    }
+
+    \Log::info('Redirecting user to their dashboard. Role: ' . $user->role_name);
+
+    switch ($user->role_name) {
+        case 'student':
+            return redirect()->route('student.dashboard');
+        case 'teacher':
+            return redirect()->route('teacher.dashboard');
+        case 'admin':
+            return redirect()->route('admin.dashboard');
+        default:
+            \Log::info('Invalid role, redirecting to login.');
+            return redirect()->route('login');
+    }
+})->name('dashboard');
+
+    // Dashboard Admin
+    Route::get('/admin-dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('admin.dashboard');
+
+    // Dashboard Guru
+    Route::get('/teacher-dashboard', function () {
+        return Inertia::render('teachersDashboard');
+    })->name('teacher.dashboard');
+
+    // Dashboard Siswa
+    Route::get('/student-dashboard', function () {
+        $user = Auth::user();
+        $student = Student::where('user_id', $user->id)->first();
+    
+        if (!$student) {
+            return redirect()->route('errorPage')->with('message', 'Student not found');
+        }
+    
+        return Inertia::render('studentsDashboard', [
+            'student_id' => $student->id,
+        ]);
+    })->name('student.dashboard');
+    
 
     // Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -105,10 +159,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/jadwal-mata-pelajaran', [MataPelajaranController::class, 'storeJadwal'])
      ->name('jadwal.store');
      Route::get('/jadwal', [MataPelajaranController::class, 'getJadwal'])->name('jadwal.get');
-
-
-
- 
 });
 
 // Admin Routes (with middleware for redirection)
@@ -142,6 +192,8 @@ Route::get('melihatDataAbsensiSiswa', [StudentRoleController::class, 'melihatDat
 Route::get('melihatJadwalPelajaran', [StudentRoleController::class, 'melihatJadwalPelajaran'])->name('melihatJadwalPelajaran');  
 
 Route::resource('student_roles', StudentRoleController::class);  
+
+
 
 Route::post('/user/{userId}/assign-role', [UserController::class, 'assignRole']);
 Route::put('/user/{user}/roles', [UserController::class, 'updateRoles'])->name('user.roles.update');

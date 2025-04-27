@@ -98,7 +98,7 @@ onMounted(async () => {
       console.log('Charts successfully initialized.');
     } else {
       console.error('Failed to initialize charts.');
-    }
+  }
     const apexChartElement = document.querySelector('#apexcharts-area');
     const barChartElement = document.querySelector('#bar');
     if (apexChartElement && barChartElement) {
@@ -107,6 +107,7 @@ onMounted(async () => {
       console.log('Waiting for chart elements...');
     }
   });
+  initFlowbite();
 });
 
 const observer = new MutationObserver((mutationsList) => {
@@ -593,7 +594,7 @@ const barChartOptions = {
               <!-- Dropdown Absensi Guru -->
               <li>
                 <a
-                  href="indexx"
+                  href="absensiGuru"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Absensi Guru</a
                 >

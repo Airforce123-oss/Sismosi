@@ -117,6 +117,7 @@ const fetchData = () => {
 
 onMounted(async () => {
   fetchData();
+  initFlowbite();
 });
 
 watch([selectedTeacher, searchNIP], () => {

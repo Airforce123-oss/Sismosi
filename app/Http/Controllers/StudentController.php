@@ -21,6 +21,7 @@ use App\Models\Classes;
 use App\Models\Section;
 use App\Models\Religion;
 use App\Models\Teacher;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Gender;
 use App\Models\NoInduk;
 use Spatie\Permission\Traits\HasRoles;
@@ -60,8 +61,27 @@ class StudentController extends Controller
         ]);
     }
     
-
- 
+    public function getLoggedInStudent(Request $request)
+    {
+        $user = Auth::user();
+    
+        if (!$user || $user->role_name !== 'student') {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+    
+        // Ambil student yang berelasi dengan user
+        $student = Student::where('user_id', $user->id)->first();
+    
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+    
+        return response()->json([
+            'id' => $student->id,
+            'name' => $student->name,
+        ]);
+    }
+    
 
     public function melihatDataAbsensiSiswa(Request $request)
     {

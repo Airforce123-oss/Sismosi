@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-
+import { initFlowbite } from 'flowbite';
 // State management
 const newAttendance = ref([]);
 const loading = ref(false);
@@ -1675,6 +1675,7 @@ function loadStatusFromLocalStorage() {
 }
 
 onMounted(async () => {
+  initFlowbite();
   try {
     console.log('🟢 Props saat mounted:', props);
     console.log('🟢 selectedMapel saat mounted:', props.selectedMapel);

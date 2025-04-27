@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { throttle } from 'lodash';
-
+import { initFlowbite } from 'flowbite';
 const selectedClassId = ref(null);
 const isModalVisible = ref(false);
 const showAbsensiModal = (teacherId, date) => {
@@ -1211,6 +1211,7 @@ onMounted(() => {
 
     fetchAttendanceRecords();
     fetchAttendanceReport();
+    initFlowbite();
 
     // Load dan validasi localStorage
     let stored = loadFromLocalStorage();
@@ -2625,6 +2626,13 @@ watch([selectedTeacherId, selectedDate], () => {
                   href="mataPelajaran"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Tambah Mata Pelajaran</a
+                >
+              </li>
+              <li>
+                <a
+                  href="settingJadwalMataPelajaran"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Jadwal Mata Pelajaran</a
                 >
               </li>
             </ul>

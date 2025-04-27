@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -19,17 +18,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
 
-    {{-- message toastr --}}
-	<link rel="stylesheet" href="{{ URL::to('assets/css/toastr.min.css') }}">
-	<script src="{{ URL::to('assets/js/toastr_jquery.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-	<script src="{{ URL::to('assets/js/toastr.min.js') }}"></script>
+    <!-- Toastr CSS (CDN Resmi dan Terbaru) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+    <!-- Toastr JS (CDN Resmi dan Terbaru) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="{{ URL::to('assets/js/toastr.min.js') }}"></script>
 
 </head>
 
 <body>
-    <style>    
-        .invalid-feedback{
+    <style>
+        .invalid-feedback {
             font-size: 14px;
         }
     </style>
