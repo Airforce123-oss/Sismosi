@@ -286,7 +286,7 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-4xl font-bold text-white">
-                                    {{ total }}
+                                    {{ total }} 125
                                 </h3>
                                 <p class="font-bold">Data Siswa</p>
                             </div>

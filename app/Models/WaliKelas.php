@@ -14,6 +14,22 @@ class WaliKelas extends Model
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
+
+    public function kelas()
+    {
+        return $this->hasMany(Classes::class, 'wali_kelas_id');
+    }
+
+    public function students()
+    {
+        return $this->hasManyThrough(Student::class, Classes::class, 'wali_kelas_id', 'class_id');
+    }
+
+    public function classes()
+{
+    return $this->belongsTo(Classes::class, 'class_id');
+}
+
     public function updateTeacherId()
     {
         // Ambil semua wali kelas yang belum memiliki teacher_id

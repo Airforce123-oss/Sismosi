@@ -435,8 +435,12 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                           <td
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
-                            {{ classForStudent.wali_kelas.name }}
+                            <span v-if="classForStudent.wali_kelas">
+                              {{ classForStudent.wali_kelas.name }}
+                            </span>
+                            <span v-else>-</span>
                           </td>
+
                           <td
                             class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
                           >

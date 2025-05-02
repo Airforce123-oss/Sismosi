@@ -52,7 +52,7 @@ const { props } = usePage();
 
 const teacherClass = ref(props.teacherClass || 'Tidak ada kelas terkait');
 const mapelList = ref([]);
-
+const auth = props.auth;
 console.log('Props received:', JSON.stringify(props, null, 2));
 const form = useForm({
   name: props.auth.user.name,
@@ -77,22 +77,20 @@ const fetchSessionData = async () => {
 
 // Fungsi untuk mengambil kelas berdasarkan guru
 const fetchClassByTeacher = async () => {
-  // Cek apakah nama guru tersedia
-  const teacherName = props.auth.user?.name;
-  if (!teacherName) {
-    console.warn('⚠️ Nama guru tidak tersedia, permintaan dibatalkan.');
+  const teacherId = props.auth.user?.id;
+  if (!teacherId) {
+    console.warn('⚠️ ID guru tidak tersedia, permintaan dibatalkan.');
     teacherClass.value = 'Tidak ada data guru';
     return;
   }
 
   try {
-    console.log('📤 Mengambil data kelas untuk guru:', teacherName);
+    console.log('📤 Mengambil data kelas untuk guru ID:', teacherId);
 
     const response = await axios.get('/api/class-by-teacher', {
-      params: { name: teacherName },
+      params: { id: teacherId },
     });
 
-    // Validasi response dari API
     if (response.data && response.data.class) {
       teacherClass.value = response.data.class;
     } else {
@@ -100,14 +98,8 @@ const fetchClassByTeacher = async () => {
       teacherClass.value = 'Tidak ada kelas terkait';
     }
   } catch (error) {
-    console.error(
-      '❌ Terjadi kesalahan saat mengambil kelas berdasarkan guru:',
-      error
-    );
-
-    // Cek apakah ada response dari server
+    console.error('❌ Terjadi kesalahan:', error);
     if (error.response) {
-      console.error('📥 Response error:', error.response.data);
       teacherClass.value = `Error: ${error.response.status} - ${
         error.response.data.message || 'Terjadi kesalahan'
       }`;
@@ -116,7 +108,25 @@ const fetchClassByTeacher = async () => {
     }
   }
 };
+const selectedTeacherId = ref(props.teacherId || null);
 
+const fetchMapelByTeacher = async () => {
+  try {
+    const teacherId = props.auth.user.id;
+    const response = await axios.get('/api/get-mapel-by-teacher-id', {
+      params: { teacher_id: teacherId },
+    });
+
+    if (response.data && Array.isArray(response.data.mapel)) {
+      selectedMapel.value = response.data.mapel;
+      console.log('✅ Mapel yang diambil:', selectedMapel.value);
+    } else {
+      console.warn('Mapel tidak ditemukan dalam response.');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching mapel:', error);
+  }
+};
 const fetchData = async () => {
   try {
     const response = await axios.get('/api/absensi-siswa');
@@ -139,14 +149,13 @@ const fetchData = async () => {
       console.log(
         'Struktur JSON fetchData:',
         JSON.stringify(response.data, null, 2)
-      ); // Log struktur JSON dengan format yang lebih mudah dibaca
+      );
     }
 
     // Mengambil data kelas dari response
     if (response.data.classes && Array.isArray(response.data.classes.data)) {
-      // Misalnya, kita ambil kelas pertama sebagai kelas yang dipilih
-      selectedKelas.value = response.data.classes[0] || null; // Atur kelas yang dipilih
-      console.log('Selected Kelas:', selectedKelas.value); // Log untuk memeriksa kelas yang dipilih
+      selectedKelas.value = response.data.classes.data[0] || null;
+      console.log('Selected Kelas:', selectedKelas.value);
     } else {
       console.error(
         'Response does not contain valid classes data:',
@@ -223,41 +232,12 @@ const fetchKelas = async () => {
   }
 };
 
-const fetchMapel = async () => {
-  try {
-    const response = await axios.get('/api/absensi-siswa'); // Ganti dengan rute yang sesuai
-    if (response.data.data && Array.isArray(response.data.data)) {
-      // Pastikan setiap item dalam array memiliki properti 'mapel' yang valid
-      const validMapelList = response.data.data.filter((mapel) => {
-        return (
-          mapel &&
-          mapel.mapel &&
-          typeof mapel.mapel === 'string' &&
-          mapel.mapel.trim() !== ''
-        );
-      });
-
-      if (validMapelList.length > 0) {
-        mapelList.value = validMapelList; // Menyimpan data mata pelajaran yang valid
-        // Misalnya, kita set selectedMapel ke mata pelajaran pertama jika ada
-        selectedMapel.value = validMapelList[0].mapel;
-      } else {
-        mapelList.value = []; // Kosongkan jika data tidak valid
-      }
-    } else {
-      mapelList.value = []; // Kosongkan jika data tidak valid
-    }
-  } catch (error) {
-    console.error('Error fetching mapel:', error);
-    mapelList.value = []; // Kosongkan jika terjadi error
-  }
-};
-
 const saveSelectedMapel = async (mapel) => {
   try {
     console.log('Selected Kelas sebelum penyimpanan:', selectedKelas.value);
     console.log('Selected Student ID:', selectedStudentId.value);
 
+    // Validasi kelas yang dipilih
     if (!selectedKelas.value || !selectedKelas.value.id) {
       console.warn(
         'Kelas yang dipilih tidak valid. Silakan pilih kelas terlebih dahulu.'
@@ -265,6 +245,7 @@ const saveSelectedMapel = async (mapel) => {
       return;
     }
 
+    // Validasi mapel yang dipilih
     if (!mapel || !mapel.mapel) {
       console.error(
         'Mapel yang dipilih tidak valid. Silakan pilih mapel terlebih dahulu.'
@@ -272,20 +253,23 @@ const saveSelectedMapel = async (mapel) => {
       return;
     }
 
+    // Validasi ID siswa
     const studentId = selectedStudentId.value;
     if (!studentId) {
-      //console.error(
-      //'ID siswa tidak valid. Silakan pilih siswa terlebih dahulu.'
-      //);
+      console.error(
+        'ID siswa tidak valid. Silakan pilih siswa terlebih dahulu.'
+      );
       return;
     }
 
+    // Mengirim data ke backend
     const response = await axios.post('/api/save-selected-mapel', {
       mapel: mapel.mapel,
       kelas: selectedKelas.value.id,
       student_id: studentId,
     });
 
+    // Mengecek respons dari server
     if (response.status === 200) {
       console.log('Pilihan mapel berhasil disimpan:', response.data);
     } else {
@@ -293,6 +277,9 @@ const saveSelectedMapel = async (mapel) => {
     }
   } catch (error) {
     console.error('Error saving selected mapel:', error);
+    if (error.response) {
+      console.error('Server response:', error.response);
+    }
   }
 };
 
@@ -358,13 +345,13 @@ onMounted(async () => {
 
   // Panggil fungsi fetching data secara berurutan
   await fetchClassByTeacher();
+  fetchMapelByTeacher();
   await fetchAttendanceData();
   initFlowbite();
   await fetchSessionData();
   await fetchData();
   await fetchKelas(); // Pastikan fetchKelas tidak menimpa selectedKelas dari localStorage
   await nextTick();
-  await fetchMapel();
 
   // Pastikan selectedKelas tidak diganti jika sudah ada dari localStorage
   if (
@@ -402,10 +389,9 @@ console.log('✅ currentMonth sebelum ref:', currentMonth);
 const selectedMonth = ref('Januari');
 console.log('✅ selectedMonth setelah ref:', selectedMonth.value);
 
-//const selectedMapel = ref({ mapel: '' });
-//const selectedMapel = ref({});
-const selectedMapel = ref({ mapel: '' });
+const selectedMapel = ref([]);
 const student = ref({});
+const teacherId = props.auth.user.id;
 const kelasList = ref([]);
 console.log('Sebelum mengirim props ke anak:', {
   selectedMapel: selectedMapel.value,
@@ -452,12 +438,25 @@ const generateUrl = (year, month, mapel, kelas) => {
   // Ambil ID kelas dan konversikan ke string
   const kelasId = String(kelas.id);
 
-  // Bersihkan mapel agar aman digunakan di URL
-  const cleanMapel = String(mapel || '')
-    .trim()
-    .replace(/\s+/g, '-') // Ganti spasi dengan "-"
-    .replace(/[()]/g, '') // Hapus tanda kurung
-    .toLowerCase();
+  // Mapel bisa berupa array of object atau string. Normalisasi jadi string.
+  let mapelList = [];
+
+  if (Array.isArray(mapel)) {
+    // Misalnya array of objects: [{ mapel: 'Pancasila' }, { mapel: 'Sejarah' }]
+    mapelList = mapel.map((m) => (typeof m === 'object' ? m.mapel : m));
+  } else if (typeof mapel === 'string') {
+    mapelList = [mapel];
+  }
+
+  const cleanMapel = mapelList
+    .map((m) =>
+      String(m)
+        .trim()
+        .replace(/\s+/g, '-') // Ganti spasi dengan "-"
+        .replace(/[()]/g, '') // Hapus tanda kurung
+        .toLowerCase()
+    )
+    .join(',');
 
   // Pastikan month dalam format yang benar:
   const cleanMonth = Array.isArray(month)
@@ -494,7 +493,7 @@ watch(selectedYear, (newValue) => {
 watch(
   () => props.selectedMapel,
   (newVal) => {
-    selectedMapel.value = newVal; // ⚠️ Bisa menimpa nilai sebelumnya
+    selectedMapel.value = validMapelList[0].mapel.name;
   }
 );
 
@@ -524,24 +523,6 @@ watch(
     console.log('Student ID berubah:', oldValue, '->', newValue);
   }
 );
-
-watch(selectedKelas, (newKelas, oldKelas) => {
-  console.log(
-    'Kelas yang dipilih berubah dari:',
-    oldKelas,
-    'menjadi:',
-    newKelas
-  );
-
-  // Logika tambahan: Misalnya, jika kelas yang dipilih berubah, kita bisa mengupdate mapel yang tersedia
-  if (newKelas) {
-    // Misalnya, kita bisa memanggil fungsi untuk mengambil mapel berdasarkan kelas yang dipilih
-    fetchMapel(newKelas.id); // Asumsikan newKelas memiliki id
-  } else {
-    // Jika tidak ada kelas yang dipilih, kita bisa mengosongkan mapel yang dipilih
-    selectedMapel.value = null;
-  }
-});
 
 // Watch untuk memantau perubahan pada selectedMapel
 
@@ -839,8 +820,22 @@ watch(selectedKelas, (newVal, oldVal) => {
                 <tr>
                   <td class="font-bold">Mata Pelajaran</td>
                   <td class="px-2">:</td>
-                  <td class="font-semibold">{{ selectedMapel }}</td>
-          
+                  <td class="font-semibold">
+                    {{
+                      selectedMapel.length === 0
+                        ? '—'
+                        : selectedMapel.length === 1
+                        ? selectedMapel[0].mapel
+                        : selectedMapel.length === 2
+                        ? `${selectedMapel[0].mapel} dan ${selectedMapel[1].mapel}`
+                        : selectedMapel
+                            .slice(0, -1)
+                            .map((m) => m.mapel) // Mengakses 'mapel' dari objek
+                            .join(', ') +
+                          ', dan ' +
+                          selectedMapel[selectedMapel.length - 1].mapel
+                    }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -888,7 +883,7 @@ watch(selectedKelas, (newVal, oldVal) => {
           </div>
 
           <!-- Dropdown Mata Pelajaran -->
-           <!--
+          <!--
                    <div class="flex flex-col space-y-2">
             <label for="mapel" class="font-semibold text-lg text-gray-700">
               Pilih Mata Pelajaran:
@@ -911,7 +906,7 @@ watch(selectedKelas, (newVal, oldVal) => {
            -->
 
           <!-- Dropdown Kelas -->
-           <!--         <div class="flex flex-col space-y-2">
+          <!--         <div class="flex flex-col space-y-2">
             <label for="kelas" class="font-semibold text-lg text-gray-700">
               Pilih Kelas:
             </label>
@@ -928,7 +923,7 @@ watch(selectedKelas, (newVal, oldVal) => {
         </div>
       </div>
       <div :selectedMapel="selectedMapel"></div>
-    
+
       <!-- Kartu Bulan -->
       <div class="flex justify-center mt-15">
         <div
@@ -969,7 +964,6 @@ watch(selectedKelas, (newVal, oldVal) => {
         </div>
       </div>
     </main>
-    :selectedKelas="selectedKelas"
 
     <!--
         <AbsensiSiswaSatu

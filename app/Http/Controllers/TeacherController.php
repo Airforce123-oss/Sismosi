@@ -13,6 +13,7 @@ use App\Http\Requests\UpdateTeacherRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\Student;
+use App\Models\WaliKelas;
 use App\Models\Classes;
 use App\Models\BukuPenghubung;
 use App\Models\Teacher;
@@ -22,54 +23,51 @@ use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
 {  
-    public function showAbsensi($kelas, $year, $mapel, $month)              
-    {              
-        // Log parameter yang diterima              
-        Log::info("Received parameters: Year: $year, Mapel: $mapel, Kelas: $kelas, Month: $month");              
-            
-        // Ambil daftar mata pelajaran dari database              
-        $validMapel = DB::table('master_mapel')->pluck('mapel')->toArray();              
-          
-        // Periksa apakah mapel yang diterima valid              
-        if (!in_array($mapel, $validMapel)) {              
-            return redirect()->route('studentsabsensiSiswaSatu');              
-        }              
-          
-        // Ambil daftar kelas dari database              
-        $validKelas = DB::table('classes')->pluck('id')->toArray(); // Ambil ID kelas      
-          
-        // Periksa apakah kelas yang diterima valid              
-        if (!in_array($kelas, $validKelas)) {              
-            return redirect()->route('absensiSiswaJanuari');              
-        }              
-          
-        // Memeriksa apakah kombinasi tahun, mapel, dan kelas ada dalam tabel attendances              
-        $isValidCombination = DB::table('attendances')              
-            ->whereYear('tanggal_kehadiran', $year)              
-            ->where('kelas', $kelas)              
-            ->where('mapel', $mapel)              
-            ->exists();              
-          
-        if (!$isValidCombination) {              
-            return redirect()->route('absensiSiswaJanuari');              
-        }              
-          
-        // Ambil data absensi untuk ditampilkan              
-        $dataAbsensi = DB::table('attendances')              
-            ->whereYear('tanggal_kehadiran', $year)              
-            ->where('kelas', $kelas)              
-            ->where('mapel', $mapel)              
-            ->get();              
-          
-    // Kembalikan data dalam format JSON untuk API      
-        return response()->json([      
-            'dataAbsensi' => $dataAbsensi,      
-            'year' => $year,      
-            'mapel' => $mapel,      
-            'kelas' => $kelas,      
-            'month' => $month,      
-        ]);      
-    }  
+    public function showAbsensi($kelas, $year, $mapel, $month)
+    {
+        Log::info("Received parameters: Year: $year, Mapel: $mapel, Kelas: $kelas, Month: $month");
+    
+        $mapelArray = explode(',', $mapel); // ubah jadi array mapel
+        $validMapel = DB::table('master_mapel')->pluck('mapel')->toArray();
+    
+        // Validasi semua mapel harus valid
+        foreach ($mapelArray as $m) {
+            if (!in_array($m, $validMapel)) {
+                return redirect()->route('studentsabsensiSiswaSatu');
+            }
+        }
+    
+        $validKelas = DB::table('classes')->pluck('id')->toArray();
+        if (!in_array($kelas, $validKelas)) {
+            return redirect()->route('absensiSiswaJanuari');
+        }
+    
+        // Validasi kombinasi tahun + kelas + mapel
+        $isValidCombination = DB::table('attendances')
+            ->whereYear('tanggal_kehadiran', $year)
+            ->where('kelas', $kelas)
+            ->whereIn('mapel', $mapelArray)
+            ->exists();
+    
+        if (!$isValidCombination) {
+            return redirect()->route('absensiSiswaJanuari');
+        }
+    
+        // Ambil data absensi
+        $dataAbsensi = DB::table('attendances')
+            ->whereYear('tanggal_kehadiran', $year)
+            ->where('kelas', $kelas)
+            ->whereIn('mapel', $mapelArray)
+            ->get();
+    
+        return response()->json([
+            'dataAbsensi' => $dataAbsensi,
+            'year' => $year,
+            'mapel' => $mapelArray,
+            'kelas' => $kelas,
+            'month' => $month,
+        ]);
+    }
     
 
     public function bukuPenghubung()
@@ -418,26 +416,41 @@ class TeacherController extends Controller
     }
     public function getClassByTeacher(Request $request)
     {
-        $name = $request->input('name');
-        Log::info('Request received with name: ' . $name);
+        $id = $request->input('id');
+        Log::info('Request received with ID: ' . $id);
     
-        if (!$name) {
-            Log::error('Name parameter is missing.');
-            return response()->json(['message' => 'Parameter name tidak ditemukan'], 400);
+        if (!$id) {
+            return response()->json(['message' => 'Parameter ID tidak ditemukan'], 400);
         }
     
-        $teacher = Teacher::where('name', $name)->first();
+        $teacher = Teacher::find($id);
     
-        if ($teacher) {
-            Log::info('Teacher found: ' . $teacher->name);
-            $kelas = $teacher->class;
-            return response()->json(['class' => $kelas ? $kelas->name : 'Tidak ada kelas terkait']);
+        if ($teacher && $teacher->class) {
+            return response()->json(['class' => $teacher->class->name]);
         } else {
-            Log::warning('Teacher not found with name: ' . $name);
-            return response()->json(['message' => 'Wali kelas tidak ditemukan'], 404);
+            return response()->json(['message' => 'Tidak ada kelas terkait'], 404);
         }
     }
+
+    public function getMapelByTeacherId(Request $request)
+    {
+        $teacherId = $request->input('teacher_id');
     
+        if (!$teacherId) {
+            return response()->json(['error' => 'teacher_id wajib dikirim'], 400);
+        }
+    
+        $mapel = DB::table('teacher_mapel')
+            ->where('teacher_id', $teacherId) // ← filter penting!
+            ->get();
+    
+        return response()->json(['mapel' => $mapel]);
+    }
+    
+    
+
+        
+        
     
 
 }

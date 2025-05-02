@@ -58,6 +58,9 @@ Route::get('/courses', [MataPelajaranController::class, 'apiCourses']);
 //Route::get('/enrollments', [EnrollmentController::class, 'getEnrollments']);
 
 Route::get('/enrollments', [EnrollmentController::class, 'getPaginatedEnrollments']);
+Route::get('/marks', [EnrollmentController::class, 'getMarks']);
+Route::post('/enrollment/update', [EnrollmentController::class, 'updateEnrollment']);
+
 
 Route::get('/enrollments/{enrollment}', [EnrollmentController::class, 'show']); 
 //Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']);
@@ -113,6 +116,7 @@ Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAtte
 Route::get('/api/mapel', [MataPelajaranController::class, 'getMapel']);
 Route::get('/api/classes', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
 Route::get('/absensi-siswa', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
+Route::get('/get-mapel-by-teacher-id', [TeacherController::class, 'getMapelByTeacherId']);
 Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);  
 Route::get('/api/classes', [ClassController::class, 'index']);
 Route::get('/teacher-attendance-report', [AttendanceTeacherController::class, 'getAttendanceReport']);

@@ -15,21 +15,48 @@ class EnrollmentController extends Controller
 {
     public function membuatEnrollment(Request $request)
     {
-        // Ambil data siswa dan mata pelajaran
-        $students = $this->uniqueByKey(Student::all(), 'id');
+        // Ambil data guru yang login
+        $user = auth()->user();
+        
+        // Ambil wali kelas yang diampu oleh guru
+        $waliKelas = $user->waliKelas;
+        
+        // Pastikan wali kelas ada dan memiliki kelas
+        if (!$waliKelas || !$waliKelas->classes) {
+            return response()->json([
+                'message' => 'Wali kelas tidak ditemukan atau tidak memiliki kelas yang diampu.'
+            ], 404);
+        }
+    
+        // Ambil kelas yang diampu oleh wali kelas tersebut
+        $classes = $waliKelas->classes;
+        
+        // Pastikan kelas ditemukan dan memiliki siswa
+        if (!$classes->students) {
+            return response()->json([
+                'message' => 'Tidak ada siswa yang terdaftar di kelas ini.'
+            ], 404);
+        }
+    
+        // Ambil data siswa yang terdaftar di kelas yang diampu oleh guru yang login
+        $students = $classes->students;
+        
+        // Ambil data mata pelajaran (mapel)
         $courses = $this->uniqueByKey(Mapel::all(), 'id');
+        
+        // Ambil data guru (teachers)
         $teachers = $this->uniqueByKey(Teacher::all(), 'id');
-
+        
         // Ambil data enrollments dengan pagination dari request
         $page = $request->input('page', 1); // Default ke halaman 1 jika tidak ada
         $perPage = $request->input('per_page', 10); // Default ke 10 item per halaman jika tidak ada
-    
-        $enrollments = Enrollment::with(['student', 'course', 'teacher'])  // Menambahkan relasi teacher
+        
+        $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])  // Menambahkan relasi teacher
             ->paginate($perPage, ['*'], 'page', $page);
     
         // Kirim data ke Vue.js melalui Inertia
         return Inertia::render('Teachers/Enrollment/membuatEnrollment', [
-            'students' => $students,
+            'students' => $students, // Siswa yang diambil berdasarkan kelas yang diampu oleh guru yang login
             'courses' => $courses,
             'teachers' => $teachers,
             'enrollments' => $enrollments,
@@ -40,39 +67,173 @@ class EnrollmentController extends Controller
             ],
         ]);
     }
+    
+    
+    public function getMarks(Request $request)
+    {
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+    
+        try {
+            $marks = Enrollment::select(
+                    'id',
+                    'student_id',
+                    'mapel_id',
+                    'cognitive_1',
+                    'cognitive_2',
+                    'cognitive_pas',
+                    'cognitive_average',
+                    'skill_1',
+                    'skill_2',
+                    'skill_pas',
+                    'skill_average',
+                    'final_mark'
+                )
+                ->with(['student', 'mapel'])
+                ->paginate($perPage, ['*'], 'page', $page);
+    
+            // Log berhasil
+            Log::info('Successfully fetched marks data', [
+                'total_items' => $marks->total(),
+                'current_page' => $marks->currentPage()
+            ]);
+    
+            return response()->json([
+                'data' => $marks->items(),
+                'pagination' => [
+                    'current_page' => $marks->currentPage(),
+                    'total_pages' => $marks->lastPage(),
+                    'total_items' => $marks->total(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            // Log error
+            Log::error('Error fetching marks data', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString()
+            ]);
+    
+            return response()->json(['error' => 'Failed to fetch marks data'], 500);
+        }
+    }
 
     public function store(Request $request)
     {
         try {
+            // Validasi data yang dikirim dari frontend
             $data = $request->validate([
                 'student_id' => 'required|exists:students,id',
                 'mapel_id' => 'required|exists:master_mapel,id',
+                'teacher_id' => 'required|exists:teachers,id',
                 'enrollment_date' => 'required|date',
                 'status' => 'required|in:active,inactive',
                 'description' => 'nullable|string',
+                'no_kd' => 'nullable|string',
+                'cognitive_1' => 'nullable|numeric',
+                'cognitive_2' => 'nullable|numeric',
+                'cognitive_pas' => 'nullable|numeric',
+                'cognitive_average' => 'nullable|numeric',
+                'skill_1' => 'nullable|numeric',
+                'skill_2' => 'nullable|numeric',
+                'skill_pas' => 'nullable|numeric',
+                'skill_average' => 'nullable|numeric',
+                'final_mark' => 'nullable|numeric',
             ]);
     
-            // Buat enrollment baru
+            // Jika nilai cognitive_average tidak dikirim, hitung dari cognitive_1, cognitive_2, cognitive_pas
+            if (!isset($data['cognitive_average']) && (isset($data['cognitive_1']) || isset($data['cognitive_2']) || isset($data['cognitive_pas']))) {
+                $data['cognitive_average'] = round(
+                    ( ($data['cognitive_1'] ?? 0) + ($data['cognitive_2'] ?? 0) + ($data['cognitive_pas'] ?? 0) ) / 3,
+                    2
+                );
+            }
+    
+            // Jika nilai skill_average tidak dikirim, hitung dari skill_1, skill_2, skill_pas
+            if (!isset($data['skill_average']) && (isset($data['skill_1']) || isset($data['skill_2']) || isset($data['skill_pas']))) {
+                $data['skill_average'] = round(
+                    ( ($data['skill_1'] ?? 0) + ($data['skill_2'] ?? 0) + ($data['skill_pas'] ?? 0) ) / 3,
+                    2
+                );
+            }
+    
+            // Jika final_mark tidak dikirim, hitung rata-rata dari cognitive_average dan skill_average
+            if (!isset($data['final_mark']) && isset($data['cognitive_average']) && isset($data['skill_average'])) {
+                $data['final_mark'] = round(
+                    ( $data['cognitive_average'] + $data['skill_average'] ) / 2,
+                    2
+                );
+            }
+    
+            // Simpan ke database
             $enrollment = Enrollment::create($data);
+            Log::info('Enrollment Data:', $request->all());
     
-            // Kembalikan data yang baru dibuat
-            return response()->json($enrollment, 201);
+            return response()->json([
+                'message' => 'Enrollment created successfully',
+                'data' => $enrollment
+            ], 201);
     
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            // Log error untuk debugging
             \Log::error('Error creating enrollment: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal Server Error'], 500);
+            return response()->json([
+                'message' => 'Internal Server Error'
+            ], 500);
         }
+    }
+
+    public function updateEnrollment(Request $request)
+    {
+        $data = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'mapel_id' => 'required|exists:master_mapel,id',
+            'teacher_id' => 'required|exists:teachers,id',
+            'enrollment_date' => 'required|date',
+            'status' => 'required|in:active,inactive',
+            'cognitive_1' => 'nullable|numeric',
+            'cognitive_2' => 'nullable|numeric',
+            'cognitive_pas' => 'nullable|numeric',
+            'cognitive_average' => 'nullable|numeric',
+            'skill_1' => 'nullable|numeric',
+            'skill_2' => 'nullable|numeric',
+            'skill_pas' => 'nullable|numeric',
+            'skill_average' => 'nullable|numeric',
+            'final_mark' => 'nullable|numeric',
+            'no_kd' => 'nullable|string',
+        ]);
+        
+    
+        // Misal Anda ingin cari berdasarkan student_id + mapel_id
+        $enrollment = Enrollment::where('student_id', $data['student_id'])
+            ->where('mapel_id', $data['mapel_id'])
+            ->first();
+    
+        if (!$enrollment) {
+            return response()->json([
+                'message' => 'Enrollment not found'
+            ], 404);
+        }
+    
+        $enrollment->update($data);
+    
+        return response()->json([
+            'message' => 'Enrollment updated successfully',
+            'data' => $enrollment
+        ]);
     }
     
     
     public function getEnrollments(Request $request)
 {
     $page = $request->input('page', 1);
-    $perPage = $request->input('per_page', 10);
+    $perPage = $request->input('per_page', 5);
 
     // Mengambil data enrollments dengan paginasi
-    $enrollments = Enrollment::with(['student', 'course'])
+    $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])
         ->paginate($perPage, ['*'], 'page', $page);
 
     return response()->json([
@@ -88,14 +249,13 @@ class EnrollmentController extends Controller
 public function getPaginatedEnrollments(Request $request)
 {
     $page = $request->input('page', 1);
-    $perPage = $request->input('per_page', 10);
+    $perPage = $request->input('per_page', 5);
     
-    $enrollments = Enrollment::with(['student', 'course'])
+    $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])
         ->paginate($perPage, ['*'], 'page', $page);
 
         Log::info('Total Enrollments:', ['total' => $enrollments->total()]);
         Log::info('Total Pages:', ['lastPage' => $enrollments->lastPage()]);
-
 
     return response()->json([
         'data' => $enrollments->items(),
@@ -108,18 +268,18 @@ public function getPaginatedEnrollments(Request $request)
     ]);
 }
 
-    // Mengambil data mapel berdasarkan id
-    public function getMapelById($id)
+// Mengambil data mapel berdasarkan id
+    public function getMapelByTeacherId(Request $request)
     {
-        // Query ke tabel master_mapel
-        //$mapel = DB::table('master_mapel')->find($id);
-        $mapel = Mapel::find($id);
-
-
-        // Kembalikan data mapel
-        return response()->json($mapel);
+        $teacherId = $request->input('id');
+        $teacher = Teacher::with('mapel')->find($teacherId); // Ambil data guru beserta mapel terkait
+    
+        if ($teacher && $teacher->mapel) {
+            return response()->json(['mapel' => $teacher->mapel->mapel]); // Mengirim nama mapel
+        } else {
+            return response()->json(['message' => 'Mapel tidak ditemukan'], 404);
+        }
     }
-
     // Menambahkan show method untuk mengambil data enrollment berdasarkan id
     public function show($enrollmentId)
     {
@@ -151,6 +311,7 @@ public function getPaginatedEnrollments(Request $request)
             $validated = $request->validate([
                 'student_id' => 'required|exists:students,id',
                 'mapel_id' => 'required|exists:master_mapel,id',
+                'enrollment_date'   => 'required|date',
                 'status' => 'required|in:active,inactive',
                 'noKd' => 'nullable|string',
                 'cognitive1' => 'nullable|numeric',
@@ -163,6 +324,7 @@ public function getPaginatedEnrollments(Request $request)
                 'skillAverage' => 'nullable|numeric',
                 'finalMark' => 'nullable|numeric',
                 //'teacher_id' => 'required|exists:wali_kelas,id',
+                
             ]);
     
             // Log data setelah validasi
@@ -207,7 +369,7 @@ public function getPaginatedEnrollments(Request $request)
     
             return response()->json([
                 'student' => $student,
-                'course' => $course,
+                'mapel' => $course,
                 //'wali_kelas' => $waliKelas,
                 'enrollment' => $enrollment,
             ], 200);

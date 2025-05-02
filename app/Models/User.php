@@ -79,18 +79,19 @@ class User extends Authenticatable
         // Periksa apakah pengguna memiliki role teacher
         } elseif ($this->hasRole('teacher')) {
             // Ambil data kelas guru terkait
-            $teacherClass = $this->teacher;
+            $waliClass = $this->waliKelas;
+            
     
             // Log percobaan login guru untuk keperluan debugging
             Log::info('Percobaan Login Guru:', [
                 'user_id' => $this->id,
                 'class_id_in_users_table' => $this->class_id,
-                'teacher_relation' => $teacherClass ? $teacherClass->toArray() : 'Tidak ada guru terkait ditemukan',
+                'teacher_relation' => $waliClass ? $waliClass->toArray() : 'Tidak ada guru terkait ditemukan',
             ]);
     
             // Pastikan teacherClass ada sebelum digunakan untuk class_id
-            if ($teacherClass) {
-                return route('dashboardTeacher', ['kelas' => $teacherClass->class_id]); // Pastikan route ini sesuai
+            if ($waliClass) {
+                return route('dashboardTeacher', ['kelas' => $waliClass->class_id]); // Pastikan route ini sesuai
             } else {
                 // Fallback jika tidak ditemukan guru terkait
                 return route('dashboardTeacher'); // Pastikan route ini didefinisikan di routes/web.php

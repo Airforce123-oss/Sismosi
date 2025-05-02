@@ -22,8 +22,8 @@ const students = ref([]);
 //const props = defineProps(['student']);
 const props = defineProps({
   selectedMapel: {
-    type: Object,
-    default: () => ({}),
+    type: Array,
+    default: () => [],
   },
   student: {
     type: Object,
@@ -37,6 +37,21 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+});
+
+const mapelNames = computed(() => {
+  let list = [];
+
+  if (Array.isArray(props.selectedMapel)) {
+    list = props.selectedMapel.map((m) => m.mapel);
+  } else if (props.selectedMapel && props.selectedMapel.mapel) {
+    list = [props.selectedMapel.mapel];
+  }
+
+  if (list.length === 0) return '—';
+  if (list.length === 1) return list[0];
+  const last = list.pop();
+  return `${list.join(', ')} dan ${last}`;
 });
 
 console.log('Props di Komponen Anak:', props);
@@ -330,7 +345,7 @@ const totalDaysInMonth = Array.from(
 );
 
 totalDaysInMonth.forEach((dayIndex) => {
-  console.log(getFormattedDate(dayIndex)); // Memanggil fungsi dengan dayIndex yang valid
+  //console.log(getFormattedDate(dayIndex)); // Memanggil fungsi dengan dayIndex yang valid
 });
 
 console.log('totalDaysInMonth ' + totalDaysInMonth);
@@ -484,6 +499,9 @@ const fetchData = async () => {
     attendances.value = absensiArray;
 
     paginatedStudents.value = attendances.value.filter((student) => {
+      const idNumber = parseInt(student.studentId);
+      if (!studentId.value.includes(idNumber)) return false;
+
       if (!student.studentId || !Array.isArray(student.status)) {
         console.warn('⚠️ Data siswa tidak valid:', student);
         return false;
@@ -503,6 +521,7 @@ const fetchData = async () => {
     loading.value = false;
   }
 };
+
 // Panggil fungsi fetchData untuk memulai pemanggilan data
 fetchData();
 
@@ -2062,7 +2081,7 @@ watch(
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Tabel Absensi Siswa" />
+      <Head title="Tabel Absensi Siswa Januari" />
       <form @submit.prevent="submitAttendance">
         <div class="container py-5">
           <div
@@ -2079,8 +2098,21 @@ watch(
                       <span class="font-semibold">Mata Pelajaran:</span>
                     </p>
                     <div class="text-sm">
-                      <p v-if="selectedMapel && selectedMapel.mapel">
-                        {{ selectedMapel.mapel }}
+                      <p v-if="selectedMapel.length">
+                        {{
+                          selectedMapel.length === 0
+                            ? '—'
+                            : selectedMapel.length === 1
+                            ? selectedMapel[0].mapel
+                            : selectedMapel.length === 2
+                            ? `${selectedMapel[0].mapel} dan ${selectedMapel[1].mapel}`
+                            : selectedMapel
+                                .slice(0, -1)
+                                .map((m) => m.mapel) // Mengakses 'mapel' dari objek
+                                .join(', ') +
+                              ', dan ' +
+                              selectedMapel[selectedMapel.length - 1].mapel
+                        }}
                       </p>
                       <p v-else>Tidak ada mata pelajaran yang dipilih.</p>
                     </div>

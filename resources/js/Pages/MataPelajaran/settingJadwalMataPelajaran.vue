@@ -16,7 +16,28 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  wali_kelas: {
+    type: Object,
+    default: () => ({ data: [] }),
+  },
 });
+
+const selectedWaliKelas = ref(null);
+function handleWaliKelasChange() {
+  if (selectedWaliKelas.value) {
+    router.get(
+      route('settingJadwalMataPelajaran'),
+      {
+        ...props.filter, // jika ada filter jurusan/tingkat/kelas
+        wali_kelas_id: selectedWaliKelas.value,
+      },
+      {
+        preserveState: true,
+        replace: true,
+      }
+    );
+  }
+}
 
 const getKelasForMapel = (mapelId) => {
   if (!mapelId) return '-';
@@ -33,6 +54,9 @@ const form = useForm({
 
 const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
 const searchTerm = ref('');
+
+const waliKelas = ref(props.wali_kelas?.data || []);
+console.log('Wali Kelas:', waliKelas.value);
 
 const kelasUrl = computed(() => {
   const url = new URL(route('matapelajaran.index'));
@@ -116,6 +140,9 @@ const loadSchedule = async () => {
 
     const rawData = response.data; // Data mentah dari API
 
+    // Debugging: Pastikan wali_kelas ada dan terhubung dengan data jadwal
+    console.log('Wali Kelas yang terkait dengan kelas ini:', waliKelas.value);
+
     // Transformasi data mentah menjadi struktur tabel
     const transformed = Array.from({ length: 8 }, (_, i) => {
       const jamKe = i + 1;
@@ -142,7 +169,18 @@ const loadSchedule = async () => {
           : null;
       });
 
-      return { jam_ke: jamKe, jam: jamLabel, jadwal: jadwalPerHari };
+      const waliKelasForKelas = waliKelas.value.find(
+        (wali) => wali.class_id === id
+      );
+
+      return {
+        jam_ke: jamKe,
+        jam: jamLabel,
+        jadwal: jadwalPerHari,
+        wali_kelas: waliKelasForKelas
+          ? waliKelasForKelas.name
+          : 'Tidak ada wali kelas',
+      };
     });
 
     schedule.value = transformed;
@@ -191,6 +229,9 @@ const entries = computed(() => {
           jam_ke: slot.jam_ke,
           jam: slot.jam || '', // ✅ Tambahkan ini
           mapel_id: mapelId,
+          wali_kelas: waliKelasForKelas
+            ? waliKelasForKelas.name
+            : 'Tidak ada wali kelas',
         };
       })
       .filter(Boolean)
@@ -361,6 +402,7 @@ const getMapelName = (jamKe, hari) => {
 };
 
 onMounted(() => {
+  console.log('Wali Kelas:', waliKelas.value);
   console.log('Schedule on mount:', schedule.value);
   const savedSchedule = localStorage.getItem('jadwal_mingguan');
   if (savedSchedule) {
@@ -509,12 +551,12 @@ watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
         <div class="p-6 space-y-6">
           <!-- FILTER -->
           <div
-            class="bg-white shadow-md rounded-xl p-6 w-full max-w-4xl mx-auto mb-6"
+            class="bg-white shadow-md rounded-xl p-4 w-full max-w-4xl mx-auto mb-6"
           >
-            <h2 class="text-xl text-center font-semibold mb-4 text-gray-700">
+            <h2 class="text-lg text-center font-semibold mb-4 text-gray-700">
               PENGATURAN JADWAL MATA PELAJARAN
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <!-- Jurusan (opsional, untuk filter tampilan) -->
               <div>
                 <label class="block text-sm font-semibold text-gray-600 mb-1">
@@ -574,17 +616,28 @@ watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
                   </option>
                 </select>
               </div>
-            </div>
 
-            <!-- Tombol -->
-            <!--    <div class="mt-6 flex justify-end">
-                <button
-                  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition duration-200"
-                  @click="loadSchedule"
+              <!--Wali Kelas -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">
+                  Wali Kelas
+                </label>
+                <select
+                  v-model.number="selectedWaliKelas"
+                  @change="handleWaliKelasChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  Lihat Jadwal
-                </button>
-              </div>-->
+                  <option value="">Pilih Wali Kelas</option>
+                  <option
+                    v-for="c in props.wali_kelas.data"
+                    :key="c.id"
+                    :value="c.id"
+                  >
+                    {{ c.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <!-- TABEL JADWAL -->
@@ -596,6 +649,7 @@ watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
                 <tr>
                   <th class="border p-2">Jam Ke</th>
                   <th class="border p-2">Jam</th>
+                  <th class="border P-2">Wali Kelas</th>
                   <th
                     v-for="day in days"
                     :key="day"
@@ -624,6 +678,9 @@ watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
                 >
                   <td class="border p-2">{{ slot.jam_ke }}</td>
                   <td class="border p-2">{{ slot.jam }}</td>
+                  <td class="border p-2">
+                    {{ slot.wali_kelas || 'Tidak ada wali kelas' }}
+                  </td>
                   <td v-for="day in days" :key="day" class="border p-2">
                     <span
                       v-if="day === 'sabtu' || day === 'minggu'"
@@ -644,6 +701,7 @@ watch([selectedJurusan, selectedMapelModal, selectedKelas], () => {
                       {{ slot.jadwal[day]?.mapel || '✖' }}
                     </button>
                   </td>
+                  <pre>{{ slot.wali_kelas || 'Tidak ada wali kelas' }}</pre>
                 </tr>
               </tbody>
             </table>

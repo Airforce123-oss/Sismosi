@@ -2062,7 +2062,7 @@ watch(
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Tabel Absensi Siswa" />
+      <Head title="Tabel Absensi Siswa Mei" />
       <form @submit.prevent="submitAttendance">
         <div class="container py-5">
           <div

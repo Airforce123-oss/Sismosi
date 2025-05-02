@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watchEffect, computed } from 'vue';
+import { onMounted, ref, watchEffect, computed, watch } from 'vue';
 import axios from 'axios';
 import { Head, usePage, useForm, router } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
@@ -13,23 +13,47 @@ import '@assets/plugins/simple-calendar/simple-calendar.css';
 import Login from './Auth/Login.vue';
 
 // Ambil props dari Inertia
-const { props } = usePage();
+const props = defineProps({
+  student_name: {
+    type: String,
+    default: '', // fallback if nothing arrives
+  },
+  student_id: {
+    type: Number,
+    required: true,
+  },
+});
+console.log('Props:', props.value);
+console.log('Auth Prop:', props.auth);
 const userName = ref('');
-//const studentId = ref(props.student_id);
-//const studentName = ref(props.student_name);
-const studentName = ref('');
-const students = ref([]);
-//const router = useRoute();
-const studentId = computed(() => props.student_id);
+const students = [{}];
+//const student_id = ref(props.student_id);
 
-console.log('Student Name:', studentName.value);
+/*
+const studentName = computed(() => {
+  return props.auth?.user?.name || 'Student';
+});
 
-console.log('Student ID di URL:', studentId.value);
+*/
+
+// Ambil props yang sudah dikirimkan melalui Inertia
+const { student_name, student_id, auth } = usePage().props;
+
+// Jika student_id adalah ref, akses value-nya
+console.log('Student Name (props.student_name):', student_name); // Mengakses nama siswa dari props
+console.log('Student ID di URL:', student_id); // Menampilkan student_id yang dikirimkan di URL
+console.log('User:', props.auth?.user);
+console.log(auth);
+
+/*
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
+  student_id: student_id.value,
 });
+console.log('Student ID:', form.student_id);
+*/
 
 // Fungsi untuk mengambil data session
 const fetchSessionData = async () => {
@@ -41,59 +65,47 @@ const fetchSessionData = async () => {
   }
 };
 
-const canResetPassword = ref(true);
-const status = ref('Active');
-
-const updateStudentId = (id) => {
-  console.log('Student ID berubah ke:', id);
-  router.visit(`/students-dashboard/${id}`);
-};
-
 const fetchLoggedInStudent = async () => {
-  console.log('📥 fetchLoggedInStudent dipanggil');
-
   try {
     const token = localStorage.getItem('token');
-    console.log('Token:', token);
-
     if (!token) {
-      console.error('❗ Token is missing');
+      console.error('❗ Token missing');
       return;
     }
 
     const response = await axios.get('/api/logged-in-student', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    console.log('✅ Axios berhasil');
-    const loggedInStudent = response.data;
-    console.log('✅ Response dari server:', loggedInStudent);
+    console.log('✅ Fetched logged-in student:', response.data);
 
-    // Perbarui studentName dan studentId
-    studentId.value = loggedInStudent.id;
-    studentName.value = loggedInStudent.name;
-    console.log('✅ Updated studentName:', studentName.value); // Cek apakah studentName diperbarui
+    if (response.data && response.data.id) {
+      // Perbarui student_id hanya jika berbeda dari yang ada di props
+      if (student_id.value !== response.data.id) {
+        student_id.value = response.data.id;
+        console.log('✅ Updated studentId:', student_id.value);
+      }
+
+      // Perbarui nama user pada auth.user jika ada perubahan
+      if (response.data.name && auth.user) {
+        auth.user.name = response.data.name;
+        console.log('✅ Updated auth.user.name:', auth.user.name);
+      }
+    } else {
+      console.error('❗ Invalid student data');
+    }
   } catch (error) {
-    console.error('❌ Error fetching logged-in student:', error);
+    //console.error('❌ Error fetching logged-in student:', error);
   }
 };
 
 // Inisialisasi kalender dan ambil session data saat komponen dimount
 onMounted(() => {
-  console.log('Student ID di URL:', studentId.value);
+  console.log('Student ID di URL:', student_id.value);
   fetchLoggedInStudent();
   //fetchStudentName();
   initFlowbite();
   fetchSessionData();
-});
-
-watchEffect(() => {
-  const studentIdFromURL = usePage().url.split('student_id=')[1];
-  if (studentIdFromURL) {
-    studentId.value = parseInt(studentIdFromURL);
-  }
 });
 </script>
 
@@ -164,28 +176,6 @@ watchEffect(() => {
           </a>
         </div>
         <div class="flex items-center lg:order-2">
-          <!--
-                                        <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-                    -->
           <!-- Apps -->
           <button
             type="button"
@@ -234,12 +224,13 @@ watchEffect(() => {
                   class="block text-sm text-gray-900 truncate dark:text-white"
                 >
                   {{ $page.props.auth.user.name }}:
-                  {{ studentName }}
+                  {{ student_name }}
                 </span>
                 <span
                   class="block text-sm text-gray-900 truncate dark:text-white"
-                  >{{ form.role_type }}</span
                 >
+                  <!--{{ form.role_type }}-->
+                </span>
               </div>
             </div>
             <div class="mt-3 space-y-1">
@@ -261,13 +252,14 @@ watchEffect(() => {
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Dashboard" />
+      <Head title="Student Dashboard" />
       <div class="text-2xl col-sm-12 mb-10">
         <div>
-          <h3 class="page-title">Selamat Datang {{ studentName }}</h3>
+          <h3 class="page-title">Selamat Datang {{ student_name }}</h3>
           <p class="text-gray-600">
-            ID Siswa Anda: <strong>{{ studentId }}</strong>
+            ID Siswa Anda: <strong>{{ student_id }}</strong>
           </p>
+          <div></div>
         </div>
         <div class="container mx-auto py-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -345,15 +337,6 @@ watchEffect(() => {
           :status="status"
         />
       </div>-->
-      <v-select
-        :options="students"
-        label="name"
-        :reduce="(student) => student.id"
-        v-model="studentId"
-        placeholder="Cari siswa..."
-        class="w-full"
-        @input="updateStudentId(studentId)"
-      />
     </main>
 
     <!-- Sidebar -->

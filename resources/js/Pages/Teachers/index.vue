@@ -476,7 +476,7 @@ watch(pageNumber, (newPage) => {
                           <td
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
-                            {{ teacher.class.name }}
+                            {{ teacher.class?.name ?? '-' }}
                           </td>
                           <td
                             class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"

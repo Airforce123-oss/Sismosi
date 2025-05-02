@@ -80,7 +80,8 @@ class AttendanceController extends Controller
             'attendances' => $attendances,
             'studentCount' => $attendances->count(),
             'filterParams' => $request->all(),
-            'selectedMapel' => $selectedMapel,
+            'selectedMapel' => $selectedMapel->toArray(),
+
         ]);
     }
 
@@ -164,114 +165,43 @@ public function saveSelectedMapel(Request $request)
     }
 }
 
-/*
-public function absensiSiswa(Request $request)
-{
-    // Set locale untuk Carbon ke bahasa Indonesia
-    Carbon::setLocale('id');
-    $timezone = 'Asia/Jakarta'; 
-
-    $request->validate([
-        'month' => 'required|string|in:Januari,Februari,Maret,April,Mei,Juni,Juli,Agustus,September,Oktober,November,Desember',
-        'year' => 'required|integer|min:1900|max:' . date('Y'),
-    ]);
-
-    // Ambil query string untuk bulan dan tahun
-    $month = $request->query('month');
-    $year = $request->query('year');
-
-    // Validasi bulan dan tahun (opsional)
-    if (!$month || !$year) {
-        return inertia('Students/absensiSiswa', [
-            'error' => 'Bulan dan tahun harus dipilih.',
-            'attendances' => [],
-            'filterParams' => $request->all(),
-        ]);
-    }
-
-    // Coba untuk memparsing bulan dengan format yang lebih umum
-    try {
-        if (!in_array($month, ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'])) {
-            throw new \Exception("Invalid month");
-        }
-        $monthNumber = Carbon::parse("1 $month $year", $timezone)->month;
-    } catch (\Exception $e) {
-        return inertia('Students/absensiSiswa', [
-            'error' => 'Bulan atau tahun tidak valid.',
-            'attendances' => [],
-            'filterParams' => $request->all(),
-        ]);
-    }
-    
-
-    // Ambil data absensi berdasarkan bulan dan tahun
-    $attendances = Attendance::with('siswa')
-        ->whereYear('tanggal_kehadiran', $year)
-        ->whereMonth('tanggal_kehadiran', $monthNumber)
-        ->get()
-        ->groupBy('student_id')
-        ->map(function ($attendance) {
-            return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
-        });
-
-    // Return data ke frontend
-    return inertia('Students/absensiSiswa', [
-        'attendances' => $attendances,
-        'studentCount' => $attendances->count(),
-        'filterParams' => $request->all(),
-    ]);
-}
-*/
 
 public function absensiSiswaJanuari($kelas, $year, $mapel, $month)
 {
     $decodedMapel = urldecode($mapel);
+    $decodedMapelList = explode(',', $decodedMapel);
 
-    // Log untuk debugging
     Log::info('🔥 Route Absensi Dipanggil:', [
         'kelas' => $kelas,
         'year' => $year,
-        'mapel' => $decodedMapel,
+        'mapel' => $decodedMapelList,
         'month' => $month
     ]);
 
-    $students = Student::where('class_id', $kelas)->get();
+$students = Student::where('class_id', $kelas)->get();
 
-    // Ambil mapel, kalau tidak ada set default object kosong
-    $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
+    $selectedMapel = Mapel::whereIn('mapel', $decodedMapelList)->get();
 
-    if (!$selectedMapel) {
-        Log::error("⚠️ Mata pelajaran '{$decodedMapel}' tidak ditemukan di database!");
-        $selectedMapel = (object) [
-            'id' => null,
-            'mapel' => '',
-            'kode_mapel' => '',
-            'created_at' => null,
-            'updated_at' => null,
-        ]; // ✅ Paksa agar tetap berbentuk object dengan struktur yang konsisten
-    } else {
-        $selectedMapel = (object) $selectedMapel->toArray();
+    if ($selectedMapel->isEmpty()) {
+        Log::error("⚠️ Tidak ada mata pelajaran ditemukan: " . implode(', ', $decodedMapelList));
     }
-    
-    
+
     $data = [
         'kelas' => $kelas,
         'year' => $year,
-        'mapel' => $decodedMapel,
+        'mapel' => $decodedMapelList,
         'month' => $month,
         'students' => $students,
-        'selectedMapel' => $selectedMapel, // Pastikan ini selalu object
+        'selectedMapel' => $selectedMapel->toArray(),
     ];
 
     Log::info('📤 Data yang dikirim ke Vue:', $data);
 
-    // Jika request dari API, kirim JSON
-    if (request()->wantsJson()) {
-        return response()->json($data);
-    }
-
-    return Inertia::render('Students/absensiSiswaJanuari', $data);
+    return request()->wantsJson()
+        ? response()->json($data)
+        : Inertia::render('Students/absensiSiswaJanuari', $data);
 }
+
 
 private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
 {
@@ -451,5 +381,6 @@ public function absensiDesember($kelas, $year, $mapel)
             ], 500);
         }
     }
+    
 }
 

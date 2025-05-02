@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use App\Models\Student;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -23,12 +25,6 @@ class AuthController extends Controller
             // Ambil student_id dari request
             $studentId = $request->student_id;
     
-            // Debugging: Log student_id yang diterima
-            Log::info('Login Request Data:', [
-                'email' => $request->email,
-                'student_id' => $studentId,
-            ]);
-    
             // Cek role_name pada user
             $roleName = $user->role_name; // Mengambil role_name dari user
     
@@ -40,27 +36,36 @@ class AuthController extends Controller
     
             // Jika user adalah student
             if ($roleName === 'student') {
-                $student = \App\Models\Student::where('user_id', $user->id)->first();
+                $studentId = $request->input('student_id');
+
+                // Check if student_id is provided
+                if ($studentId) {
+                    // Fetch student data where user_id matches the authenticated user's ID
+                    // and the student_id matches the provided student_id
+                    $student = Student::where('user_id', auth()->id())
+                    ->where('id', $studentId)
+                    ->first();
             
-                if ($student) {
-                    // Pastikan student_id yang dikirim valid
-                    if ($studentId != $student->id) {
-                        return redirect()->route('login')->withErrors([
-                            'student_id' => 'Student ID tidak valid untuk pengguna ini.',
+                    // Check if student exists
+                    if ($student) {
+                        // Return the student data to the frontend
+                        return Inertia::render('StudentDashboard', [
+                            'student_id' => $student->id,
+                            'student_name' => $student->name,
+                        ]);
+                    } else {
+                        // Return an error page if student not found
+                        return Inertia::render('ErrorPage', [
+                            'message' => 'Student not found.',
                         ]);
                     }
-            
-                    // Simpan student_id ke session
-                    session(['student_id' => $studentId]);
-                    return redirect()->route('student.dashboard');
                 } else {
-                    // Jika user tidak terdaftar sebagai student
-                    return redirect()->route('login')->withErrors([
-                        'email' => 'Email tidak terdaftar sebagai siswa.',
+                    // Return an error page if student_id is not provided
+                    return Inertia::render('ErrorPage', [
+                        'message' => 'No student selected.',
                     ]);
                 }
             }
-            
     
             // Jika user adalah teacher
             if ($roleName === 'teacher') {

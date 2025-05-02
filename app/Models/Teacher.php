@@ -9,11 +9,12 @@ class Teacher extends Model
 {
     use HasFactory;
 
-    protected $table = 'wali_kelas';
+    protected $table = 'teachers';
     protected $fillable = [
         'name',
         'nip',
         'class_id',
+        'mapel_id',
     ];
 
 
@@ -37,9 +38,20 @@ class Teacher extends Model
     }
     public function masterMapel()
     {
-        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'wali_kelas_id', 'mapel_id')
+        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'mapel_id')
                     ->withPivot('id', 'kode_mapel', 'mapel', 'created_at', 'updated_at');
     }
+
+    public function mapel()
+    {
+        return $this->belongsTo(Mapel::class, 'mapel_id');  // 'mapel_id' mengacu pada kolom di teachers
+    }
+
+        public function mapels()
+    {
+        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id');
+    }
+
     
      // Relasi dengan WaliKelas (One to Many / Many to One)
      public function waliKelas()

@@ -85,18 +85,24 @@ Route::get('/dashboard', function () {
     })->name('teacher.dashboard');
 
     // Dashboard Siswa
-    Route::get('/student-dashboard', function () {
+    Route::middleware('auth')->get('/student-dashboard/{student_id?}', function ($student_id = null) {
         $user = Auth::user();
-        $student = Student::where('user_id', $user->id)->first();
+    
+        // Jika tidak ada student_id yang diberikan, ambil siswa pertama untuk pengguna
+        $student = Student::where('user_id', $user->id)
+        ->where('id', $student_id ?? 1) // Gunakan ID default jika tidak ada parameter
+        ->first();
     
         if (!$student) {
             return redirect()->route('errorPage')->with('message', 'Student not found');
         }
     
         return Inertia::render('studentsDashboard', [
-            'student_id' => $student->id,
+            'student_id'   => $student->id,
+            'student_name' => $student->name,
         ]);
     })->name('student.dashboard');
+    
     
 
     // Profile Routes
@@ -118,7 +124,7 @@ Route::get('/dashboard', function () {
     
     // Enrollment Routes
     Route::get('/enrollments/create', [EnrollmentController::class, 'membuatEnrollment'])->name('enrollments.create');
-    Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollment'])->name('teachermembuatEnrollment');
+Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollment'])->name('teachermembuatEnrollment');
 
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, toRaw, nextTick, watch } from 'vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import { initFlowbite } from 'flowbite';
 import axios from 'axios';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 
@@ -9,9 +10,10 @@ defineProps({
   courses: Array,
 });
 
-const { students, courses } = usePage().props;
+const { students, courses, teachers } = usePage().props;
 console.log('Courses:', toRaw(courses));
 console.log('Students:', toRaw(students));
+console.log('Teachers:', toRaw(teachers));
 console.log('Data pertama di array courses:', courses[0]);
 console.log('ID Mata Pelajaran:', courses[0].id);
 console.log('Nama Mata Pelajaran:', courses[0].mapel);
@@ -26,7 +28,8 @@ const selectEnrollment = (id) => {
 const newEnrollment = ref({
   studentId: null,
   courseId: null,
-  enrollmentDate: '',
+  teacher_id: null,
+  enrollment_date: '',
   status: 'active',
 });
 
@@ -46,10 +49,9 @@ const getEnrollment = async () => {
     console.log('Response data getenrollment:', response.data);
     newEnrollment.value.status = response.data.status;
     newEnrollment.value.studentId = response.data.student_id;
-    //newEnrollment.value.studentId = selectedStudentId;
     newEnrollment.value.courseId = response.data.course_id;
-    //newEnrollment.value.courseId = selectedCourseId;
-    newEnrollment.value.enrollmentDate = response.data.enrollment_date;
+    newEnrollment.value.teacher_id = response.data.teacher_id;
+    newEnrollment.value.enrollment_date = response.data.enrollment_date;
   } catch (error) {
     console.error('Error fetching enrollment:', error);
   }
@@ -59,19 +61,19 @@ const emit = defineEmits(['close', 'markAdded']);
 
 const newMark = ref({
   studentId: '',
-  courseId: '',
+  mapelId: '',
   status: 'active',
-  enrollmentDate: '',
+  enrollmentDate: null,
   noKd: '',
-  cognitive1: null,
-  cognitive2: null,
-  cognitivePAS: null,
-  cognitiveAverage: null,
-  skill1: null,
-  skill2: null,
-  skillPAS: null,
-  skillAverage: null,
-  finalMark: null,
+  cognitive1: 0,
+  cognitive2: 0,
+  cognitivePAS: 0,
+  cognitiveAverage: 0,
+  skill1: 0,
+  skill2: 0,
+  skillPAS: 0,
+  skillAverage: 0,
+  finalMark: 0,
 });
 
 const isMarkModalVisible = ref(false);
@@ -82,75 +84,109 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
   newMark.value.studentId = studentId;
   newMark.value.mapelId = mapelId; // Sinkron dengan mapelId
   isMarkModalVisible.value = true;
+  console.log('newMark.studentId:', newMark.value.studentId);
+  console.log('newMark.mapelId:', newMark.value.mapelId);
 
   try {
     console.log(`Fetching enrollment data for ID: ${enrollmentId}`);
 
     // Mengambil data dari API
     const response = await axios.get(`/api/enrollments/${enrollmentId}`);
-    const enrollmentData = response.data; // Menyimpan data API ke dalam variabel
+    console.log('Enrollment API response:', response.data);
 
-    // Debugging API response
-    console.log('API Response Data:', enrollmentData);
+    const enrollmentData = response.data;
+    console.log('Enrollment data:', enrollmentData);
 
-    // Memastikan data dari API lebih prioritas
-    newMark.value.studentId = enrollmentData.student_id;
-    newMark.value.mapelId = enrollmentData.mapel_id;
-    newMark.value.status = enrollmentData.status;
+    // Check if teacher_id exists
+    if (enrollmentData && enrollmentData.teacher_id) {
+      const dataToSend = {
+        student_id: enrollmentData.student_id,
+        mapel_id: enrollmentData.mapel_id,
+        teacher_id: enrollmentData.teacher_id,
+        enrollment_date: enrollmentData.enrollment_date,
+        status: enrollmentData.status,
+      };
 
-    // Menampilkan data siswa dan mata pelajaran
-    console.log('Looking for Student ID:', enrollmentData.student_id);
-    console.log('Looking for Course ID:', enrollmentData.mapel_id);
+      try {
+        const updateResponse = await axios.post(
+          '/api/enrollment/update',
+          dataToSend
+        );
+        console.log('Enrollment updated:', updateResponse.data);
+      } catch (error) {
+        console.error('Error updating enrollment:', error);
+      }
 
-    // Cek data students dan courses sebelum mencari
-    if (!students || students.length === 0) {
-      console.warn('No students data found.');
+      // Debugging API response
+      console.log('API Response Data:', enrollmentData);
+
+      // Memastikan data dari API lebih prioritas
+      newMark.value.studentId = enrollmentData.student_id;
+      newMark.value.mapelId = enrollmentData.mapel_id;
+      newMark.value.teacherId = enrollmentData.teacher_id;
+      newMark.value.enrollmentDate = enrollmentData.enrollment_date;
+      newMark.value.status = enrollmentData.status;
+
+      // Menampilkan data siswa dan mata pelajaran
+      console.log('Looking for Student ID:', enrollmentData.student_id);
+      console.log('Looking for Course ID:', enrollmentData.mapel_id);
+      console.log('Teacher ID:', enrollmentData.teacher_id);
+
+      // Cek data students dan courses sebelum mencari
+      if (!students || students.length === 0) {
+        console.warn('No students data found.');
+      } else {
+        console.log('Students data loaded:', students);
+      }
+
+      if (!courses || courses.length === 0) {
+        console.warn('No courses data found.');
+      } else {
+        console.log('Courses data loaded:', courses);
+      }
+
+      // Mencari student dan course berdasarkan enrollmentData
+      const selectedStudent = students.find(
+        (student) => student.id === enrollmentData.student_id
+      );
+      const selectedCourse = courses.find(
+        (course) => course.id === enrollmentData.mapel_id
+      );
+
+      // Debugging hasil pencarian
+      console.log('Selected Student:', selectedStudent);
+      console.log('Selected Course:', selectedCourse);
+
+      // Memastikan data ini sudah terupdate
+      newMark.value.studentId = selectedStudent
+        ? selectedStudent.id
+        : enrollmentData.student_id;
+      newMark.value.mapelId = selectedCourse
+        ? selectedCourse.id
+        : enrollmentData.mapel_id;
+      newMark.value.status = enrollmentData.status || 'active';
+
+      // Mengisi nilai penilaian dengan data yang tersedia (menggunakan data dari enrollment)
+      newMark.value.cognitive1 = enrollmentData.nilai1_tek || '';
+      newMark.value.cognitive2 = enrollmentData.nilai2_tek || '';
+      newMark.value.cognitivePAS = enrollmentData.nilai1_nil || '';
+      newMark.value.cognitiveAverage = enrollmentData.nilai2_tek || '';
+
+      newMark.value.skill1 = enrollmentData.nilai1_tek || '';
+      newMark.value.skill2 = enrollmentData.nilai2_tek || '';
+      newMark.value.skillPAS = enrollmentData.nilai1_nil || '';
+      newMark.value.skillAverage = enrollmentData.nilai2_tek || '';
+
+      newMark.value.finalMark = enrollmentData.nilai1_tek || ''; // Set nilai akhir sesuai dengan data yang ada
+      newMark.value.teacherId = enrollmentData.teacher_id || '';
+
+      // Log tambahan untuk memastikan newMark terupdate
+      console.log('Updated newMark (raw):', toRaw(newMark.value));
     } else {
-      console.log('Students data loaded:', students);
+      // If teacher_id does not exist, show an alert and log error
+      console.error('Teacher ID atau data lainnya tidak ditemukan.');
+      alert('Teacher ID tidak ada dalam data!');
     }
-
-    if (!courses || courses.length === 0) {
-      console.warn('No courses data found.');
-    } else {
-      console.log('Courses data loaded:', courses);
-    }
-
-    // Mencari student dan course berdasarkan enrollmentData
-    const selectedStudent = students.find(
-      (student) => student.id === enrollmentData.student_id
-    );
-    const selectedCourse = courses.find(
-      (course) => course.id === enrollmentData.mapel_id
-    );
-
-    // Debugging hasil pencarian
-    console.log('Selected Student:', selectedStudent);
-    console.log('Selected Course:', selectedCourse);
-
-    // Memastikan data ini sudah terupdate
-    newMark.value.studentId = selectedStudent
-      ? selectedStudent.id
-      : enrollmentData.student_id;
-    newMark.value.mapelId = selectedCourse
-      ? selectedCourse.id
-      : enrollmentData.mapel_id;
-    newMark.value.status = enrollmentData.status || 'active';
-
-    // Mengisi nilai penilaian dengan data yang tersedia (menggunakan data dari enrollment)
-    newMark.value.cognitive1 = enrollmentData.nilai1_tek || '';
-    newMark.value.cognitive2 = enrollmentData.nilai2_tek || '';
-    newMark.value.cognitivePAS = enrollmentData.nilai1_nil || '';
-    newMark.value.cognitiveAverage = enrollmentData.nilai2_tek || '';
-
-    newMark.value.skill1 = enrollmentData.nilai1_tek || '';
-    newMark.value.skill2 = enrollmentData.nilai2_tek || '';
-    newMark.value.skillPAS = enrollmentData.nilai1_nil || '';
-    newMark.value.skillAverage = enrollmentData.nilai2_tek || '';
-
-    newMark.value.finalMark = enrollmentData.nilai1_tek || ''; // Set nilai akhir sesuai dengan data yang ada
-
-    // Log tambahan untuk memastikan newMark terupdate
-    console.log('Updated newMark (raw):', toRaw(newMark.value));
   } catch (error) {
     console.error('Error fetching enrollment details:', error);
   }
@@ -196,7 +232,7 @@ const enrollments = ref([]);
 const paginatedEnrollments = ref([]);
 const currentPage = ref(1); // Halaman aktif
 const totalPages = ref(1);
-const perPage = ref(10); // Jumlah per halaman
+const perPage = ref(5); // Jumlah per halaman
 
 console.log('Current Page:', currentPage.value);
 console.log('Enrollments Data:', enrollments.value);
@@ -233,19 +269,21 @@ const fetchDataForPage = async (page) => {
       params: { page, perPage: perPage.value },
     });
 
-    console.log('Data yang diterima dari API:', response.data);
+    console.log('Data dari API:', response.data);
+
+    const data = response.data.data;
 
     if (response.data.data.length === 0) {
       alert('No data available for this page.');
       return;
     }
 
-    // Simpan data enrollments untuk digunakan di paginasi
-    enrollments.value = response.data.data; // Data enrollments diupdate di sini
-    console.log('Enrollments setelah diupdate:', enrollments.value);
+    enrollments.value = response.data.data;
+    paginatedEnrollments.value = response.data.data;
 
-    // Update paginated data
-    updatePaginatedEnrollments(response.data.pagination);
+    // Perbarui info pagination
+    currentPage.value = response.data.pagination.current_page;
+    totalPages.value = response.data.pagination.total_pages;
   } catch (error) {
     console.error('Error fetching data:', error);
   }
@@ -262,17 +300,9 @@ const loadEnrollmentsFromLocalStorage = () => {
 };
 
 const goToPage = (page) => {
-  // Pastikan halaman valid
-  if (page < 1 || page > totalPages.value) {
-    alert('Halaman tidak valid');
-    return;
+  if (page >= 1 && page <= totalPages.value) {
+    fetchDataForPage(page);
   }
-
-  // Update current page
-  currentPage.value = page;
-
-  // Ambil data untuk halaman baru
-  fetchDataForPage(page);
 };
 
 fetchDataForPage(currentPage.value);
@@ -285,8 +315,8 @@ const saveEnrollmentsToLocalStorage = () => {
   );
 };
 
-watch([currentPage, enrollments], () => {
-  updatePaginatedEnrollments();
+watch(currentPage, (newPage) => {
+  fetchDataForPage(newPage);
 });
 
 updatePaginatedEnrollments();
@@ -385,71 +415,36 @@ const showMarkModal = () => {
 };
 const addEnrollmentToDatabase = async (enrollmentData) => {
   try {
+    console.log('Data dikirim:', enrollmentData);
+
     const response = await axios.post('/api/enrollments', enrollmentData);
-    console.log('Response from server:', response);
+    console.log('Response dari server:', response.data);
 
-    // Cek apakah data yang diterima lengkap
-    if (response.data) {
-      const {
-        student_id,
-        mapel_id,
-        enrollment_date,
-        status,
-        created_at,
-        updated_at,
-      } = response.data;
+    // ── Bongkar wrapper: ambil object enrollment yang sebenarnya ──
+    const created = response.data.data;
 
-      if (!student_id) {
-        console.error('Data student_id tidak ditemukan.');
-        alert('student_id tidak ditemukan.');
-      }
-      if (!mapel_id) {
-        console.error('Data mapel_id tidak ditemukan.');
-        alert('mapel_id tidak ditemukan.');
-      }
-      if (!enrollment_date) {
-        console.error('Data enrollment_date tidak ditemukan.');
-        alert('enrollment_date tidak ditemukan.');
-      }
-      if (!status) {
-        console.error('Data status tidak ditemukan.');
-        alert('status tidak ditemukan.');
-      }
-      if (!created_at) {
-        console.error('Data created_at tidak ditemukan.');
-        alert('created_at tidak ditemukan.');
-      }
-      if (!updated_at) {
-        console.error('Data updated_at tidak ditemukan.');
-        alert('updated_at tidak ditemukan.');
-      }
-
-      // Jika semua data tersedia, lanjutkan
-      if (
-        student_id &&
-        mapel_id &&
-        enrollment_date &&
-        status &&
-        created_at &&
-        updated_at
-      ) {
-        enrollments.value.push(response.data);
-        await nextTick(); // Menunggu render ulang
-        console.log('Data setelah render ulang:', enrollments.value);
-      } else {
-        console.error('Data tidak lengkap:', response.data);
-        alert('Data yang diterima tidak lengkap.');
-      }
+    // ── Pengecekan pada object created, bukan pada response.data ──
+    if (created && created.student_id && created.mapel_id) {
+      enrollments.value.push(created);
+      await nextTick();
+      console.log('Data enrollments setelah update:', enrollments.value);
     } else {
-      console.error('Tidak ada data yang diterima dari server.');
-      alert('Tidak ada data yang diterima.');
+      console.warn('Data penting tidak lengkap:', created);
+      alert('Data penting (student_id atau mapel_id) tidak ada.');
     }
 
-    return response; // Pastikan respons dikembalikan
+    return response;
   } catch (error) {
     console.error('Error adding enrollment:', error);
-    alert('Terjadi kesalahan, coba lagi.');
-    throw error; // Lemparkan ulang error jika ada
+    if (error.response) {
+      console.error('API Response Error:', error.response.data);
+      alert(
+        'Gagal tambah enrollment: ' + JSON.stringify(error.response.data.errors)
+      );
+    } else {
+      alert('Gagal menambahkan enrollment.');
+    }
+    throw error;
   }
 };
 
@@ -477,7 +472,8 @@ const addEnrollment = async () => {
     const response = await addEnrollmentToDatabase({
       student_id: newEnrollment.value.studentId,
       mapel_id: newEnrollment.value.courseId,
-      enrollment_date: newEnrollment.value.enrollmentDate,
+      teacher_id: newEnrollment.value.teacher_id,
+      enrollment_date: newEnrollment.value.enrollment_date,
       status: newEnrollment.value.status,
     });
 
@@ -506,52 +502,63 @@ console.log('New Enrollment Status:', newEnrollment.value.status);
 const payload = {
   student_id: 1,
   enrollment_id: 1,
-  cognitive1: 11,
-  cognitive2: 11,
-  cognitivePAS: 11,
-  cognitiveAverage: 11,
-  skill1: 11,
-  skill2: 11,
-  skillPAS: 11,
-  skillAverage: 11,
-  finalMark: 11,
+  enrollment_date: '2025-04-29',
+  cognitive_1: 11,
+  cognitive_2: 11,
+  cognitive_pas: 11,
+  cognitive_average: 11,
+  skill_1: 11,
+  skill_2: 11,
+  skill_pas: 11,
+  skill_average: 11,
+  final_mark: 11,
   mapel_id: 1,
-  //teacher_id: 2,
+  teacher_id: 2,
   status: 'active',
-  noKd: '123456',
+  no_kd: '123456',
 };
 
 // Debug payload sebelum dikirim
 console.log('Payload yang akan dikirim:', payload);
+console.log('payload buat teacher_id', typeof payload.teacher_id);
 
 // Debug URL API yang digunakan
 const url = `/api/enrollments/${payload.enrollment_id}`;
 console.log('URL API:', url);
 
-// Menjalankan permintaan HTTP
-axios
-  .put(`/api/enrollments/${payload.enrollment_id}`, payload)
-  .then((response) => {
-    console.log('Respons berhasil:', response.data);
-    if (payload.mapel_id === 0) {
-      alert('Mapel ID tidak valid!');
-      return;
-    }
-  })
-  .catch((error) => {
-    if (error.response) {
-      // Respons dari server
-      console.error('Respons error dari server:', error.response.data);
-      console.error('Status code:', error.response.status);
-      console.error('Headers:', error.response.headers);
-    } else if (error.request) {
-      // Jika request dikirim tapi tidak ada respons
-      console.error('Request dikirim tapi tidak ada respons:', error.request);
-    } else {
-      // Jika terjadi kesalahan lain dalam setup request
-      console.error('Kesalahan lain:', error.message);
-    }
-  });
+if (!payload.enrollment_id || Object.keys(payload).length === 0) {
+  console.error('Data enrollment tidak valid atau kosong.');
+  alert('Data enrollment tidak valid atau kosong.');
+} else {
+  axios
+    .put(`/api/enrollments/${payload.enrollment_id}`, payload)
+    .then((response) => {
+      console.log('Respons berhasil:', response.data);
+      if (payload.mapel_id === 0) {
+        alert('Mapel ID tidak valid!');
+        return;
+      }
+    })
+    .catch((error) => {
+      if (error.response) {
+        // Respons dari server
+        if (error.response.status === 404) {
+          //console.error('Enrollment tidak ditemukan:', error.response.data);
+          //alert('Enrollment tidak ditemukan!');
+        } else {
+          console.error('Respons error dari server:', error.response.data);
+          console.error('Status code:', error.response.status);
+          console.error('Headers:', error.response.headers);
+        }
+      } else if (error.request) {
+        // Jika request dikirim tapi tidak ada respons
+        console.error('Request dikirim tapi tidak ada respons:', error.request);
+      } else {
+        // Jika terjadi kesalahan lain dalam setup request
+        console.error('Kesalahan lain:', error.message);
+      }
+    });
+}
 
 const saveMark = async () => {
   try {
@@ -560,6 +567,7 @@ const saveMark = async () => {
     const numericEnrollmentId = Number(enrollmentId);
 
     if (!numericEnrollmentId || isNaN(numericEnrollmentId)) {
+      MarkController;
       throw new Error('Invalid enrollment ID: Expected a numeric value');
     }
 
@@ -602,7 +610,7 @@ const saveMark = async () => {
     // Kirim data ke API
     const response = await axios.post('/api/marks', {
       enrollment_id: numericEnrollmentId, // ID Enrollment
-      student_id: newMark.value.studentId ?? 0, // ID Siswa
+      student_id: newMark.studentId ?? 0, // ID Siswa
       mapel_id: newMark.value.mapelId ?? 0, // ID Mata Pelajaran
       enrollment_date: newMark.value.enrollmentDate ?? '', // Tanggal Enrollment
       status: newMark.value.status ?? 'active', // Status (active/inactive)
@@ -697,6 +705,7 @@ onMounted(() => {
   } catch (error) {
     console.error('Error fetching data:', error);
   }
+  initFlowbite();
 });
 const logChange = (fieldName, value) => {
   console.log(
@@ -758,7 +767,6 @@ button:hover {
             class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
           >
             <svg
-              aria-hidden="true"
               class="w-6 h-6"
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -771,7 +779,6 @@ button:hover {
               ></path>
             </svg>
             <svg
-              aria-hidden="true"
               class="hidden w-6 h-6"
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -788,43 +795,21 @@ button:hover {
           <a href="" class="flex items-center justify-between mr-4">
             <img src="/images/barunawati.jpeg" class="mr-3 h-8" alt="" />
             <span
-              class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-              >SISTEM MONITORING SISWA</span
+              class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
+              >SMA BARUNAWATI SURABAYA</span
             >
           </a>
         </div>
         <div class="flex items-center lg:order-2">
-          <button
-            type="button"
-            data-drawer-toggle="drawer-navigation"
-            aria-controls="drawer-navigation"
-            class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-          >
-            <span class="sr-only">Toggle search</span>
-            <svg
-              aria-hidden="true"
-              class="w-6 h-6"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clip-rule="evenodd"
-                fill-rule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              ></path>
-            </svg>
-          </button>
           <!-- Apps -->
           <button
             type="button"
             class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-          >
-            <span class="sr-only">View notifications</span>
-          </button>
+          ></button>
 
           <button
-            class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+            type="button"
+            class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
             id="user-menu-button"
             aria-expanded="false"
             data-dropdown-toggle="dropdown"
@@ -849,22 +834,29 @@ button:hover {
           </button>
           <!-- Dropdown menu -->
           <div
-            class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+            class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
             id="dropdown"
           >
-            <div class="py-3 px-4">
-              <span
-                class="block text-sm font-semibold text-gray-900 dark:text-white"
-                >{{ $page.props.auth.user.email }}</span
+            <div class="py-3 px-3">
+              <div
+                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
               >
-              <span
-                class="block text-sm text-gray-900 truncate dark:text-white"
-                >{{ $page.props.auth.user.name }}</span
-              >
-              <span
-                class="block text-sm text-gray-900 truncate dark:text-white"
-                >{{ $page.props.auth.user.role_type }}</span
-              >
+                <span
+                  class="block text-sm font-semibold text-gray-900 dark:text-white"
+                  >{{ $page.props.auth.user.email }}
+                </span>
+                <span
+                  class="block text-sm text-gray-900 truncate dark:text-white"
+                >
+                  {{ $page.props.auth.user.name }}:
+                  <!-- {{ student_name }}-->
+                </span>
+                <span
+                  class="block text-sm text-gray-900 truncate dark:text-white"
+                >
+                  <!--{{ form.role_type }}-->
+                </span>
+              </div>
             </div>
             <div class="mt-3 space-y-1">
               <ResponsiveNavLink :href="route('profile.edit')">
@@ -885,7 +877,7 @@ button:hover {
     <!-- Main content -->
     <main class="p-4 sm:p-6 lg:p-8 md:ml-64 h-screen pt-10 mb-20">
       <h2
-        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-10 mb-6 text-center"
       >
         List Enrollment Siswa
       </h2>
@@ -893,40 +885,39 @@ button:hover {
       <div v-if="isLoading" class="spinner"></div>
 
       <div
-        class="container mx-auto px-4 py-6 bg-gray-100 rounded-lg shadow-md mb-15"
+        class="max-w-screen-md mx-auto px-2 py-4 bg-gray-100 rounded-lg shadow-md mb-12"
       >
         <div
-          class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4"
+          class="flex flex-col sm:flex-row sm:flex-wrap gap-2 justify-between items-center mb-4"
         >
           <!-- Search filter for Student Name -->
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Nama Kelas"
-            class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full sm:w-1/4 text-sm px-3 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <!-- Search filter for Teacher Name -->
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Nama Guru"
-            class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full sm:w-1/4 text-sm px-3 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <!-- Search filter for Subject -->
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Mata Pelajaran"
-            class="w-full sm:w-1/3 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full sm:w-1/4 text-sm px-3 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <button
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center"
+            class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-1.5 px-3 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 flex items-center"
             @click="showAddModal"
           >
-            <i class="fa fa-plus mr-2"></i> Tambah Enrollment Baru
+            <i class="fa fa-plus mr-2"></i> Tambah
           </button>
         </div>
-        <h2>pake dropdown saja semua</h2>
       </div>
 
       <!-- Modal tambah enrollment -->
@@ -988,6 +979,33 @@ button:hover {
               </select>
             </div>
 
+            <!-- Pilih Guru -->
+            <div class="mb-4">
+              <label
+                for="teacherId"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Guru
+              </label>
+              <select
+                v-model="newEnrollment.teacher_id"
+                id="teacherId"
+                required
+                @change="
+                  console.log('Selected teacher_id:', newEnrollment.teacher_id)
+                "
+                class="w-full px-4 py-2 border rounded-md"
+              >
+                <option
+                  v-for="teacher in teachers"
+                  :key="teacher.id"
+                  :value="teacher.id"
+                >
+                  {{ teacher.name }}
+                </option>
+              </select>
+            </div>
+
             <!-- Tanggal Enrollment -->
             <div class="mb-4">
               <label
@@ -997,7 +1015,7 @@ button:hover {
               >
               <input
                 type="date"
-                v-model="newEnrollment.enrollmentDate"
+                v-model="newEnrollment.enrollment_date"
                 id="enrollmentDate"
                 required
                 class="w-full px-4 py-2 border rounded-md"
@@ -1126,7 +1144,7 @@ button:hover {
               >
               <input
                 type="date"
-                v-model="newEnrollment.enrollmentDate"
+                v-model="newEnrollment.enrollment_date"
                 id="enrollmentDate"
                 required
                 class="w-full px-4 py-2 border rounded-md"
@@ -1346,39 +1364,44 @@ button:hover {
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div class="bg-white p-4 sm:p-5 rounded-md shadow-md text-center">
+          <p class="text-lg sm:text-xl lg:text-2xl font-semibold text-blue-600">
             <span
-              class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
-              >TOTAL PENDAFTARAN</span
+              class="block text-base sm:text-lg lg:text-xl text-green-600 mb-1 font-semibold"
             >
+              TOTAL PENDAFTARAN
+            </span>
             <span class="flex items-center justify-center gap-2">
               <i class="fas fa-users"></i>{{ totalEnrollments }}
             </span>
           </p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
+
+        <div class="bg-white p-4 sm:p-5 rounded-md shadow-md text-center">
+          <p
+            class="text-lg sm:text-xl lg:text-2xl font-semibold text-green-600"
+          >
             <span
-              class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
-              >PENDAFTARAN AKTIF</span
+              class="block text-base sm:text-lg lg:text-xl text-green-600 mb-1 font-semibold"
             >
+              PENDAFTARAN AKTIF
+            </span>
             <span class="flex items-center justify-center gap-2">
-              <i class="fas fa-user-check"></i>
-              {{ activeEnrollments }}
+              <i class="fas fa-user-check"></i>{{ activeEnrollments }}
             </span>
           </p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
+
+        <div class="bg-white p-4 sm:p-5 rounded-md shadow-md text-center">
+          <p class="text-lg sm:text-xl lg:text-2xl font-semibold text-red-600">
             <span
-              class="block text-xl sm:text-2xl lg:text-3xl font-bold text-green-600 mb-2"
-              >PENDAFTARAN TIDAK AKTIF</span
+              class="block text-base sm:text-lg lg:text-xl text-green-600 mb-1 font-semibold"
             >
+              PENDAFTARAN TIDAK AKTIF
+            </span>
             <span class="flex items-center justify-center gap-2">
-              <i class="fas fa-user-times"></i>
-              {{ inactiveEnrollments }}
+              <i class="fas fa-user-times"></i>{{ inactiveEnrollments }}
             </span>
           </p>
         </div>
@@ -1408,6 +1431,13 @@ button:hover {
               >
                 Mata Pelajaran
               </th>
+              <th
+                rowspan="3"
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-48"
+              >
+                Nama Guru
+              </th>
+
               <th
                 rowspan="3"
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300 w-36"
@@ -1552,11 +1582,21 @@ button:hover {
                 class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
               >
                 {{
-                  enrollment.course
-                    ? enrollment.course.mapel
+                  enrollment.mapel
+                    ? enrollment.mapel.mapel
                     : 'Mapel tidak tersedia'
                 }}
               </td>
+              <td
+                class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
+              >
+                {{
+                  enrollment.teacher && enrollment.teacher.name
+                    ? enrollment.teacher.name
+                    : 'Guru tidak tersedia'
+                }}
+              </td>
+
               <td
                 class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
               >
@@ -1645,6 +1685,7 @@ button:hover {
       </div>
       <!-- Pagination -->
       <div class="flex justify-between items-center">
+        <!-- Tombol Previous -->
         <button
           @click="goToPage(currentPage - 1)"
           :disabled="currentPage === 1"
@@ -1652,9 +1693,13 @@ button:hover {
         >
           Previous
         </button>
+
+        <!-- Informasi Halaman -->
         <span class="text-gray-700">
           Page {{ currentPage }} of {{ totalPages }}
         </span>
+
+        <!-- Tombol Next -->
         <button
           @click="goToPage(currentPage + 1)"
           :disabled="currentPage === totalPages"
@@ -1691,6 +1736,7 @@ button:hover {
           </div>
         </div>
       </div>
+      <!--<pre>{{ paginatedEnrollments }}</pre> -->
     </main>
 
     <!-- Sidebar -->

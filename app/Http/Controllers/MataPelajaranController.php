@@ -10,6 +10,7 @@ use App\Http\Resources\MapelResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\Teacher;
 
 
 class MataPelajaranController extends Controller
@@ -61,6 +62,10 @@ class MataPelajaranController extends Controller
         $jurusan       = $request->input('jurusan');
         $tingkat       = $request->input('tingkat');
         $kelas         = $request->input('kelas');
+        $teacherQuery = Teacher::query()->with('class');
+        //$this->applySearch($teacherQuery, $request->search);
+
+        $teacherQuery->orderBy('id');
     
         // 2. Build query dasar untuk Mapel
         $mapelQuery = Mapel::query();
@@ -71,6 +76,7 @@ class MataPelajaranController extends Controller
         // 3. Clone query untuk jadwal (tanpa paginate)
         $allMapel = (clone $mapelQuery)->get();
         $classesQuery = Classes::with('waliKelas');
+        $teachers = $teacherQuery->paginate(20)->appends($request->only('search'));
         $classes_for_student = $classesQuery->paginate(20)->appends($request->only('search'));
         // 4. Paginate untuk master_mapel
         $master_mapel = $mapelQuery
@@ -139,7 +145,11 @@ class MataPelajaranController extends Controller
                     ),
                 ],
             ],
+            'wali_kelas' => [
+                'data' => $teachers->items(),
+            ],
         ]);
+        
     }
 
     

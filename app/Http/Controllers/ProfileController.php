@@ -72,15 +72,28 @@ class ProfileController extends Controller
                     'role_type' => $role,
                 ]);
             case 'student':
-                $student = $selectedStudentId
-                    ? Student::find($selectedStudentId)
-                    : Student::where('user_id', $user->id)->first();
-    
-                if (!$student) {
-                    return Inertia::render('ErrorPage', [
-                        'message' => 'Student not found.',
-                    ]);
+                // Mengambil student_id dari session yang sudah disimpan saat login
+                $studentId = session('student_id');
+
+                // Jika student_id tidak ditemukan di session, redirect ke login
+                if (!$studentId) {
+                    Log::warning('Student ID tidak ditemukan di session, redirect ke login.');
+                    return redirect()->route('login');
                 }
+
+                // Cari data siswa berdasarkan student_id yang ada di session
+                $student = Student::find($studentId);
+    
+                    if (!$student) {
+                        return Inertia::render('ErrorPage', [
+                            'message' => 'Student tidak ditemukan.',
+                        ]);
+                    }
+
+                    Log::info('Mengirim data ke frontend', [
+                        'student_name' => $student->name,
+                    ]);
+                    
     
                 return Inertia::render('studentsDashboard', [
                     'total' => $totalStudents,
@@ -88,6 +101,7 @@ class ProfileController extends Controller
                     'profileUrl' => route('profile.edit'),
                     'student_id' => $student->id,
                     'student_name' => $student->name,
+                    'auth'         => ['user' => $user],
                 ]);
             default:
                 return Inertia::render('ErrorPage', [

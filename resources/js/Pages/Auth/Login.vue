@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import vSelect from 'vue-select';
 import 'vue-select/dist/vue-select.css';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -41,19 +41,26 @@ const form = useForm({
   email: '',
   password: '',
   remember: false,
-  student_id: '',
+  student: null,
   role: '',
-  student_id: '',
 });
 
 const handleStudentSelect = (selected) => {
-  form.value.student_id = selected ? selected.id : '';
+  form.student = selected ? selected : null; // Menyimpan objek siswa lengkap
 };
 
 const userName = ref('');
 const errorMessage = ref(''); // Untuk menyimpan pesan error jika login gagal
 const successMessage = ref('');
-const studentName = ref('');
+//const studentName = ref('');
+const studentName = computed(() => {
+  // Pastikan 'students' sudah ada dan terdefinisi
+  const selectedStudent = students.find(
+    (student) => student.id === form.student_id
+  );
+  return selectedStudent ? selectedStudent.name : 'Student!';
+});
+
 const studentId = ref('');
 // Fetch session data
 const fetchSessionData = async () => {
@@ -147,10 +154,12 @@ const submit = async () => {
       email: form.email,
       password: form.password,
       role: form.role,
+      student_id: form.student_id,
     };
 
-    if (form.student_id) {
-      payload.student_id = form.student_id;
+    if (form.student) {
+      payload.student_id = form.student.id;
+      payload.student_name = form.student.name;
     }
 
     // 3. Ambil CSRF Cookie
@@ -186,7 +195,10 @@ const submit = async () => {
       if (role === 'student') {
         router.visit('/dashboard', {
           method: 'get',
-          data: { student_id: studentId.value }, // pakai studentId dari fetch
+          data: {
+            student_id: form.student.id,
+            student_name: form.student.name,
+          },
         });
       } else if (role === 'teacher') {
         router.visit('/teacher-dashboard');
@@ -201,6 +213,7 @@ const submit = async () => {
     errorMessage.value = 'Login gagal. Silakan coba lagi.';
   }
 };
+
 </script>
 
 <template>
@@ -248,17 +261,26 @@ const submit = async () => {
           </div>
 
           <div class="mb-4" v-if="form.role === 'student'">
-            <label for="student_id" class="block text-gray-700"
+            <label for="student_id" class="block text-gray-700 mb-1"
               >Pilih Siswa</label
             >
+
             <v-select
+              v-if="props.students.length"
+              v-model="form.student"
               :options="students"
-              label="name"
               :reduce="(student) => student.id"
-              v-model="form.student_id"
+              label="name"
               placeholder="Cari siswa..."
               class="w-full"
+              searchable
+              clearable
             />
+
+            <div v-else class="text-sm text-gray-500">
+              Tidak ada data siswa tersedia.
+            </div>
+
             <small class="text-gray-500">Ketik nama siswa untuk mencari.</small>
           </div>
 
