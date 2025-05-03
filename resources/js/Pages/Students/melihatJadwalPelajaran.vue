@@ -9,6 +9,7 @@ import { initFlowbite } from 'flowbite';
 const { props } = usePage();
 const schedule = ref(props.schedule ?? []); // jadwal dari backend
 const kelasList = ref(props.kelasList ?? []); // daftar kelas
+const waliKelas = ref(props.wali_kelas ?? []); // daftar wali kelas)
 
 // === Hari-hari dalam seminggu ===
 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
@@ -34,6 +35,7 @@ const filteredScheduleByDay = (day) => {
       jam_ke: slot.jam_ke,
       jam: slot.jam,
       jadwal: { [day]: slot.jadwal[day] },
+      wali_kelas: slot.wali_kelas,
     }));
 };
 
@@ -60,6 +62,7 @@ onMounted(() => {
   initFlowbite();
   fetchSessionData();
   console.log('Daftar kelas:', kelasList.value);
+  console.log('Daftar wali kelas', waliKelas.value);
 });
 
 // === Log perubahan kelas terpilih ===
@@ -303,6 +306,7 @@ watch(selectedKelas, (newVal) => {
                 <th class="p-3 border">Waktu</th>
                 <th class="p-3 border">Mata Pelajaran</th>
                 <th class="p-3 border">Kelas</th>
+                <th class="p-3 border">Wali Kelas</th>
               </tr>
             </thead>
             <tbody>
@@ -332,6 +336,9 @@ watch(selectedKelas, (newVal) => {
                     <td class="p-3 border">
                       {{ slot.jadwal[day]?.kelas || '-' }}
                     </td>
+                    <td class="p-3 border">
+                      {{ slot.jadwal[day]?.wali_kelas || '-' }}
+                    </td>
                   </tr>
                 </template>
 
@@ -349,28 +356,6 @@ watch(selectedKelas, (newVal) => {
           </table>
         </div>
       </div>
-      <!--  <pre>{{ JSON.stringify(schedule, null, 2) }}</pre>-->
-
-      <div class="row">
-        <div class="col-12 col-lg-16 col-xl-6">
-          <!-- 
-                             <div class="row">
-                        <div class="col-12 col-lg-12 col-xl-4 d-flex">
-                            <div class="card flex-fill comman-shadow">
-                                <div class="card-body">
-                                    <div
-                                        id="calendar-doctor"
-                                        class="calendar-container"
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    -->
-        </div>
-      </div>
-
-      <div id="apexcharts-area"></div>
     </main>
 
     <!-- Sidebar -->

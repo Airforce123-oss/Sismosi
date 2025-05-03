@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;  
 use App\Models\Student;  
 use App\Models\JadwalMataPelajaran;
-
+use App\Models\Teacher;
 use Inertia\Inertia;  
 
   
@@ -87,45 +87,52 @@ class StudentRoleController extends Controller
     }  
     public function melihatJadwalPelajaran()
     {
-        // 1. Ambil semua jadwal, eager-load relasi mapel & kelas
         $schedule = JadwalMataPelajaran::with(['mapel', 'kelas'])
             ->get()
             ->groupBy('jam_ke')
             ->map(function ($group) {
                 $jamKe = $group[0]->jam_ke;
-                $jam   = $group[0]->jam; // kolom 'jam' di tabel jadwal_mata_pelajaran
+                $jam   = $group[0]->jam;
     
-                // Inisialisasi struktur per jam_ke
                 $data = [
                     'jam_ke' => $jamKe,
                     'jam'    => $jam,
-                    'jadwal' => [],        // akan diisi per hari
+                    'jadwal' => [],
                 ];
     
-                // Isi jadwal per hari
                 foreach ($group as $jadwal) {
                     $hari = strtolower($jadwal->hari);
                     $data['jadwal'][$hari] = [
-                        'mapel'   => $jadwal->mapel->mapel ?? '-',   
-                        'kelas'   => $jadwal->kelas->name  ?? '-',     
-                        'kelas_id' => $jadwal->kelas_id, // tambahkan kelas_id
+                        'mapel'    => $jadwal->mapel->mapel ?? '-',
+                        'kelas'    => $jadwal->kelas->name ?? '-',
+                        'kelas_id' => $jadwal->kelas_id,
+                        // wali_kelas akan ditambahkan nanti
                     ];
                 }
     
                 return $data;
             })
-            ->values(); // reset key numeric
+            ->values();
     
-        // 2. Ambil daftar kelas untuk dropdown: [id => name]
+        $teachers = Teacher::all();
+    
+        $schedule = $schedule->transform(function ($slot) use ($teachers) {
+            foreach ($slot['jadwal'] as $hari => &$jadwalPerHari) {
+                $waliKelas = $teachers->firstWhere('class_id', $jadwalPerHari['kelas_id']);
+                $jadwalPerHari['wali_kelas'] = $waliKelas ? $waliKelas->name : 'Tidak ada wali kelas';
+            }
+    
+            // Kembalikan slot yang sudah dimodifikasi
+            return $slot;
+        });
+    
         $kelasList = \App\Models\Classes::pluck('name', 'id')->toArray();
-    
-        // 3. Kirim ke Inertia
+        //dd($schedule);
         return Inertia::render('Students/melihatJadwalPelajaran', [
-            'schedule'  => $schedule,
-            'kelasList' => $kelasList,
+            'schedule'    => $schedule,
+            'kelasList'   => $kelasList,
+            'wali_kelas'  => $teachers,
         ]);
     }
-    
-    
     
 }  
