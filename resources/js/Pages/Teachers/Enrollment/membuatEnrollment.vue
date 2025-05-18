@@ -10,7 +10,7 @@ defineProps({
   courses: Array,
 });
 
-const { students, courses, teachers } = usePage().props;
+const { students, courses, teachers, auth } = usePage().props;
 console.log('Courses:', toRaw(courses));
 console.log('Students:', toRaw(students));
 console.log('Teachers:', toRaw(teachers));
@@ -81,92 +81,31 @@ const isEnrollmentModalVisible = ref(false);
 
 const markEnrollment = async (enrollmentId, studentId, mapelId) => {
   selectedEnrollmentId.value = enrollmentId;
-  newMark.value.studentId = studentId;
-  newMark.value.mapelId = mapelId; // Sinkron dengan mapelId
+
+  // Debug awal input
+  console.log('Incoming studentId:', studentId);
+  console.log('Incoming mapelId:', mapelId);
+
+  // Set awal berdasarkan parameter langsung (jika tersedia)
+  newMark.value.studentId = studentId || null;
+  newMark.value.mapelId = mapelId || null;
   isMarkModalVisible.value = true;
-  console.log('newMark.studentId:', newMark.value.studentId);
-  console.log('newMark.mapelId:', newMark.value.mapelId);
 
   try {
     console.log(`Fetching enrollment data for ID: ${enrollmentId}`);
-
-    // Mengambil data dari API
     const response = await axios.get(`/api/enrollments/${enrollmentId}`);
-    console.log('Enrollment API response:', response.data);
-
     const enrollmentData = response.data;
-    console.log('Enrollment data:', enrollmentData);
+    console.log('Enrollment API response:', enrollmentData);
 
-    // Check if teacher_id exists
     if (enrollmentData && enrollmentData.teacher_id) {
-      const dataToSend = {
-        student_id: enrollmentData.student_id,
-        mapel_id: enrollmentData.mapel_id,
-        teacher_id: enrollmentData.teacher_id,
-        enrollment_date: enrollmentData.enrollment_date,
-        status: enrollmentData.status,
-      };
-
-      try {
-        const updateResponse = await axios.post(
-          '/api/enrollment/update',
-          dataToSend
-        );
-        console.log('Enrollment updated:', updateResponse.data);
-      } catch (error) {
-        console.error('Error updating enrollment:', error);
-      }
-
-      // Debugging API response
-      console.log('API Response Data:', enrollmentData);
-
-      // Memastikan data dari API lebih prioritas
+      // Update newMark berdasarkan API
       newMark.value.studentId = enrollmentData.student_id;
       newMark.value.mapelId = enrollmentData.mapel_id;
       newMark.value.teacherId = enrollmentData.teacher_id;
       newMark.value.enrollmentDate = enrollmentData.enrollment_date;
-      newMark.value.status = enrollmentData.status;
-
-      // Menampilkan data siswa dan mata pelajaran
-      console.log('Looking for Student ID:', enrollmentData.student_id);
-      console.log('Looking for Course ID:', enrollmentData.mapel_id);
-      console.log('Teacher ID:', enrollmentData.teacher_id);
-
-      // Cek data students dan courses sebelum mencari
-      if (!students || students.length === 0) {
-        console.warn('No students data found.');
-      } else {
-        console.log('Students data loaded:', students);
-      }
-
-      if (!courses || courses.length === 0) {
-        console.warn('No courses data found.');
-      } else {
-        console.log('Courses data loaded:', courses);
-      }
-
-      // Mencari student dan course berdasarkan enrollmentData
-      const selectedStudent = students.find(
-        (student) => student.id === enrollmentData.student_id
-      );
-      const selectedCourse = courses.find(
-        (course) => course.id === enrollmentData.mapel_id
-      );
-
-      // Debugging hasil pencarian
-      console.log('Selected Student:', selectedStudent);
-      console.log('Selected Course:', selectedCourse);
-
-      // Memastikan data ini sudah terupdate
-      newMark.value.studentId = selectedStudent
-        ? selectedStudent.id
-        : enrollmentData.student_id;
-      newMark.value.mapelId = selectedCourse
-        ? selectedCourse.id
-        : enrollmentData.mapel_id;
       newMark.value.status = enrollmentData.status || 'active';
 
-      // Mengisi nilai penilaian dengan data yang tersedia (menggunakan data dari enrollment)
+      // Update nilai kognitif dan keterampilan
       newMark.value.cognitive1 = enrollmentData.nilai1_tek || '';
       newMark.value.cognitive2 = enrollmentData.nilai2_tek || '';
       newMark.value.cognitivePAS = enrollmentData.nilai1_nil || '';
@@ -177,15 +116,33 @@ const markEnrollment = async (enrollmentId, studentId, mapelId) => {
       newMark.value.skillPAS = enrollmentData.nilai1_nil || '';
       newMark.value.skillAverage = enrollmentData.nilai2_tek || '';
 
-      newMark.value.finalMark = enrollmentData.nilai1_tek || ''; // Set nilai akhir sesuai dengan data yang ada
-      newMark.value.teacherId = enrollmentData.teacher_id || '';
+      newMark.value.finalMark = enrollmentData.nilai1_tek || '';
 
-      // Log tambahan untuk memastikan newMark terupdate
-      console.log('Updated newMark (raw):', toRaw(newMark.value));
+      // Log data final
+      console.log('Updated newMark:', toRaw(newMark.value));
+
+      // Optional: mencari student dan course untuk ditampilkan (jika tersedia)
+      if (!students || students.length === 0) {
+        console.warn('No students data found.');
+      }
+      if (!courses || courses.length === 0) {
+        console.warn('No courses data found.');
+      }
+
+      const selectedStudent = students.find(
+        (student) => student.id === enrollmentData.student_id
+      );
+      const selectedCourse = courses.find(
+        (course) => course.id === enrollmentData.mapel_id
+      );
+
+      console.log('Selected Student:', selectedStudent);
+      console.log('Selected Course:', selectedCourse);
     } else {
-      // If teacher_id does not exist, show an alert and log error
-      console.error('Teacher ID atau data lainnya tidak ditemukan.');
-      alert('Teacher ID tidak ada dalam data!');
+      console.error(
+        'Teacher ID atau data lainnya tidak ditemukan dalam response.'
+      );
+      alert('Data teacher_id tidak tersedia.');
     }
   } catch (error) {
     console.error('Error fetching enrollment details:', error);
@@ -230,6 +187,7 @@ const hideMarkModal = () => {
 const searchQuery = ref('');
 const enrollments = ref([]);
 const paginatedEnrollments = ref([]);
+const isLoading = ref(true);
 const currentPage = ref(1); // Halaman aktif
 const totalPages = ref(1);
 const perPage = ref(5); // Jumlah per halaman
@@ -340,7 +298,6 @@ const changePage = (page) => {
   fetchDataForPage(currentPage.value);
 };
 
-const isLoading = ref(false);
 const fetchStudents = async () => {
   try {
     const response = await axios.get('/api/students');
@@ -359,6 +316,7 @@ const fetchCourses = async () => {
     console.error('Error fetching courses:', error);
   }
 };
+
 const fetchEnrollments = async () => {
   const token = document
     .querySelector('meta[name="csrf-token"]')
@@ -367,6 +325,9 @@ const fetchEnrollments = async () => {
     console.error('Token tidak ditemukan!');
     return;
   }
+
+  isLoading.value = true; // Menandakan bahwa data sedang di-load
+
   try {
     const response = await axios.get('/api/enrollments', {
       headers: {
@@ -376,23 +337,21 @@ const fetchEnrollments = async () => {
     });
 
     if (response.status === 200) {
-      // const dummyEnrollments = [];
-
-      // Misalkan response.data mengandung properti 'data' yang berisi array enrollments
       const enrollmentsData = response.data.data || [];
 
-      // Gabungkan data API dengan data dummy
-      ///enrollments.value = [...enrollmentsData, ...dummyEnrollments];
-      //console.log("Enrollments (API + Dummy):", enrollments.value);
+      // Perbarui paginatedEnrollments dengan data terbaru
+      paginatedEnrollments.value = enrollmentsData;
 
-      // Save enrollments to localStorage
-      localStorage.setItem('enrollments', JSON.stringify(enrollments.value));
-      console.log('Enrollments saved to localStorage:', enrollments.value);
+      // Simpan data ke localStorage setelah mendapatkan data dari API
+      localStorage.setItem('enrollments', JSON.stringify(enrollmentsData));
+      console.log('Enrollments saved to localStorage:', enrollmentsData);
     } else {
       console.error('Failed to fetch enrollments:', response.status);
     }
   } catch (error) {
     console.error('Error fetching enrollments:', error);
+  } finally {
+    isLoading.value = false; // Menandakan bahwa loading telah selesai
   }
 };
 
@@ -410,24 +369,37 @@ const isModalVisible = ref(false);
 const showAddModal = () => {
   isEnrollmentModalVisible.value = true;
 };
+
 const showMarkModal = () => {
   isMarkModalVisible.value = true;
 };
+
 const addEnrollmentToDatabase = async (enrollmentData) => {
   try {
+    const page = usePage();
+    const authUser = page.props.auth.user;
+
+    // Set teacher_id dari user yang login
+    enrollmentData.teacher_id = authUser.id;
     console.log('Data dikirim:', enrollmentData);
 
     const response = await axios.post('/api/enrollments', enrollmentData);
     console.log('Response dari server:', response.data);
 
-    // ── Bongkar wrapper: ambil object enrollment yang sebenarnya ──
     const created = response.data.data;
 
-    // ── Pengecekan pada object created, bukan pada response.data ──
     if (created && created.student_id && created.mapel_id) {
+      // Tambahkan data yang baru ke enrollments
       enrollments.value.push(created);
+
+      // Pastikan juga menambahkan data ke paginatedEnrollments jika perlu
+      paginatedEnrollments.value.push(created);
+
+      // Menunggu perubahan render pada UI
       await nextTick();
       console.log('Data enrollments setelah update:', enrollments.value);
+
+      // Pastikan untuk memberikan feedback ke pengguna atau pembaruan lainnya
     } else {
       console.warn('Data penting tidak lengkap:', created);
       alert('Data penting (student_id atau mapel_id) tidak ada.');
@@ -449,11 +421,30 @@ const addEnrollmentToDatabase = async (enrollmentData) => {
 };
 
 const addEnrollment = async () => {
+  console.log('newMark:', newMark);
+  console.log('newMark.studentId:', newMark.studentId);
+  console.log('newMark.mapelId:', newMark.mapelId);
+
+  console.log('studentId:', newMark.studentId);
+  console.log('mapelId:', newMark.mapelId);
+
+  // Mengakses teacher_id dari props.auth.user.id
+  const teacherId = auth.user.id; // Pastikan props sudah diteruskan ke komponen ini
+
   console.log('Sebelum perubahan:', students);
   console.log('Isi newEnrollment.value:', newEnrollment.value); // Tambahkan di sini
 
-  // Periksa apakah courseId terisi dengan benar
-  if (newEnrollment.value.studentId && newEnrollment.value.courseId) {
+  // Pastikan teacher_id sudah diatur sebelum melanjutkan
+  if (!newEnrollment.value.teacher_id) {
+    newEnrollment.value.teacher_id = teacherId; // Set teacher_id dari props.auth.user.id
+  }
+
+  // Periksa apakah courseId dan studentId terisi dengan benar
+  if (
+    newEnrollment.value.studentId &&
+    newEnrollment.value.courseId &&
+    newEnrollment.value.teacher_id
+  ) {
     if (Array.isArray(students)) {
       // Pastikan courseId sudah terisi dengan benar
       students.push({ ...newEnrollment.value });
@@ -487,6 +478,7 @@ const addEnrollment = async () => {
       courseId: null,
       enrollmentDate: '',
       status: 'active',
+      teacher_id: teacherId, // Menjaga agar teacher_id tetap terisi setelah reset
     };
 
     // Menutup modal setelah data berhasil disimpan
@@ -500,22 +492,22 @@ console.log('Enrollments:', enrollments.value);
 console.log('New Enrollment Status:', newEnrollment.value.status);
 
 const payload = {
-  student_id: 1,
-  enrollment_id: 1,
-  enrollment_date: '2025-04-29',
-  cognitive_1: 11,
-  cognitive_2: 11,
-  cognitive_pas: 11,
-  cognitive_average: 11,
-  skill_1: 11,
-  skill_2: 11,
-  skill_pas: 11,
-  skill_average: 11,
-  final_mark: 11,
-  mapel_id: 1,
-  teacher_id: 2,
-  status: 'active',
-  no_kd: '123456',
+  student_id: newEnrollment.value.studentId || null,
+  enrollment_id: newEnrollment.value.enrollmentId || null,
+  enrollment_date: newEnrollment.value.enrollment_date || null,
+  cognitive_1: newEnrollment.value.cognitive_1 || null,
+  cognitive_2: newEnrollment.value.cognitive_2 || null,
+  cognitive_pas: newEnrollment.value.cognitive_pas || null,
+  cognitive_average: newEnrollment.value.cognitive_average || null,
+  skill_1: newEnrollment.value.skill_1 || null,
+  skill_2: newEnrollment.value.skill_2 || null,
+  skill_pas: newEnrollment.value.skill_pas || null,
+  skill_average: newEnrollment.value.skill_average || null,
+  final_mark: newEnrollment.value.final_mark || null,
+  mapel_id: newEnrollment.value.courseId || null,
+  teacher_id: newEnrollment.value.teacher_id || null,
+  status: newEnrollment.value.status || 'active',
+  no_kd: newEnrollment.value.no_kd || null,
 };
 
 // Debug payload sebelum dikirim
@@ -526,36 +518,48 @@ console.log('payload buat teacher_id', typeof payload.teacher_id);
 const url = `/api/enrollments/${payload.enrollment_id}`;
 console.log('URL API:', url);
 
+// Cek apakah enrollment_id ada dan payload tidak kosong
 if (!payload.enrollment_id || Object.keys(payload).length === 0) {
-  console.error('Data enrollment tidak valid atau kosong.');
-  alert('Data enrollment tidak valid atau kosong.');
+  //console.error('Data enrollment tidak valid atau kosong.');
+  //alert('Data enrollment tidak valid atau kosong.');
 } else {
   axios
-    .put(`/api/enrollments/${payload.enrollment_id}`, payload)
+    .put(url, payload)
     .then((response) => {
       console.log('Respons berhasil:', response.data);
+
+      // Cek apakah mapel_id valid
       if (payload.mapel_id === 0) {
         alert('Mapel ID tidak valid!');
         return;
+      }
+
+      // Tambahan logika untuk penanganan lebih lanjut setelah update berhasil
+      if (response.data && response.data.data) {
+        // Misalnya, bisa update tampilan atau data lain setelah update sukses
+        alert('Enrollment berhasil diperbarui!');
       }
     })
     .catch((error) => {
       if (error.response) {
         // Respons dari server
+        console.error('Respons error dari server:', error.response.data);
+        console.error('Status code:', error.response.status);
+        console.error('Headers:', error.response.headers);
+
         if (error.response.status === 404) {
-          //console.error('Enrollment tidak ditemukan:', error.response.data);
-          //alert('Enrollment tidak ditemukan!');
+          alert('Enrollment tidak ditemukan!');
         } else {
-          console.error('Respons error dari server:', error.response.data);
-          console.error('Status code:', error.response.status);
-          console.error('Headers:', error.response.headers);
+          //alert('Gagal memperbarui data enrollment.');
         }
       } else if (error.request) {
         // Jika request dikirim tapi tidak ada respons
         console.error('Request dikirim tapi tidak ada respons:', error.request);
+        alert('Tidak ada respons dari server.');
       } else {
         // Jika terjadi kesalahan lain dalam setup request
         console.error('Kesalahan lain:', error.message);
+        alert('Terjadi kesalahan saat mengirim request.');
       }
     });
 }
@@ -679,7 +683,7 @@ const saveMark = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // Ambil data enrollments dari localStorage
   const storedEnrollments = localStorage.getItem('enrollments');
   if (storedEnrollments) {
@@ -696,17 +700,22 @@ onMounted(() => {
     console.log('Tidak ada data yang tersimpan di localStorage');
   }
 
+  isLoading.value = true;
+
   try {
     // Panggil fungsi untuk fetch data dari API
-    fetchData();
-    fetchStudents();
-    fetchCourses();
-    fetchEnrollments(); // Opsional, jika ingin memperbarui data dari server
+    await fetchData();
+    await fetchStudents();
+    await fetchCourses();
+    await fetchEnrollments(); // Opsional, jika ingin memperbarui data dari server
   } catch (error) {
     console.error('Error fetching data:', error);
   }
+
+  // Pastikan Flowbite diinisialisasi setelah semua data siap
   initFlowbite();
 });
+
 const logChange = (fieldName, value) => {
   console.log(
     `[Tambah/Perbarui Data Kognitif & Keterampilan] ${fieldName}:`,
@@ -920,6 +929,10 @@ button:hover {
         </div>
       </div>
 
+      <!--      <pre>{{ JSON.stringify(students, null, 2) }}</pre>
+-->
+      >
+
       <!-- Modal tambah enrollment -->
       <div
         v-if="isEnrollmentModalVisible"
@@ -933,7 +946,7 @@ button:hover {
               <label
                 for="student"
                 class="block text-sm font-medium text-gray-700"
-                >Siswa</label
+                >Nama Siswa</label
               >
               <select
                 v-model="newEnrollment.studentId"
@@ -982,28 +995,17 @@ button:hover {
             <!-- Pilih Guru -->
             <div class="mb-4">
               <label
-                for="teacherId"
+                for="teacherName"
                 class="block text-sm font-medium text-gray-700"
               >
                 Guru
               </label>
-              <select
-                v-model="newEnrollment.teacher_id"
-                id="teacherId"
-                required
-                @change="
-                  console.log('Selected teacher_id:', newEnrollment.teacher_id)
-                "
-                class="w-full px-4 py-2 border rounded-md"
-              >
-                <option
-                  v-for="teacher in teachers"
-                  :key="teacher.id"
-                  :value="teacher.id"
-                >
-                  {{ teacher.name }}
-                </option>
-              </select>
+              <input
+                type="text"
+                id="teacherName"
+                :value="$page.props.auth.user.name"
+                class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-800"
+              />
             </div>
 
             <!-- Tanggal Enrollment -->
@@ -1060,6 +1062,8 @@ button:hover {
         v-if="isMarkModalVisible"
         class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
       >
+        2 >
+
         <div
           class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
         >
@@ -1105,8 +1109,9 @@ button:hover {
               </label>
               <input
                 :value="
-                  students.find((student) => student.id === newMark.studentId)
-                    ?.name || 'Siswa tidak ditemukan'
+                  students.find(
+                    (student) => student.id === Number(newMark.studentId)
+                  )?.name || 'Siswa tidak ditemukan'
                 "
                 id="studentName"
                 type="text"
@@ -1558,7 +1563,15 @@ button:hover {
               </th>
             </tr>
           </thead>
+          <!--          <pre>{{ JSON.stringify(paginatedEnrollments, null, 2) }}</pre>
+-->
           <tbody>
+            <tr v-if="isLoading">
+              <td colspan="16" class="text-center text-sm text-gray-700">
+                Loading...
+              </td>
+            </tr>
+
             <tr
               v-for="enrollment in paginatedEnrollments"
               :key="enrollment.id"
@@ -1567,7 +1580,7 @@ button:hover {
               <td
                 class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
               >
-                {{ enrollment.id }}
+                {{ enrollment.id || 'ID tidak tersedia' }}
               </td>
               <td
                 class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
@@ -1596,7 +1609,6 @@ button:hover {
                     : 'Guru tidak tersedia'
                 }}
               </td>
-
               <td
                 class="px-4 py-3 text-sm text-gray-800 border-r border-gray-300"
               >
@@ -1669,6 +1681,7 @@ button:hover {
                   <button
                     @click="
                       markEnrollment(
+                        enrollment.id,
                         enrollment.student_id,
                         enrollment.course_id
                       )
@@ -1750,7 +1763,7 @@ button:hover {
         <ul class="space-y-2">
           <li>
             <a
-              href="dashboard"
+              href="teacher-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -1900,6 +1913,24 @@ button:hover {
                 />
               </svg>
               <span class="ml-3">Buku Penghubung</span>
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="#"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 576 512"
+                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                  d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                />
+              </svg>
+              <span class="ml-3">Jadwal Mata Pelajaran</span>
             </a>
           </li>
         </ul>

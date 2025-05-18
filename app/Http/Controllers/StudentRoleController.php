@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Student;  
 use App\Models\JadwalMataPelajaran;
 use App\Models\Teacher;
+use App\Models\Attendance;
 use Inertia\Inertia;  
+use Carbon\Carbon;
 
   
 class StudentRoleController extends Controller  
@@ -80,11 +82,32 @@ class StudentRoleController extends Controller
     {  
         return Inertia::render('Students/melihatTugasSiswa'); // Pastikan nama file sesuai  
     }  
-
-    public function melihatDataAbsensiSiswa()    
-    {    
-        return Inertia::render('Students/melihatDataAbsensiSiswa'); // Menggunakan huruf kecil  
-    }  
+    public function melihatDataAbsensiSiswa(Request $request)
+    {
+        $student = auth()->user()->student->load(['class', 'mapel']); // load relasi class & mapel
+        
+        // Ambil bulan & tahun dari request (atau default ke sekarang)
+        $month = $request->input('month', Carbon::now()->format('m'));
+        $year = $request->input('year', Carbon::now()->format('Y'));
+    
+        // Ambil data absensi untuk siswa ini
+        $absensi = Attendance::where('student_id', $student->id)
+            ->whereMonth('tanggal_kehadiran', $month)
+            ->whereYear('tanggal_kehadiran', $year)
+            ->orderBy('tanggal_kehadiran')
+            ->pluck('status_kehadiran', 'tanggal_kehadiran');
+        
+        return Inertia::render('Students/melihatDataAbsensiSiswa', [
+            'attendanceData' => $absensi,
+            'month' => $month,
+            'year' => $year,
+            'student' => $student,
+            'subject' => $student->mapel, // Ambil mapel dari relasi
+        ]);
+    }
+    
+    
+    
     public function melihatJadwalPelajaran()
     {
         $schedule = JadwalMataPelajaran::with(['mapel', 'kelas'])
@@ -127,7 +150,7 @@ class StudentRoleController extends Controller
         });
     
         $kelasList = \App\Models\Classes::pluck('name', 'id')->toArray();
-        //dd($schedule);
+        //dd($schedule);x
         return Inertia::render('Students/melihatJadwalPelajaran', [
             'schedule'    => $schedule,
             'kelasList'   => $kelasList,

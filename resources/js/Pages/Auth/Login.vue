@@ -12,9 +12,14 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import axios from 'axios';
 
 // Pastikan CSRF token ada di meta tag
-axios.defaults.headers.common['X-CSRF-TOKEN'] = document.head.querySelector(
-  'meta[name="csrf-token"]'
-).content;
+const csrfMetaTag = document.querySelector('meta[name="csrf-token"]');
+if (csrfMetaTag) {
+  const csrfToken = csrfMetaTag.getAttribute('content');
+  axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+  console.log('✅ CSRF token loaded:', csrfToken);
+} else {
+  console.warn('⚠️ CSRF meta tag not found!');
+}
 
 const props = defineProps({
   students: {
@@ -35,7 +40,7 @@ const props = defineProps({
   },
 });
 
-console.log('Daftar students dari props:', props.students);
+//console.log('Daftar students dari props:', props.students);
 
 const form = useForm({
   email: '',
@@ -45,22 +50,11 @@ const form = useForm({
   role: '',
 });
 
-const handleStudentSelect = (selected) => {
-  form.student = selected ? selected : null; // Menyimpan objek siswa lengkap
-};
+console.log('Role terpilih:', form.role);
 
 const userName = ref('');
 const errorMessage = ref(''); // Untuk menyimpan pesan error jika login gagal
 const successMessage = ref('');
-//const studentName = ref('');
-const studentName = computed(() => {
-  // Pastikan 'students' sudah ada dan terdefinisi
-  const selectedStudent = students.find(
-    (student) => student.id === form.student_id
-  );
-  return selectedStudent ? selectedStudent.name : 'Student!';
-});
-
 const studentId = ref('');
 // Fetch session data
 const fetchSessionData = async () => {
@@ -74,6 +68,7 @@ const fetchSessionData = async () => {
 
 const students = ref([]);
 
+const studentName = ref('');
 // Watch untuk memantau perubahan student_id
 watch(
   () => form.student_id,
@@ -105,30 +100,46 @@ const fetchLoggedInStudent = async () => {
     console.log('✅ Response dari server:', loggedInStudent);
 
     studentId.value = loggedInStudent.id;
-    studentName.value = loggedInStudent.name;
+    studentName.value =
+      students.value.find((s) => s.id === form.student_id)?.name || '';
   } catch (error) {
     console.error('❌ Error fetching logged-in student:', error);
   }
 };
 
-const fetchStudents = async (page = 1) => {
+const fetchAllStudents = async () => {
   try {
-    const response = await axios.get(`/api/students?page=${page}`);
-    if (page === 1) {
-      students.value = response.data.data; // Replace with the new data for the first page
-    } else {
-      students.value = [...students.value, ...response.data.data]; // Append data for subsequent pages
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn(
+        '⚠️ Token tidak ditemukan di localStorage, melewati fetchAllStudents'
+      );
+      return;
     }
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    const response = await axios.get('/api/fetch-all-students', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
+    });
+
+    students.value = response.data.students;
+    console.log('✅ Data siswa berhasil diambil:', students.value);
+    console.log('📊 Jumlah siswa yang diambil:', students.value.length);
+    console.log('🔍 Isi lengkap students:', students.value);
   } catch (error) {
-    console.error('Error fetching students:', error);
+    console.error(
+      '❌ Gagal mengambil data siswa:',
+      error.response?.data || error.message
+    );
   }
 };
 
-// Call this function to fetch students when the component mounts
-fetchStudents();
-
 // Fungsi submit login
 const submit = async () => {
+  console.log('>>> submit function dipanggil');
   errorMessage.value = '';
   successMessage.value = '';
 
@@ -136,25 +147,25 @@ const submit = async () => {
     email: form.email,
     password: form.password,
     student_id: form.student_id,
+    student_name:
+      students.value.find((s) => s.id === form.student_id)?.name || null,
     role: form.role,
   });
 
   try {
-    // 1. Ambil CSRF token dari meta (optional)
+    // 1. Ambil CSRF token dari meta
     const csrfToken = document
       .querySelector('meta[name="csrf-token"]')
       ?.getAttribute('content');
-
     if (csrfToken) {
       axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
     }
 
-    // 2. Siapkan payload
+    // 2. Payload login
     const payload = {
       email: form.email,
       password: form.password,
       role: form.role,
-      student_id: form.student_id,
     };
 
     if (form.student) {
@@ -165,39 +176,34 @@ const submit = async () => {
     // 3. Ambil CSRF Cookie
     await axios.get('/sanctum/csrf-cookie');
 
-    // 4. Kirim POST /login
-    const response = await axios.post('/login', payload);
+    // 4. Kirim request login
+    const response = await axios.post('/api/login', payload);
 
+    // 5. Jika berhasil, simpan token
     if (response.data.token) {
-      // 5. Simpan token ke localStorage
-      localStorage.setItem('token', response.data.token);
-      console.log('✅ Token saved:', response.data.token);
-
-      successMessage.value = 'Login berhasil!';
-
-      // 6. Cari siswa berdasarkan ID yang dipilih
-      const selectedStudent = props.students.find((student) => {
-        console.log('Checking student:', student);
-        return student.id === form.student_id;
-      });
-
-      if (selectedStudent) {
-        localStorage.setItem('student_name', selectedStudent.name);
-        console.log('✅ Student name saved:', selectedStudent.name);
+      const token = response.data.token;
+      if (form.student) {
+        localStorage.setItem('student_name', form.student.name);
       }
 
-      // 7. Panggil fetchLoggedInStudent()
-      await fetchLoggedInStudent();
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('✅ Token berhasil disimpan dan diset:', token);
+      console.log(
+        'Token di localStorage sebelum fetchAllStudents:',
+        localStorage.getItem('token')
+      );
 
-      // 8. Redirect ke dashboard sesuai role
+      await fetchAllStudents();
+
       const role = response.data.role;
 
       if (role === 'student') {
         router.visit('/dashboard', {
           method: 'get',
           data: {
-            student_id: form.student.id,
-            student_name: form.student.name,
+            student_id: form.student?.id,
+            student_name: form.student?.name,
           },
         });
       } else if (role === 'teacher') {
@@ -210,10 +216,41 @@ const submit = async () => {
     }
   } catch (error) {
     console.error('❌ Error during login:', error);
-    errorMessage.value = 'Login gagal. Silakan coba lagi.';
+    errorMessage.value =
+      error.response?.data?.message || 'Login gagal. Silakan coba lagi.';
   }
 };
 
+fetchAllStudents();
+
+// Watch role, misal untuk reset form.student jika bukan student
+watch(
+  () => form.role,
+  (newRole) => {
+    if (newRole !== 'student') {
+      form.student = null;
+      form.student_id = null;
+    }
+  }
+);
+
+watch(
+  () => form.student,
+  (newStudentId) => {
+    const matched = students.value.find((s) => s.id === newStudentId);
+
+    if (matched) {
+      form.student_id = matched.id;
+      console.log('👤 Siswa dipilih (dari watch):', {
+        student_id: matched.id,
+        student_name: matched.name,
+      });
+    } else {
+      form.student_id = null;
+      console.log('❌ Siswa tidak ditemukan untuk ID:', newStudentId);
+    }
+  }
+);
 </script>
 
 <template>
@@ -257,6 +294,7 @@ const submit = async () => {
               <option value="student">Siswa</option>
               <option value="teacher">Guru</option>
               <option value="admin">Admin</option>
+              <option value="parent">Orang Tua</option>
             </select>
           </div>
 
@@ -266,7 +304,7 @@ const submit = async () => {
             >
 
             <v-select
-              v-if="props.students.length"
+              v-if="students.length"
               v-model="form.student"
               :options="students"
               :reduce="(student) => student.id"
@@ -297,11 +335,11 @@ const submit = async () => {
             />
           </div>
           <PrimaryButton
+            type="submit"
             class="w-full px-3 py-2 rounded-lg bg-[#12bdee] items-center justify-center"
             style="text-align: center; text-transform: none"
             :class="{ 'opacity-25': form.processing }"
             :disabled="form.processing"
-            @click="submit"
           >
             Login
           </PrimaryButton>

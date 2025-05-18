@@ -19,6 +19,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TugasController;
+use App\Http\Controllers\ParentController;
 use App\Http\Controllers\RoleTypeController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\StudentRoleController;  
@@ -66,6 +67,8 @@ Route::get('/dashboard', function () {
             return redirect()->route('student.dashboard');
         case 'teacher':
             return redirect()->route('teacher.dashboard');
+        case 'parent':
+            return redirect()->route('parent.dashboard');
         case 'admin':
             return redirect()->route('admin.dashboard');
         default:
@@ -84,25 +87,45 @@ Route::get('/dashboard', function () {
         return Inertia::render('teachersDashboard');
     })->name('teacher.dashboard');
 
+    Route::get('/parent-dashboard', function () {
+        return Inertia::render('Parents/parentsDashboard');
+    })->name('parent.dashboard');
+    
+
+
     // Dashboard Siswa
     Route::middleware('auth')->get('/student-dashboard/{student_id?}', function ($student_id = null) {
         $user = Auth::user();
     
-        // Jika tidak ada student_id yang diberikan, ambil siswa pertama untuk pengguna
-        $student = Student::where('user_id', $user->id)
-        ->where('id', $student_id ?? 1) // Gunakan ID default jika tidak ada parameter
-        ->first();
+        // Ambil siswa berdasarkan user_id
+        $studentQuery = Student::where('user_id', $user->id);
     
-        if (!$student) {
-            return redirect()->route('errorPage')->with('message', 'Student not found');
+        // Jika student_id diberikan, cari siswa dengan ID tersebut
+        if ($student_id) {
+            $studentQuery->where('id', $student_id);
         }
     
+        // Ambil siswa (dengan filter di atas)
+        $student = $studentQuery->first();
+    
+        // Jika tidak ditemukan, redirect dengan error
+        if (!$student) {
+            return redirect()->route('errorPage')->with('message', 'Student not found or unauthorized access');
+        }
+    
+        // Render halaman siswa dengan data siswa yang valid
         return Inertia::render('studentsDashboard', [
             'student_id'   => $student->id,
             'student_name' => $student->name,
         ]);
     })->name('student.dashboard');
     
+    
+    Route::get('/parent-dashboard', [ParentController::class, 'parentDashboard'])->name('parentDashboard');        
+    Route::get('/memeriksa-tugas', [ParentController::class, 'memeriksaTugasSubmit'])->name('memeriksa-tugas');
+    Route::get('/memberikan-komentar', [ParentController::class, 'memberikanKomentarKepadaSiswa'])->name('memberikan-komentar');
+    Route::get('/melihat-presensi', [ParentController::class, 'melihatPresensiSiswa'])->name('melihat-presensi');
+    Route::get('/melihat-nilai', [ParentController::class, 'melihatNilaiSiswa'])->name('melihat-nilai');
     
 
     // Profile Routes
@@ -113,6 +136,8 @@ Route::get('/dashboard', function () {
     // Resource Routes
     Route::resource('students', StudentController::class);
     Route::resource('teachers', TeacherController::class);
+    Route::resource('jadwalmataPelajarans', MataPelajaranController::class);
+    Route::resource('settingjadwalmataPelajarans', MataPelajaranController::class);
     Route::resource('kelas', ClassController::class);
     Route::get('/kelas/edit/{classId}', [ClassController::class, 'edit'])->name('kelas.edit');
     Route::resource('/Profile', ProfileController::class);
@@ -141,7 +166,7 @@ Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollmen
     
     // Custom Attendance Views
     //Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [TeacherController::class, 'showAbsensi'])->name('absensi');  
-    Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaJanuari'])->name('absensiSiswaJanuari');
+    Route::get('/absensi/{classId}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaJanuari'])->name('absensiSiswaJanuari');
     Route::get('/absensi/{kelas}/{year}/{mapel}/januari', [AttendanceController::class, 'absensiJanuari'])->name('absensiSiswaJanuari');
     Route::get('/absensi/{kelas}/{year}/{mapel}/februari', [AttendanceController::class, 'absensiFebruari'])->name('absensiSiswaFebruari');
     Route::get('/absensi/{kelas}/{year}/{mapel}/maret', [AttendanceController::class, 'absensiMaret'])->name('absensiSiswaMaret');
@@ -157,7 +182,11 @@ Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollmen
     // Other Routes
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');
-    Route::get('/settingJadwalMataPelajaran', [MataPelajaranController::class, 'settingJadwalMataPelajaran'])->name('matapelajaran.settingJadwalMataPelajaran');
+    Route::get('/settingJadwalMataPelajaran', [MataPelajaranController::class, 'settingJadwalMataPelajaran'])->name('matapelajaran.JadwalMataPelajaran');
+    Route::get('/laporanJadwalMataPelajaran', [MataPelajaranController::class, 'laporanJadwalMataPelajaran'])->name('matapelajaran.LaporanJadwalMataPelajaran');
+    Route::get('/settingjadwalmataPelajarans/settingJadwalMataPelajaran', [MataPelajaranController::class, 'settingJadwalMataPelajaran'])
+    ->name('settingjadwalmataPelajarans.settingJadwalMataPelajaran');
+    Route::get('/createJadwalMataPelajaran', [MataPelajaranController::class, 'createJadwalMataPelajaran'])->name('matapelajaran.createJadwalMataPelajaran');
     Route::get('/mataPelajaran/create', [MataPelajaranController::class, 'create'])->name('matapelajaran.create');
     Route::post('/mata-pelajaran/store', [MataPelajaranController::class, 'store'])->name('matapelajaran.store');
     Route::delete('/matapelajaran/{id}', [MataPelajaranController::class, 'destroy'])->name('matapelajaran.destroy');
@@ -165,6 +194,11 @@ Route::get('membuat-enrollment', [EnrollmentController::class, 'membuatEnrollmen
     Route::post('/jadwal-mata-pelajaran', [MataPelajaranController::class, 'storeJadwal'])
      ->name('jadwal.store');
      Route::get('/jadwal', [MataPelajaranController::class, 'getJadwal'])->name('jadwal.get');
+     Route::get('/jadwal-mata-pelajaran/create', [MataPelajaranController::class, 'createJadwalMataPelajaran'])
+     ->name('jadwalmataPelajarans.createjadwalmatapelajaran');
+
+ 
+
 });
 
 // Admin Routes (with middleware for redirection)
@@ -193,6 +227,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
+
 Route::get('melihatTugas', [StudentRoleController::class, 'melihatTugas'])->name('melihatTugas');  
 Route::get('melihatDataAbsensiSiswa', [StudentRoleController::class, 'melihatDataAbsensiSiswa'])->name('melihatDataAbsensiSiswa');  
 Route::get('melihatJadwalPelajaran', [StudentRoleController::class, 'melihatJadwalPelajaran'])->name('melihatJadwalPelajaran');  
@@ -201,11 +236,10 @@ Route::resource('student_roles', StudentRoleController::class);
 
 
 
-Route::post('/user/{userId}/assign-role', [UserController::class, 'assignRole']);
+
 Route::put('/user/{user}/roles', [UserController::class, 'updateRoles'])->name('user.roles.update');
 
 Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
-
 
 
 // Include Auth Routes

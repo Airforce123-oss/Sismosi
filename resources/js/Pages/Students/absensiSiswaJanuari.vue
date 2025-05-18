@@ -25,8 +25,8 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  student: {
-    type: Object,
+  students: {
+    type: Array,
     required: true,
   },
   kelasList: {
@@ -38,6 +38,12 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
+const studentsList = ref([]);
+const currentPage = ref(1);
+console.log('currentPage:', currentPage.value);
+const perPage = 5;
+console.log('🧑‍🎓 Students yang diterima:', props.students);
 
 const mapelNames = computed(() => {
   let list = [];
@@ -344,10 +350,6 @@ const totalDaysInMonth = Array.from(
   (_, i) => i + 1
 );
 
-totalDaysInMonth.forEach((dayIndex) => {
-  //console.log(getFormattedDate(dayIndex)); // Memanggil fungsi dengan dayIndex yang valid
-});
-
 console.log('totalDaysInMonth ' + totalDaysInMonth);
 
 const isSunday = (day) => {
@@ -391,11 +393,6 @@ function toggleModalSave() {
 // Logs for debugging
 //console.log(studentId.value);
 console.log('Data siswa:', toRaw(studentId.value));
-
-// Example of page navigation state
-watch(pageNumber, (newPageNumber) => {
-  console.log('Page changed to:', newPageNumber);
-});
 
 watch(
   () => props,
@@ -786,39 +783,33 @@ const fetchAttendances = async () => {
     const response = await axios.get('/api/attendances');
     console.log('Response Data:', response.data);
 
-    // Pastikan response.data.attendances adalah array
-    if (Array.isArray(response.data.attendances)) {
-      attendanceData.value = response.data.attendances;
-      console.log('Absensi Data Valid:', attendanceData.value);
-
-      // Memproses data absensi
-      processAttendances();
-
-      // Pastikan ada data yang valid untuk absensi
-      if (attendanceData.value.length === 0) {
-        console.error(
-          'Data absensi kosong, pastikan semua siswa memiliki status absensi yang valid.'
-        );
-        alert(
-          'Data absensi kosong, pastikan semua siswa memiliki status absensi yang valid.'
-        );
-        return;
-      }
-    } else {
-      console.error(
-        'Data absensi tidak valid: response.data.attendances bukan array.'
-      );
+    // Validasi: response.data harus array
+    if (!Array.isArray(response.data)) {
+      console.error('Data absensi tidak valid: response.data bukan array.');
       attendanceData.value = [];
+      newAttendance.value = [];
+      return;
     }
 
-    // Pastikan newAttendance diisi dengan data yang benar
-    newAttendance.value = Array.isArray(response.data.attendances)
-      ? response.data.attendances
-      : Object.values(response.data.attendances);
+    // Simpan data
+    attendanceData.value = response.data;
+    newAttendance.value = response.data;
+    console.log('Absensi Data Valid:', attendanceData.value);
 
-    console.log('New Attendance Array:', newAttendance.value);
+    // Periksa apakah kosong
+    if (attendanceData.value.length === 0) {
+      console.warn('Data absensi kosong.');
+      alert(
+        'Data absensi kosong, pastikan semua siswa memiliki status absensi yang valid.'
+      );
+    }
+
+    // Proses data absensi (jika ada fungsi khusus)
+    processAttendances();
   } catch (error) {
     console.error('Error fetching attendances:', error);
+    attendanceData.value = [];
+    newAttendance.value = [];
   }
 };
 
@@ -934,27 +925,72 @@ const createDate = (dateString) => {
    */
 
 const paginatedStudents = computed(() => {
-  return studentId.value.slice(0, 5);
+  // Pastikan studentsList.value adalah array yang valid
+  if (!Array.isArray(studentsList.value)) {
+    console.error('studentsList.value bukan array:', studentsList.value);
+    return [];
+  }
+
+  // Menampilkan data studentsList sebelum melakukan pagination
+  console.log('Data studentsList sebelum pagination:', studentsList.value);
+
+  // Hitung start dan end berdasarkan pagination
+  const start = (pagination.value.current_page - 1) * pagination.value.per_page;
+  let end = start + pagination.value.per_page;
+
+  // Menyesuaikan nilai end jika lebih besar dari jumlah total data
+  if (end > studentsList.value.length) {
+    end = studentsList.value.length;
+  }
+
+  // Menampilkan informasi pagination
+  console.log(
+    'Start:',
+    start,
+    'End:',
+    end,
+    'Halaman:',
+    pagination.value.current_page,
+    'Per Halaman:',
+    pagination.value.per_page
+  );
+
+  // Ambil data yang sesuai dengan pagination
+  const paginatedData = studentsList.value.slice(start, end);
+
+  // Menampilkan data setelah pagination
+  console.log('Data yang ditampilkan pada halaman ini:', paginatedData);
+
+  return paginatedData;
 });
 
 const processAttendances = () => {
+  const statusMap = {};
+
   if (Array.isArray(attendanceData.value)) {
-    attendances.value = attendanceData.value
-      .map((attendance) => {
-        if (!attendance.student_id || !attendance.status_kehadiran) {
-          console.warn(
-            `Data tidak lengkap untuk siswa ID: ${attendance.student_id}`
-          );
-          return null; // Kembalikan null jika data tidak lengkap
-        }
-        return {
-          student_id: attendance.student_id,
-          status_kehadiran: attendance.status_kehadiran || 'Belum diabsen', // Gunakan status default
-        };
-      })
-      .filter(Boolean); // Hapus nilai null atau data yang tidak lengkap
+    attendanceData.value.forEach((attendance) => {
+      const studentId = attendance.siswa_id; // Gunakan 'siswa_id' dari API
+      const tanggal = attendance.tanggal_kehadiran;
+      const status = attendance.status;
+
+      if (!studentId || !tanggal || !status) {
+        console.warn(`Data tidak lengkap untuk siswa ID: ${studentId}`);
+        return;
+      }
+
+      if (!statusMap[studentId]) {
+        statusMap[studentId] = {};
+      }
+
+      statusMap[studentId][tanggal] = {
+        status_kehadiran: status, // Gunakan key 'status_kehadiran' agar cocok dengan getAttendanceStatus()
+      };
+    });
+
+    selectedStudentStatuses.value = statusMap;
+    console.log('selectedStudentStatuses:', selectedStudentStatuses.value);
   } else {
-    console.error('attendancesData bukan array:', attendanceData.value);
+    console.error('attendanceData.value bukan array:', attendanceData.value);
   }
 };
 
@@ -1005,8 +1041,14 @@ const handlePageChange = (page) => {
   if (isAttendanceDataSent.value) {
     isAttendanceDataSent.value = false;
   }
-  fetchStudents(page);
+
+  fetchStudents(page); // Pastikan Anda memanggil API atau mengambil data untuk halaman tersebut
   isAlertVisible.value = false;
+
+  // Setelah memuat data, cek jika halaman terakhir tercapai
+  if (pagination.current_page >= pagination.last_page) {
+    console.log('Halaman terakhir, tombol Next dinonaktifkan');
+  }
 };
 
 // Variabel untuk mengontrol modal
@@ -1043,10 +1085,11 @@ const handleStatusChange = (studentId, date) => {
   console.log('Menangani status perubahan untuk siswa:', studentId);
   const formattedDateValue = formattedDate(date);
   console.log('isi formattedDateValue:', formattedDateValue);
-  // Panggil formattedDate untuk memformat tanggal
+
   const currentStatus =
     selectedStudentStatuses.value[studentId]?.[formattedDate(date)]
       ?.status_kehadiran;
+
   // Jika status sudah dipilih, langsung perbarui tanpa prompt
   if (currentStatus) {
     selectedStudentId.value = studentId;
@@ -1097,8 +1140,11 @@ const selectStatus = (status) => {
       console.log('Tidak ada perubahan, data tidak disimpan.');
     }
 
-    // Perbarui status di database atau server (misalnya melalui API)
-    updateAttendanceStatus(selectedStudentId.value, selectedDate.value, status);
+    updateAttendance({
+      siswa_id: selectedStudentId.value,
+      tanggal_kehadiran: formattedDate(selectedDate.value),
+      status: status,
+    });
 
     closeModal(); // Menutup modal setelah memilih status
   }
@@ -1322,13 +1368,15 @@ const mapStudentStatuses = () => {
     selectedStudentStatuses.value = {}; // Inisialisasi jika tidak ada data
   }
 };
-const fetchStudents = async (page = 1) => {
+
+const fetchStudents = async (page = 1, perPage = 5) => {
   isNavigating.value = true;
   loading.value = true;
 
   try {
     let token = sessionStorage.getItem('auth_token'); // Mengambil token dari sessionStorage
 
+    // Pastikan token valid atau perbarui token
     if (!token) {
       const response = await axios.post('/api/auth/refresh-token');
       console.log('Response dari /api/auth/refresh-token:', response);
@@ -1349,16 +1397,19 @@ const fetchStudents = async (page = 1) => {
             2
           ) // Indentasi 2 spasi untuk keterbacaan
         );
-
         throw new Error('Gagal mendapatkan token baru');
       }
     }
 
-    const response = await axios.get(`/api/students?page=${page}&per_page=5`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    // Ambil data siswa dengan pagination berdasarkan siswa_id unik
+    const response = await axios.get(
+      `/api/students?page=${page}&per_page=${perPage}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     if (Array.isArray(response.data.data) && response.data.data.length > 0) {
       // Menyaring data siswa
@@ -1368,16 +1419,17 @@ const fetchStudents = async (page = 1) => {
       }));
 
       // Inisialisasi status absensi untuk semua siswa yang terambil
-      //selectedStudentStatuses.value = {}; // Reset status absensi
+      if (!selectedStudentStatuses.value) {
+        selectedStudentStatuses.value = {}; // Inisialisasi hanya sekali
+      }
+
       response.data.data.forEach((student) => {
-        if (student.id) {
-          // Inisialisasi status absensi default jika belum ada
-          if (!selectedStudentStatuses.value[student.id]) {
-            selectedStudentStatuses.value[student.id] = {};
-          }
+        if (student.id && !selectedStudentStatuses.value[student.id]) {
+          selectedStudentStatuses.value[student.id] = {}; // Inisialisasi status untuk siswa jika belum ada
 
           // Mengatur status default absensi berdasarkan tanggal yang dipilih
           if (
+            tanggal_kehadiran.value &&
             !selectedStudentStatuses.value[student.id][tanggal_kehadiran.value]
           ) {
             selectedStudentStatuses.value[student.id][tanggal_kehadiran.value] =
@@ -1394,22 +1446,35 @@ const fetchStudents = async (page = 1) => {
         selectedStudentStatuses.value
       );
 
-      // Update pagination
+      // Update pagination berdasarkan jumlah siswa unik
       pagination.value = {
         current_page: response.data.current_page,
         last_page: response.data.last_page,
-        total: response.data.total,
+        total: response.data.total, // Jumlah total siswa unik
         per_page: response.data.per_page,
       };
+      console.log('➡️ last_pageeee:', pagination.value.last_page);
+      console.log('API response last_page:', response.data.last_page);
 
       // Panggil inisialisasi status absensi setelah data siswa terambil
-      initializeStatuses();
+      if (Object.keys(selectedStudentStatuses.value).length > 0) {
+        initializeStatuses(); // Panggil hanya jika ada status yang sudah diinisialisasi
+      }
     } else {
       console.error('Data siswa tidak ditemukan atau kosong');
-      //selectedStudentStatuses.value = {}; // Kosongkan status jika data tidak valid
+      // Kosongkan status jika data tidak valid
+      selectedStudentStatuses.value = {};
     }
   } catch (error) {
     console.error('Error saat mengirim data absensi:', error);
+    // Tangani error lebih rinci
+    if (error.response) {
+      console.error('Response error:', error.response.data);
+    } else if (error.request) {
+      console.error('Request error:', error.request);
+    } else {
+      console.error('Error:', error.message);
+    }
   } finally {
     isNavigating.value = false;
     loading.value = false;
@@ -1420,30 +1485,27 @@ console.log('Data siswa sebelum pemeriksaan:', studentId.value);
 
 // Inisialisasi selectedStudentStatuses dengan status default jika belum ada
 const initializeStatuses = () => {
-  if (Array.isArray(paginatedStudents.value)) {
-    paginatedStudents.value.forEach((student) => {
-      if (typeof student !== 'object' || student === null) {
-        return;
-      }
+  if (!Array.isArray(paginatedStudents.value)) return;
 
-      // Validasi student.id
-      if (student.id !== undefined && student.id !== null) {
-        // Jika status untuk tanggal tertentu belum ada, set status default
-        if (
-          !selectedStudentStatuses.value[student.id][tanggal_kehadiran.value]
-        ) {
-          selectedStudentStatuses.value[student.id][tanggal_kehadiran.value] = {
-            status_kehadiran: 'Belum diabsen', // Status default
-            tanggal_kehadiran: tanggal_kehadiran.value,
-          };
-        }
-      } else {
-        console.warn(`ID siswa tidak valid: ${JSON.stringify(student)}`);
-      }
-    });
-  } else {
-    console.warn('Data siswa bukan array:', paginatedStudents.value);
-  }
+  paginatedStudents.value.forEach((student) => {
+    if (!student?.id || !tanggal_kehadiran.value) return;
+
+    // Pastikan struktur nested object aman sebelum digunakan
+    if (!selectedStudentStatuses.value) {
+      selectedStudentStatuses.value = {};
+    }
+
+    if (!selectedStudentStatuses.value[student.id]) {
+      selectedStudentStatuses.value[student.id] = {};
+    }
+
+    if (!selectedStudentStatuses.value[student.id][tanggal_kehadiran.value]) {
+      selectedStudentStatuses.value[student.id][tanggal_kehadiran.value] = {
+        status_kehadiran: 'Belum diabsen',
+        tanggal_kehadiran: tanggal_kehadiran.value,
+      };
+    }
+  });
 };
 
 // Panggil fungsi inisialisasi saat data siswa pertama kali dimuat
@@ -1460,17 +1522,25 @@ const updateAttendance = async (newData) => {
       .querySelector('meta[name="csrf-token"]')
       .getAttribute('content');
 
-    // Validasi newData sebelum dikirimkan ke API
-    if (!newData || !newData.tanggal_kehadiran) {
-      //console.error("Data tidak lengkap:", newData);
-      //alert("Data tidak lengkap, silakan coba lagi.");
+    if (
+      !newData ||
+      !newData.tanggal_kehadiran ||
+      !newData.siswa_id ||
+      !newData.status
+    ) {
       return;
     }
 
+    console.log('Mengirim PUT ke', '/attendances/update');
+    console.log('Mengirim data absensi ke backend:', newData);
+
     const response = await axios.put(
-      `/api/attendances`,
+      '/api/attendances/update', // Menggunakan route yang baruRoute::put('/attendances/update', [TeacherController::class, 'storeAttendance'])->name('attendances.update');
+
       {
-        tanggal_kehadiran: newData.tanggal_kehadiran, // Pastikan tanggal_kehadiran ada
+        siswa_id: newData.siswa_id,
+        tanggal_kehadiran: newData.tanggal_kehadiran,
+        status: newData.status,
       },
       {
         headers: {
@@ -1481,10 +1551,21 @@ const updateAttendance = async (newData) => {
     );
 
     console.log('Absensi berhasil diperbarui:', response.data);
-    alert('Absensi berhasil diperbarui!');
+    //alert('Absensi berhasil diperbarui!');
     fetchAttendances(); // Ambil data absensi terbaru
   } catch (error) {
+    // Log error secara lebih lengkap
     console.error('Error memperbarui absensi:', error);
+
+    // Jika ada response error, tampilkan status dan pesan error dari server
+    if (error.response) {
+      console.log('Response error:', error.response);
+      console.log('Error status:', error.response.status);
+      console.log('Error data:', error.response.data);
+      console.log('Error headers:', error.response.headers);
+    }
+
+    // Menampilkan pesan error pada alert
     alert('Gagal memperbarui absensi. Silakan coba lagi.');
   }
 };
@@ -1493,23 +1574,44 @@ updateAttendance(newData);
 
 // Ambil semua data siswa
 const getAllStudents = async () => {
-  let currentPageUrl = 'http://127.0.0.1:8000/api/students?page=1';
-  let allStudents = [];
+  let currentPageUrl = 'http://127.0.0.1:8000/api/students?page=1'; // URL untuk mengambil data siswa
+  let allStudents = []; // Menyimpan semua data siswa
 
+  // Loop untuk mengambil data siswa per halaman hingga tidak ada halaman berikutnya
   while (currentPageUrl) {
     try {
       const response = await axios.get(currentPageUrl);
+
+      // Debugging: Menampilkan response yang diterima
+      console.log('Response data:', response.data);
+
+      // Menambahkan data siswa ke dalam array allStudents
       allStudents = [...allStudents, ...response.data.data];
+
+      // Menyimpan URL halaman berikutnya untuk diambil data selanjutnya
       currentPageUrl = response.data.next_page_url;
     } catch (error) {
       console.error('Error mengambil data siswa:', error);
-      break;
+
+      // Memastikan log error lebih rinci
+      if (error.response) {
+        console.error('Response error:', error.response);
+      } else if (error.request) {
+        console.error('Request error:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+
+      break; // Jika error, keluar dari loop
     }
   }
+
+  // Menyimpan data siswa ke dalam variable reactive atau state
   students.value = allStudents;
 
-  // Inisialisasi status absensi dengan status default
+  // Inisialisasi status absensi dengan status default jika status belum ada
   allStudents.forEach((student) => {
+    // Menggunakan status default jika belum ada status kehadiran untuk siswa tersebut
     selectedStudentStatuses.value[student.id] = selectedStudentStatuses.value[
       student.id
     ] || { status_kehadiran: 'Belum diabsen' };
@@ -1588,7 +1690,7 @@ const getAttendanceData = async () => {
       Array.isArray(response.data.attendances) &&
       response.data.attendances.length > 0
     ) {
-      attendances.value = response.data.attendances;
+      attendances.value = response.data;
       updateSelectedStatuses(response.data.attendances);
     } else {
       console.warn('Data absensi kosong.');
@@ -1601,50 +1703,64 @@ const getAttendanceData = async () => {
 };
 
 const getAttendanceStatus = (studentId, date) => {
-  //const rawStatuses = toRaw(selectedStudentStatuses.value); // Mengambil data yang tidak reaktif
-  //const studentStatuses = rawStatuses[studentId];
+  // Validasi awal
+  if (
+    !studentId ||
+    !date ||
+    typeof studentId !== 'number' ||
+    typeof date !== 'string' ||
+    date.trim() === ''
+  ) {
+    console.warn('ID atau tanggal absensi tidak valid:', studentId, date);
+    return 'Belum diabsen';
+  }
+
+  if (
+    !selectedStudentStatuses.value ||
+    typeof selectedStudentStatuses.value !== 'object'
+  ) {
+    return 'Belum diabsen';
+  }
+
   const studentStatuses = selectedStudentStatuses.value[studentId];
 
-  // Cek jika ada status untuk studentId dan tanggal tertentu
   if (studentStatuses && studentStatuses[date]) {
-    // Pastikan ada status absensi untuk tanggal tertentu
     const statusObj = studentStatuses[date];
-    return statusObj.status_kehadiran; // Mengembalikan status
+    return statusObj.status_kehadiran;
   }
 
-  return 'Belum diabsen'; // Jika tidak ada status absensi untuk studentId
-};
-
-const getAttendanceStatusOnClick = (studentId, date) => {
-  const student = selectedStudentStatuses.value[studentId];
-  if (student && student[date]) {
-    return student[date].status_kehadiran;
-  }
-  return 'Belum diabsen'; // Default jika tidak ada status
+  return 'Belum diabsen';
 };
 
 console.log('Nilai isAddModalVisible:', isAddModalVisible.value);
 
 const getAttendanceClass = (studentId, tanggal_kehadiran) => {
   if (!tanggal_kehadiran) {
-    return 'bg-light text-dark'; // Jika tidak ada tanggal yang dipilih, tampilkan default
+    return 'bg-light text-dark';
   }
 
-  // Panggil fungsi untuk mendapatkan status absensi berdasarkan studentId dan tanggal_kehadiran
+  // Cek apakah tanggal merupakan akhir pekan
+  const dateObj = new Date(tanggal_kehadiran);
+  const day = dateObj.getDay(); // 0 = Minggu, 6 = Sabtu
+  const isWeekend = day === 0 || day === 6;
+
+  if (isWeekend) {
+    return 'bg-red-500 text-white italic cursor-not-allowed'; // Style khusus untuk "Libur"
+  }
+
   const status = getAttendanceStatus(studentId, tanggal_kehadiran);
 
-  // Kelas berdasarkan status kehadiran
   switch (status) {
     case 'P':
-      return 'bg-info text-white fw-bold'; // Hadir
+      return 'bg-info text-white fw-bold';
     case 'A':
-      return 'bg-danger text-white fw-bold'; // Absen
+      return 'bg-danger text-white fw-bold';
     case 'S':
-      return 'bg-warning text-white fw-bold'; // Sakit
+      return 'bg-warning text-white fw-bold';
     case 'I':
-      return 'bg-primary text-white fw-bold'; // Izin
+      return 'bg-primary text-white fw-bold';
     default:
-      return 'bg-light text-dark'; // Status tidak ditemukan atau belum diabsen
+      return 'bg-light text-dark';
   }
 };
 
@@ -1784,6 +1900,31 @@ watch(
     console.log('📥 selectedKelas baru:', newValue);
   }
 );
+
+watch(
+  () => props.students,
+  (newValue) => {
+    console.log('🧑‍🎓 Students yang diterima:', newValue);
+    studentsList.value = newValue || [];
+  },
+  { immediate: true }
+);
+
+watch(currentPage, (newPage) => {
+  fetchStudents(newPage);
+});
+
+watch(
+  () => props.students,
+  (newVal) => {
+    studentsList.value = newVal || [];
+    pagination.value.total = studentsList.value.length;
+    pagination.value.last_page = Math.ceil(
+      pagination.value.total / pagination.value.per_page
+    );
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -1830,10 +1971,6 @@ watch(
 .custom-thead th {
   padding: 10px; /* Menambahkan padding agar teks tidak terlalu rapat */
   text-align: center; /* Menjaga agar teks berada di tengah */
-}
-.spanan {
-  text-align: center;
-  color: #000;
 }
 .modal-overlay {
   position: fixed;
@@ -1996,19 +2133,6 @@ watch(
             class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
           >
             <span class="sr-only">Toggle search</span>
-            <svg
-              aria-hidden="true"
-              class="w-6 h-6"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clip-rule="evenodd"
-                fill-rule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              ></path>
-            </svg>
           </button>
           <!-- Apps -->
           <button
@@ -2172,57 +2296,75 @@ watch(
 
             <tbody>
               <tr v-for="student in paginatedStudents" :key="student.id">
-                <td>{{ student.name }}</td>
+                <td class="font-medium">{{ student.name }}</td>
                 <td
                   v-for="(date, index) in totalDaysInMonth"
                   :key="
-                    'attendance-' +
-                    student.id +
-                    '-' +
-                    formattedDate(new Date(currentYear, currentMonth, date))
+                    (() => {
+                      const validDate = getValidDate(date);
+                      const formatted = formattedDate(validDate);
+                      return `attendance-${student.id}-${formatted}`;
+                    })()
                   "
                   :class="
-                    getAttendanceClass(
-                      student.id,
-                      formattedDate(new Date(currentYear, currentMonth, date))
-                    ) + ' text-center'
+                    (() => {
+                      const validDate = getValidDate(date);
+                      const formatted = formattedDate(validDate);
+                      return [
+                        getAttendanceClass(student.id, formatted),
+                        'text-center',
+                        isWeekend(validDate)
+                          ? 'bg-red-500 text-white italic cursor-not-allowed'
+                          : 'cursor-pointer',
+                      ];
+                    })()
                   "
                   @click="
-                    handleStatusChange(
-                      student.id,
-                      formattedDate(new Date(currentYear, currentMonth, date))
-                    )
+                    (() => {
+                      const validDate = getValidDate(date);
+                      const formatted = formattedDate(validDate);
+                      if (!isWeekend(validDate)) {
+                        handleStatusChange(student.id, formatted);
+                      }
+                    })()
                   "
                 >
-                  <span class="spanan">
+                  <span class="text-center text-black">
                     {{
-                      getAttendanceStatus(
-                        student.id,
-                        formattedDate(new Date(currentYear, currentMonth, date))
-                      )
+                      (() => {
+                        const validDate = getValidDate(date);
+                        const formatted = formattedDate(validDate);
+                        return isWeekend(validDate)
+                          ? 'Libur'
+                          : getAttendanceStatus(student.id, formatted);
+                      })()
                     }}
-                    <!-- {{ date }} -->
                   </span>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
         <!-- flex justify-center mt-4-->
-        <div class="flex flex-col items-center mt-4">
-          <!-- Help text -->
+        <div
+          v-if="pagination.last_page > 1"
+          class="flex flex-col items-center mt-4"
+        >
+          <!-- Info Halaman -->
           <span class="text-sm text-gray-700 dark:text-gray-400">
             Page
-            <span class="font-semibold text-gray-900 dark:text-white">{{
-              pagination.current_page
-            }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">
+              {{ pagination.current_page }}
+            </span>
             of
-            <span class="font-semibold text-gray-900 dark:text-white">{{
-              pagination.last_page
-            }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">
+              {{ pagination.last_page }}
+            </span>
           </span>
 
-          <div class="inline-flex mt-2 xs:mt-0">
+          <!-- Tombol Navigasi -->
+          <div class="inline-flex mt-2">
             <!-- Tombol Previous -->
             <button
               @click="handlePageChange(pagination.current_page - 1)"
@@ -2231,17 +2373,17 @@ watch(
             >
               <svg
                 class="w-3.5 h-3.5 me-2 rtl:rotate-180"
-                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 14 10"
+                aria-hidden="true"
               >
                 <path
+                  d="M13 5H1m0 0 4 4M1 5l4-4"
                   stroke="currentColor"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 5H1m0 0 4 4M1 5l4-4"
                 />
               </svg>
               Previous
@@ -2256,17 +2398,17 @@ watch(
               Next
               <svg
                 class="w-3.5 h-3.5 ms-2 rtl:rotate-180"
-                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 14 10"
+                aria-hidden="true"
               >
                 <path
+                  d="M1 5h12m0 0L9 1m4 4L9 9"
                   stroke="currentColor"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M1 5h12m0 0L9 1m4 4L9 9"
                 />
               </svg>
             </button>
@@ -2495,7 +2637,7 @@ watch(
         <ul class="space-y-2">
           <li>
             <a
-              href="dashboard"
+              href="teacher-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2614,7 +2756,7 @@ watch(
 
           <li>
             <a
-              href="bukuPenghubung"
+              href="bukuPenghubung1"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2626,63 +2768,26 @@ watch(
                   d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
                 />
               </svg>
-              <span class="ml-3">Identitas Siswa</span>
+              <span class="ml-3">Buku Penghubung</span>
             </a>
           </li>
 
           <li>
-            <button
-              type="button"
-              class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-              aria-controls="dropdown-authentication"
-              data-collapse-toggle="dropdown-authentication1"
+            <a
+              href="#"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
+                viewBox="0 0 576 512"
+                class="w-6 h-6"
                 xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-5 h-5"
               >
                 <path
-                  fill-rule="evenodd"
-                  d="M9.664 1.319a.75.75 0 0 1 .672 0 41.059 41.059 0 0 1 8.198 5.424.75.75 0 0 1-.254 1.285 31.372 31.372 0 0 0-7.86 3.83.75.75 0 0 1-.84 0 31.508 31.508 0 0 0-2.08-1.287V9.394c0-.244.116-.463.302-.592a35.504 35.504 0 0 1 3.305-2.033.75.75 0 0 0-.714-1.319 37 37 0 0 0-3.446 2.12A2.216 2.216 0 0 0 6 9.393v.38a31.293 31.293 0 0 0-4.28-1.746.75.75 0 0 1-.254-1.285 41.059 41.059 0 0 1 8.198-5.424ZM6 11.459a29.848 29.848 0 0 0-2.455-1.158 41.029 41.029 0 0 0-.39 3.114.75.75 0 0 0 .419.74c.528.256 1.046.53 1.554.82-.21.324-.455.63-.739.914a.75.75 0 1 0 1.06 1.06c.37-.369.69-.77.96-1.193a26.61 26.61 0 0 1 3.095 2.348.75.75 0 0 0 .992 0 26.547 26.547 0 0 1 5.93-3.95.75.75 0 0 0 .42-.739 41.053 41.053 0 0 0-.39-3.114 29.925 29.925 0 0 0-5.199 2.801 2.25 2.25 0 0 1-2.514 0c-.41-.275-.826-.541-1.25-.797a6.985 6.985 0 0 1-1.084 3.45 26.503 26.503 0 0 0-1.281-.78A5.487 5.487 0 0 0 6 12v-.54Z"
-                  clip-rule="evenodd"
+                  d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
                 />
               </svg>
-
-              <span class="flex-1 ml-3 text-left whitespace-nowrap"
-                >Buku Penghubung</span
-              >
-              <svg
-                class="w-6 h-6"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clip-rule="evenodd"
-                ></path>
-              </svg>
-            </button>
-
-            <ul id="dropdown-authentication1" class="hidden py-2 space-y-2">
-              <li>
-                <a
-                  href="#"
-                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >Tambah Buku Penghubung</a
-                >
-              </li>
-              <li>
-                <a
-                  href="bukuPenghubung1"
-                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >Tampilkan Buku Penghubung</a
-                >
-              </li>
-            </ul>
+              <span class="ml-3">Jadwal Mata Pelajaran</span>
+            </a>
           </li>
         </ul>
       </div>

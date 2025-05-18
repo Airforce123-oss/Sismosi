@@ -21,6 +21,12 @@ class MapelResource extends JsonResource
             'mapel' => $this->mapel,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'teachers' => $this->teachers->map(function ($teacher) {
+                return [
+                    'id' => $teacher->id,
+                    'name' => $teacher->name,
+                ];
+            }),
         ];
     }
 }

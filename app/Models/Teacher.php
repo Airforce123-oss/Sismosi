@@ -10,23 +10,23 @@ class Teacher extends Model
     use HasFactory;
 
     protected $table = 'teachers';
+
     protected $fillable = [
         'name',
         'nip',
         'class_id',
-        'mapel_id',
     ];
 
-
-   public function class()
+    public function class()
     {
         return $this->belongsTo(Classes::class, 'class_id');
     }
 
-        public function attendanceTeachers()
+    public function attendanceTeachers()
     {
         return $this->hasMany(AttendanceTeacher::class, 'teacher_id');
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -36,30 +36,23 @@ class Teacher extends Model
     {
         return $this->hasMany(AttendanceTeacher::class, 'teacher_id', 'id');
     }
+    public function mapels()
+    {
+        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id')
+                    ->withPivot('kode_mapel')
+                    ->withTimestamps();
+    }
+    
+
+    public function waliKelas()
+    {
+        return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
+    }
+
     public function masterMapel()
-    {
-        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'mapel_id')
-                    ->withPivot('id', 'kode_mapel', 'mapel', 'created_at', 'updated_at');
-    }
-
-    public function mapel()
-    {
-        return $this->belongsTo(Mapel::class, 'mapel_id');  // 'mapel_id' mengacu pada kolom di teachers
-    }
-
-        public function mapels()
     {
         return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id');
     }
 
-    
-     // Relasi dengan WaliKelas (One to Many / Many to One)
-     public function waliKelas()
-     {
-         return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
-     }
-     
-     
-    
-
 }
+

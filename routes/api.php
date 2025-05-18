@@ -86,8 +86,7 @@ Route::post('/buku-penghubung', [TeacherController::class, 'storeBukuPenghubung'
 Route::middleware('role:teacher')->get('/students/{id}', [TeacherController::class, 'showStudent']);
 
 // Rute untuk StudentController, hanya bisa diakses oleh siswa
-Route::middleware('role:student')->get('/students/{id}', [StudentController::class, 'show']);
-
+Route::middleware('role:student')->get('/students/profile', [StudentController::class, 'show']);
 
 Route::post('/store-teacher', [TeacherController::class, 'store']);
 Route::post('/students', [StudentController::class, 'storeStudent']);
@@ -107,6 +106,8 @@ Route::middleware('role')->get('/dashboard', function () {
 Route::get('/attendance-teacher/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'show']);
 Route::get('/attendance-teacher-detail/{teacher_id}/{attendance_date}', [AttendanceTeacherController::class, 'getAttendance']);
 Route::post('/attendance', [AttendanceTeacherController::class, 'storeAttendance']);
+Route::post('/attendances', [AttendanceController::class, 'store'])->name('attendance.store');
+Route::get('/attendances', [AttendanceTeacherController::class, 'getAttendances']);
 //Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'store'])->name('attendance-teacher-create');
 Route::get('/teachers/attendance', [AttendanceTeacherController::class, 'absensiGuru'])->name('teachers.attendance');
 Route::post('/attendance-teacher-create', [AttendanceTeacherController::class, 'create']);
@@ -123,9 +124,21 @@ Route::get('/teacher-attendance-report', [AttendanceTeacherController::class, 'g
 
 Route::middleware('auth:sanctum')->get('/logged-in-student', [StudentController::class, 'getLoggedInStudent']);
 Route::get('/students-dashboard', [ProfileController::class, 'dashboard']);
-
+Route::put('/attendances/update', [TeacherController::class, 'storeAttendance'])->name('attendances.update');
 
 Route::post('/save-selected-mapel', [AttendanceController::class, 'saveSelectedMapel']);
+
+Route::post('/jadwal', [MataPelajaranController::class, 'storeJadwal']);
+
+Route::get('/jadwal', [MataPelajaranController::class, 'getAllJadwal']);
+
+
+Route::get('/tahun_ajaran', action: [MataPelajaranController::class, 'getTahunAjaran']);
+
+Route::middleware('auth:sanctum')->get('/fetch-all-students', [StudentController::class, 'fetchAllStudents']);
+
+
+
 
 
 

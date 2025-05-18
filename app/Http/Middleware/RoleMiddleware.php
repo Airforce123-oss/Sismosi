@@ -11,6 +11,8 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
+        \Log::info('RoleMiddleware dijalankan pada URL: ' . $request->fullUrl());
+
         // Periksa apakah pengguna sudah login
         if (Auth::check()) {
             // Periksa apakah pengguna memiliki role yang benar

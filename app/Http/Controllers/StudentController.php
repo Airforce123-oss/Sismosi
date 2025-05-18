@@ -60,6 +60,38 @@ class StudentController extends Controller
             'religions' => $religions, // Kirim data religions
         ]);
     }
+
+    public function fetchAllStudents()
+    {
+        $user = auth()->user();
+    
+        if (!$user) {
+            return response()->json(['error' => 'User not authenticated'], 401);
+        }
+    
+        // Ambil semua data siswa dengan relasi (tanpa filter, tanpa pagination)
+        $students = Student::with(['noInduk', 'religion', 'gender', 'class', 'attendances'])
+                        ->orderBy('id')
+                        ->get();
+    
+        // Ambil data lain seperti di index()
+        $classes = Classes::all();
+        $genders = Gender::all();
+        $noInduks = NoInduk::all();
+        $religions = Religion::all();
+    
+        // Kirim dalam bentuk JSON
+        return response()->json([
+            'students' => StudentResource::collection($students),
+            'classes' => $classes,
+            'genders' => $genders,
+            'no_induks' => $noInduks,
+            'religions' => $religions,
+            'roles' => $user->roles->pluck('name'), // opsional jika butuh role
+        ]);
+    }
+    
+    
     
     public function getLoggedInStudent(Request $request)
     {
@@ -269,6 +301,18 @@ class StudentController extends Controller
             ], 404);  // Status 404 jika siswa tidak ditemukan
         }
     }
+
+    public function show()
+    {
+        $student = auth()->user();
+    
+        // Cek role manual, misal kolom 'role'
+        logger('User role:', ['role' => $student->role]);
+    
+        return response()->json($student);
+    }
+    
+
 
     public function indexApiDetailStudent(Request $request)
 {

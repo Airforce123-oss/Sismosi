@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\AttendancesResources;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Models\Attendance;
+use App\Models\WaliKelas;
 use App\Models\Mapel;
 use Inertia\Inertia;
 use App\Models\Student;
@@ -164,38 +166,81 @@ public function saveSelectedMapel(Request $request)
         return response()->json(['message' => 'Gagal menyimpan data'], 500);
     }
 }
-
-
-public function absensiSiswaJanuari($kelas, $year, $mapel, $month)
+public function absensiSiswaJanuari($classId, $year, $mapel, $month)
 {
     $decodedMapel = urldecode($mapel);
     $decodedMapelList = explode(',', $decodedMapel);
 
-    Log::info('🔥 Route Absensi Dipanggil:', [
-        'kelas' => $kelas,
-        'year' => $year,
-        'mapel' => $decodedMapelList,
-        'month' => $month
+    $user = Auth::user();
+    Log::info('🧪 Auth user check', [
+        'user_id' => $user->id,
+        'user_name' => $user->name,
     ]);
+    Log::info('🧪 Route parameters', compact('classId', 'year', 'mapel', 'month'));
+    Log::info('🧪 Auth user info', ['id' => $user->id, 'name' => $user->name]);
 
-$students = Student::where('class_id', $kelas)->get();
 
+    Log::info('🔎 Mencari wali kelas', [
+        'user_id' => $user->id,
+        'class_id_yang_diminta' => $classId,
+        'data_wali_kelas_user_ini' => WaliKelas::where('user_id', $user->id)->get()
+    ]);
+    
+    Log::info('classId sebelum query', ['classId' => $classId]);
+
+
+    // Verifikasi bahwa user adalah wali dari classId yang diminta
+    $classId = (int) $classId; // pastikan bertipe integer
+
+    $waliKelas = WaliKelas::where('user_id', $user->id)
+        ->where('class_id', $classId)
+        ->first();
+    
+
+    if (!$waliKelas) {
+        return response()->json(['message' => 'Anda bukan wali kelas dari kelas ini.'], 403);
+    }
+
+    $teacherClassData = DB::table('classes')
+    ->where('id', $classId)
+    ->first();
+
+    \Log::info('teacherClassData', ['data' => $teacherClassData]);
+
+
+    // Ambil semua siswa di kelas yang diminta dan sertakan mapel
+    $student = Student::with('mapel')
+        ->where('class_id', $classId)  // Pastikan hanya siswa dengan class_id yang sesuai yang diambil
+        ->get();
+
+    // Tambahkan field subject dari relasi
+    $student = $student->map(function ($student) {
+        return [
+            'id' => $student->id,
+            'name' => $student->name,
+            'subject' => $student->mapel->mapel ?? '-', // fallback jika null
+        ];
+    });
+
+    // Ambil data mapel yang dipilih
     $selectedMapel = Mapel::whereIn('mapel', $decodedMapelList)->get();
 
     if ($selectedMapel->isEmpty()) {
-        Log::error("⚠️ Tidak ada mata pelajaran ditemukan: " . implode(', ', $decodedMapelList));
+        Log::warning("⚠️ Tidak ada mata pelajaran ditemukan: " . implode(', ', $decodedMapelList));
     }
 
     $data = [
-        'kelas' => $kelas,
+        'kelas' => $classId,
         'year' => $year,
         'mapel' => $decodedMapelList,
         'month' => $month,
-        'students' => $students,
+        'students' => $student,
         'selectedMapel' => $selectedMapel->toArray(),
+        'teacherClass' => $teacherClassData,
+
     ];
 
-    Log::info('📤 Data yang dikirim ke Vue:', $data);
+    Log::info('📤 Data absensi dikirim ke Vue:', $data);
 
     return request()->wantsJson()
         ? response()->json($data)
@@ -206,7 +251,7 @@ $students = Student::where('class_id', $kelas)->get();
 private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
 {
     $decodedMapel = urldecode($mapel);
-    $students = Student::where('class_id', $kelas)->get();
+    $student = Student::where('class_id', $kelas)->get();
 
     $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
     if (!$selectedMapel) {
@@ -224,7 +269,7 @@ private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
         'year' => $year,
         'mapel' => $decodedMapel,
         'month' => $month,
-        'students' => $students,
+        'students' => $student,
         'selectedMapel' => $selectedMapel,
     ]);
 }
@@ -310,10 +355,13 @@ public function absensiDesember($kelas, $year, $mapel)
 
         $attendances = $attendancesQuery->paginate($perPage, ['*'], 'page', $page);
 
+        \Log::info('Total Attendances:', ['total' => $attendances->total()]);
+        \Log::info('Last Page:', ['last_page' => $attendances->lastPage()]);
+
         // Format attendances
         $formattedAttendances = [];
         foreach ($attendances as $attendance) {
-            $studentId = $attendance->student_id;
+            $studentId = $attendance->siswa_id;
             $date = $attendance->tanggal_kehadiran;
             $status = $attendance->status_kehadiran;
 
@@ -334,53 +382,59 @@ public function absensiDesember($kelas, $year, $mapel)
             ]
         ], 200);
     }
-
-    public function store(Request $request)
+    /*
+        public function store(Request $request)
     {
-        Log::info('Data yang diterima:', $request->all());
-
-        $request->validate([
-            'tanggal_kehadiran' => 'required|date',
-            'attendances' => 'required|array|min:1',
-            'attendances.*.student_id' => 'required|integer|exists:students,id',
-            'attendances.*.status_kehadiran' => 'required|in:A,P,I',
-        ]);
-
-        $tanggal_kehadiran = Carbon::parse($request->tanggal_kehadiran)->format('Y-m-d');
-        $attendances = $request->input('attendances', []);
-
-        Log::info('Attendance data before mapping:', ['attendances' => $attendances]);
-
-        if (!is_array($attendances) || empty($attendances)) {
-            return response()->json(['message' => 'Data absensi tidak valid.'], 400);
-        }
-
-        $attendanceData = array_map(function ($attendance) use ($tanggal_kehadiran) {
-            $parsedStudentId = (int) $attendance['student_id'];
-            return [
-                'tanggal_kehadiran' => $tanggal_kehadiran,
-                'student_id' => $parsedStudentId,
-                'status_kehadiran' => $attendance['status_kehadiran'],
-            ];
-        }, $attendances);
-
-        $insertedCount = Attendance::insert($attendanceData);
-
-        Log::info('Data absensi berhasil disimpan', ['inserted_count' => $insertedCount]);
-
-        if ($insertedCount) {
+        try {
+            $request->validate([
+                'tanggal_kehadiran' => 'required|date',
+                'attendances' => 'required|array|min:1',
+                'attendances.*.student_id' => 'required|integer|exists:students,id',
+                'attendances.*.status_kehadiran' => 'required|in:A,P,I',
+            ]);
+    
+            $tanggal_kehadiran = Carbon::parse($request->tanggal_kehadiran)->format('Y-m-d');
+            $attendances = $request->input('attendances', []);
+    
+            Log::info('Attendance data before mapping:', ['attendances' => $attendances]);
+    
+            if (!is_array($attendances) || empty($attendances)) {
+                return response()->json(['message' => 'Data absensi tidak valid.'], 400);
+            }
+    
+            $attendanceData = array_map(function ($attendance) use ($tanggal_kehadiran) {
+                if (!isset($attendance['student_id'], $attendance['status_kehadiran'])) {
+                    throw new \Exception("Data attendance tidak lengkap: " . json_encode($attendance));
+                }
+    
+                return [
+                    'tanggal_kehadiran' => $tanggal_kehadiran,
+                    'student_id' => (int) $attendance['student_id'],
+                    'status_kehadiran' => $attendance['status_kehadiran'],
+                ];
+            }, $attendances);
+    
+            Attendance::insert($attendanceData);
+    
             $attendances = Attendance::whereDate('tanggal_kehadiran', $tanggal_kehadiran)->get();
-            Log::info('Absensi yang disimpan:', ['attendances' => $attendances]);
+    
             return response()->json([
                 'message' => 'Attendance saved successfully',
                 'attendances' => $attendances,
             ], 201);
-        } else {
+        } catch (\Throwable $e) {
+            Log::error('Error saat menyimpan absensi:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
             return response()->json([
-                'message' => 'Failed to save attendance.',
+                'message' => 'Terjadi kesalahan saat menyimpan absensi.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
     
+    */
 }
 

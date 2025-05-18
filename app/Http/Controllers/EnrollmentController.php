@@ -20,6 +20,9 @@ class EnrollmentController extends Controller
         
         // Ambil wali kelas yang diampu oleh guru
         $waliKelas = $user->waliKelas;
+
+        Log::info('Wali Kelas:', ['waliKelas' => $waliKelas]);
+
         
         // Pastikan wali kelas ada dan memiliki kelas
         if (!$waliKelas || !$waliKelas->classes) {
@@ -30,6 +33,9 @@ class EnrollmentController extends Controller
     
         // Ambil kelas yang diampu oleh wali kelas tersebut
         $classes = $waliKelas->classes;
+
+        Log::info('Classes:', ['classes' => $classes]);
+
         
         // Pastikan kelas ditemukan dan memiliki siswa
         if (!$classes->students) {
@@ -166,6 +172,8 @@ class EnrollmentController extends Controller
     
             // Simpan ke database
             $enrollment = Enrollment::create($data);
+            $enrollment->load(['student', 'mapel', 'teacher']);
+
             Log::info('Enrollment Data:', $request->all());
     
             return response()->json([
@@ -283,12 +291,25 @@ public function getPaginatedEnrollments(Request $request)
     // Menambahkan show method untuk mengambil data enrollment berdasarkan id
     public function show($enrollmentId)
     {
-        $enrollment = Enrollment::where('id', $enrollmentId)->first(); // Mengambil data tanpa paginasi
+        Log::info("Memulai pencarian enrollment", [
+            'requested_id' => $enrollmentId
+        ]);
+    
+        $enrollment = Enrollment::with('student')->find($enrollmentId);
     
         if (!$enrollment) {
-            Log::error("Enrollment with ID {$enrollmentId} not found.");
+            Log::warning("Enrollment tidak ditemukan", [
+                'enrollment_id' => $enrollmentId,
+                'total_enrollments' => Enrollment::count(),
+                'ids_terkait' => Enrollment::pluck('id')->toArray(),
+            ]);
             return response()->json(['error' => 'Enrollment not found'], 404);
         }
+    
+        Log::info("Enrollment ditemukan", [
+            'enrollment_id' => $enrollment->id,
+            'student_name' => optional($enrollment->student)->name,
+        ]);
     
         return response()->json($enrollment);
     }

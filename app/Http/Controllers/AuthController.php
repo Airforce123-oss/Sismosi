@@ -13,94 +13,101 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     // Metode untuk menangani login
-    public function login(Request $request)
-    {
-        // Validasi input
-        $credentials = $request->only('email', 'password');
-        
-        // Cek kredensial dan autentikasi
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+// Metode untuk menangani login
+public function login(Request $request)
+{
+    // Validasi input
+    $credentials = $request->only('email', 'password');
     
-            // Ambil student_id dari request
-            $studentId = $request->student_id;
+    // Cek kredensial dan autentikasi
+    if (Auth::attempt($credentials)) {
+        $user = Auth::user();
     
-            // Cek role_name pada user
-            $roleName = $user->role_name; // Mengambil role_name dari user
+        // Ambil student_id dari request
+        $studentId = $request->student_id;
     
-            // Debugging: Log role user
-            Log::info('Authenticated User:', [
-                'user_id' => $user->id,
-                'role_name' => $roleName,
-            ]);
+        // Cek role_name pada user
+        $roleName = $user->role_name; // Mengambil role_name dari user
     
-            // Jika user adalah student
-            if ($roleName === 'student') {
-                $studentId = $request->input('student_id');
+        // Debugging: Log role user
+        Log::info('Authenticated User:', [
+            'user_id' => $user->id,
+            'role_name' => $roleName,
+        ]);
+    
+        // Jika user adalah student
+        if ($roleName === 'student') {
+            $studentId = $request->input('student_id');
 
-                // Check if student_id is provided
-                if ($studentId) {
-                    // Fetch student data where user_id matches the authenticated user's ID
-                    // and the student_id matches the provided student_id
-                    $student = Student::where('user_id', auth()->id())
-                    ->where('id', $studentId)
-                    ->first();
-            
-                    // Check if student exists
-                    if ($student) {
-                        // Return the student data to the frontend
-                        return Inertia::render('StudentDashboard', [
-                            'student_id' => $student->id,
-                            'student_name' => $student->name,
-                        ]);
-                    } else {
-                        // Return an error page if student not found
-                        return Inertia::render('ErrorPage', [
-                            'message' => 'Student not found.',
-                        ]);
-                    }
+            // Check if student_id is provided
+            if ($studentId) {
+                // Fetch student data where user_id matches the authenticated user's ID
+                // and the student_id matches the provided student_id
+                $student = Student::where('user_id', auth()->id())
+                ->where('id', $studentId)
+                ->first();
+        
+                // Check if student exists
+                if ($student) {
+                    // Return the student data to the frontend
+                    return Inertia::render('StudentDashboard', [
+                        'student_id' => $student->id,
+                        'student_name' => $student->name,
+                    ]);
                 } else {
-                    // Return an error page if student_id is not provided
+                    // Return an error page if student not found
                     return Inertia::render('ErrorPage', [
-                        'message' => 'No student selected.',
+                        'message' => 'Student not found.',
                     ]);
                 }
+            } else {
+                // Return an error page if student_id is not provided
+                return Inertia::render('ErrorPage', [
+                    'message' => 'No student selected.',
+                ]);
             }
-    
-            // Jika user adalah teacher
-            if ($roleName === 'teacher') {
-                // Pastikan teacher terdaftar di tabel teachers (jika perlu)
-                $teacher = \App\Models\Teacher::where('user_id', $user->id)->first();
-                if ($teacher) {
-                    // Jika terdaftar sebagai teacher
-                    return redirect()->route('teacher.dashboard');
-                } else {
-                    // Jika user tidak terdaftar sebagai teacher
-                    return redirect()->route('login')->withErrors([
-                        'email' => 'Email tidak terdaftar sebagai guru.',
-                    ]);
-                }
+        }
+
+        // Jika user adalah teacher
+        if ($roleName === 'teacher') {
+            // Pastikan teacher terdaftar di tabel teachers (jika perlu)
+            $teacher = \App\Models\Teacher::where('user_id', $user->id)->first();
+            if ($teacher) {
+                // Jika terdaftar sebagai teacher
+                return redirect()->route('teacher.dashboard');
+            } else {
+                // Jika user tidak terdaftar sebagai teacher
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Email tidak terdaftar sebagai guru.',
+                ]);
             }
-    
-            // Jika user adalah admin
-            if ($roleName === 'admin') {
-                return redirect()->route('admin.dashboard');
-            }
-            
-    
-            // Jika role tidak dikenali
-            return redirect()->route('login')->withErrors([
-                'email' => 'Role tidak ditemukan untuk pengguna ini.',
+        }
+
+        // Jika user adalah admin
+        if ($roleName === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        // Jika user adalah parent
+        if ($roleName === 'parent') {
+            // Di sini Anda bisa mengarahkan ke dashboard parent, misalnya:
+            return Inertia::render('Parents/ParentDashboard', [
+                'parent_id' => $user->id, // Anda bisa mengirimkan data lainnya yang dibutuhkan
             ]);
         }
-    
-        // Jika login gagal
-        throw ValidationException::withMessages([
-            'email' => ['The provided credentials are incorrect.'],
+
+        // Jika role tidak dikenali
+        return redirect()->route('login')->withErrors([
+            'email' => 'Role tidak ditemukan untuk pengguna ini.',
         ]);
     }
     
-    
+    // Jika login gagal
+    throw ValidationException::withMessages([
+        'email' => ['The provided credentials are incorrect.'],
+    ]);
+}
+
     // (Optional) Metode untuk menangani logout
     public function logout(Request $request)
     {

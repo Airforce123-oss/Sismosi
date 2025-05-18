@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\AttendanceTeacher;
 use App\Models\Teacher;
+use App\Models\AbsensiSiswa;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -56,8 +57,21 @@ class AttendanceTeacherController extends Controller
         ]);
     }
 
-
-
+    public function getAttendances(Request $request)
+    {
+        $query = AbsensiSiswa::query();
+    
+        if ($request->has('siswa_id')) {
+            $query->where('siswa_id', $request->siswa_id);
+        }
+    
+        if ($request->has('month') && $request->has('year')) {
+            $query->whereMonth('tanggal_kehadiran', $request->month)
+                  ->whereYear('tanggal_kehadiran', $request->year);
+        }
+    
+        return response()->json($query->get());
+    }
     
     public function absensiGuru()
     {

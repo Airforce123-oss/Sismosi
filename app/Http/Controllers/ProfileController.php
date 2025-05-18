@@ -73,34 +73,38 @@ class ProfileController extends Controller
                 ]);
             case 'student':
                 // Mengambil student_id dari session yang sudah disimpan saat login
-                $studentId = session('student_id');
+                $studentId = $request->input('student_id', session('student_id'));
+                $studentName = $request->input('student_name');
+
 
                 // Jika student_id tidak ditemukan di session, redirect ke login
                 if (!$studentId) {
-                    Log::warning('Student ID tidak ditemukan di session, redirect ke login.');
+                    Log::warning('Student ID tidak ditemukan di session maupun request');
                     return redirect()->route('login');
                 }
 
-                // Cari data siswa berdasarkan student_id yang ada di session
-                $student = Student::find($studentId);
-    
+                if (!$studentName) {
+                    $student = Student::find($studentId);
                     if (!$student) {
                         return Inertia::render('ErrorPage', [
                             'message' => 'Student tidak ditemukan.',
                         ]);
                     }
+                    $studentName = $student->name;
+                }
 
-                    Log::info('Mengirim data ke frontend', [
-                        'student_name' => $student->name,
-                    ]);
-                    
+                Log::info('Mengirim data ke frontend', [
+                    'student_id' => $studentId,
+                    'student_name' => $studentName,
+                ]);
+    
     
                 return Inertia::render('studentsDashboard', [
                     'total' => $totalStudents,
                     'role_type' => $role,
                     'profileUrl' => route('profile.edit'),
-                    'student_id' => $student->id,
-                    'student_name' => $student->name,
+                    'student_id' => $studentId,
+                    'student_name' => $studentName,
                     'auth'         => ['user' => $user],
                 ]);
             default:

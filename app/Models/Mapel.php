@@ -9,40 +9,46 @@ class Mapel extends Model
 {
     use HasFactory;
 
-    protected $table = 'master_mapel'; // Tabel yang benar
+    protected $table = 'master_mapel';
     protected $primaryKey = 'id';
-    public $incrementing = false; 
-    protected $keyType = 'int';
+public $incrementing = true;
+protected $keyType = 'int';
+
     public $timestamps = false;
+
     protected $fillable = [
         'id',
-        'kode_mapel', // Kolom kode mata pelajaran
-        'mapel',      // Nama mata pelajaran
+        'kode_mapel',
+        'mapel',
     ];
+
     public function tugas()
     {
         return $this->hasMany(Tugas::class, 'mapel_id', 'id');
     }
-    
+
     public function section()
     {
         return $this->belongsTo(Section::class, 'section_id', 'id');
     }
 
-    public function course() {
-        return $this->belongsTo(Mapel::class, 'mapel_id', 'id'); // Kolom yang benar adalah id
-    }
-    public function waliKelas()
+    public function kelas()
     {
-        return $this->belongsToMany(Teacher::class, 'teacher_mapel', 'mapel_id', 'wali_kelas_id')
-                    ->withPivot('id', 'kode_mapel', 'mapel', 'created_at', 'updated_at');
-    }
-    public function teachers()
-    {
-        return $this->belongsToMany(Teacher::class, 'teacher_mapel', 'mapel_id', 'wali_kelas_id');
+        return $this->belongsTo(Classes::class, 'kelas_id');
     }
 
+    public function guru()
+    {
+        return $this->belongsTo(Teacher::class, 'guru_id', 'id');
+    }
     
-    
+
+    public function teachers()
+    {
+        return $this->belongsToMany(Teacher::class, 'teacher_mapel', 'mapel_id', 'teacher_id')
+                    ->withPivot('kode_mapel') // tambahkan kolom lain yang memang ada
+                    ->withTimestamps();
+    }
+
 }
 

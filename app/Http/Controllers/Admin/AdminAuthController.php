@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
@@ -21,31 +22,29 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
-        
+    
         if (Auth::guard('admin')->attempt($credentials)) {
-            // Cek jika user login berhasil
             $admin = Auth::guard('admin')->user();
             Session::put('name', $admin->name);
-
+    
             $roles = $admin->roles->pluck('name')->toArray();
-            
-          // Redirect berdasarkan role
+    
             if (in_array('admin', $roles)) {
                 return redirect()->route('admin.dashboard');
             } elseif (in_array('teacher', $roles)) {
                 return redirect()->route('teachers.dashboard');
             } elseif (in_array('student', $roles)) {
+                // ❌ Tidak perlu ambil students di sini
                 return redirect()->route('students.dashboard');
             } else {
                 return redirect()->route('home');
             }
-    }
-        
+        }
+    
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ]);
     }
-    
     
     
     public function showRegisterForm()

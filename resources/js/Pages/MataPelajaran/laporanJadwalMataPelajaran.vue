@@ -1,60 +1,322 @@
 <script setup>
 import { initFlowbite } from 'flowbite';
-import { Link, useForm, router } from '@inertiajs/vue3';
-import { ref, onMounted, watch } from 'vue';
+import Pagination from '../../Components/Pagination.vue';
+import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { onMounted, ref, watch, computed } from 'vue';
+import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import InputError from '@/Components/InputError.vue'; // Pastikan komponen InputError ada
-
 const props = defineProps({
-  classes: { type: Object },
-  teachers: { type: Object, default: () => ({ data: [] }) },
-  mapels: {
+  auth: { type: Object },
+  schedule: {
     type: Array,
     default: () => [],
   },
+  master_mapel: {
+    type: Object,
+    required: true,
+  },
+  classes_for_student: {
+    type: Object,
+    required: true,
+  },
+  wali_kelas: {
+    type: Object,
+    default: () => ({ data: [] }),
+  },
+  teachers: Array,
+  kelas_id: {
+    type: Number,
+    required: true,
+  },
 });
 
-const classes = ref(props.classes.data || []);
-const mapels = ref(props.mapels);
-const formData = useForm({
-  name: 'Bambang Nurdhiari, S.Pd',
-  class_id: '1',
+const teachers = ref([]);
+
+const fetchTeachers = () => {
+  try {
+    // Menggunakan data yang diterima langsung dari props
+    const teachersData = props.teachers; // Asumsi bahwa data guru diteruskan sebagai props
+
+    // Memastikan data guru valid
+    if (teachersData && Array.isArray(teachersData)) {
+      // Proses data guru (seperti penambahan nama atau atribut lain)
+      teachersData.forEach((teacher) => {
+        //console.log('Nama Guru:', teacher.name); // Menampilkan nama guru
+      });
+
+      // Perbarui data teachers tanpa menghapus data yang ada
+      teachersData.forEach((newTeacher) => {
+        const index = teachers.value.findIndex(
+          (teacher) => teacher.id === newTeacher.id
+        );
+
+        if (index === -1) {
+          teachers.value.push(newTeacher); // Jika data baru, tambahkan
+        } else {
+          teachers.value[index] = newTeacher; // Jika ada data lama, update
+        }
+      });
+    } else {
+      console.error('Invalid or empty data for teachers:', teachersData);
+    }
+  } catch (error) {
+    console.error('Error fetching teachers:', error);
+  }
+};
+
+console.log('Classes for Student:', props.classes_for_student);
+console.log('Teachers:', props.teachers);
+console.log('Classes Data:', props.classes_for_student.data);
+
+const form = useForm({
+  name: props.auth?.user?.name || '',
+  email: props.auth?.user?.email || '',
+  role_type: props.auth?.user?.role_type || '',
 });
 
-function submit() {
-  console.log('Submitting data:', formData);
+const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
+const searchTerm = ref('');
 
-  formData.post(route('teachers.store'), {
-    onSuccess: () => {
-      console.log('Data successfully submitted');
-      router.visit(route('teachers.index'), { replace: true });
-    },
-    onError: (errors) => {
-      console.error('Error:', errors);
-    },
-  });
-}
+const waliKelas = ref(props.wali_kelas || { data: [] });
+console.log('Wali Kelas:', waliKelas.value);
+
+const kelasUrl = computed(() => {
+  const url = new URL(route('matapelajaran.index'));
+  console.log('URL manual:', url);
+  url.searchParams.set('page', currentPage.value); // Gunakan currentPage
+  if (searchTerm.value) {
+    url.searchParams.set('search', searchTerm.value);
+  }
+  return url;
+});
 
 watch(
-  () => props.mapels,
-  (newMapels) => {
-    if (newMapels && newMapels.length > 0) {
-      mapels.value = newMapels;
-      console.log('Mapels after watch:', mapels.value);
-    } else {
-      console.error('Mapels data is empty or undefined');
-    }
-  },
-  { immediate: true }
-);
-onMounted(() => {
-  if (props.mapels && props.mapels.length) {
-    mapels.value = props.mapels; // Atur nilai mapels dari props ke ref
-    console.log('Mapels data structure:', mapels.value);
-  } else {
-    console.error('Mapels data is empty or undefined');
+  () => kelasUrl.value,
+  (updatedKelasUrl) => {
+    console.log('Navigating to URL:', updatedKelasUrl.toString());
+    router.visit(updatedKelasUrl.toString(), {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    });
   }
+);
+
+const selectedKelas = ref(props.kelas_id || '');
+console.log('Selected Kelas:', selectedKelas.value);
+
+// HARI
+const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
+
+const schedule = ref([]);
+
+const loadSchedule = async (id) => {
+  // Jika id null/undefined, load semua jadwal tanpa filter kelas
+  if (id === null || id === undefined) {
+    try {
+      const response = await axios.get('/api/jadwal'); // endpoint load semua jadwal
+      schedule.value = response.data;
+      console.log('📦 Semua jadwal dari semua kelas:', response.data);
+    } catch (error) {
+      console.error('❌ Gagal memuat semua jadwal:', error);
+      schedule.value = [];
+    }
+    return;
+  }
+
+  // Jika id ada, validasi dan parse seperti biasa
+  const kelasId = parseInt(id, 10);
+  console.log('Selected Kelas (before parsing):', id);
+
+  if (isNaN(kelasId) || kelasId <= 0) {
+    console.error(
+      `❗ Kelas ID tidak valid: "${id}". Pastikan ID berupa angka lebih besar dari 0.`
+    );
+    schedule.value = [];
+    return;
+  }
+
+  console.log('Parsed ID:', kelasId);
+
+  try {
+    const response = await axios.get(route('jadwal.get'), {
+      params: { kelas_id: kelasId },
+    });
+
+    const rawData = response.data;
+
+    // Proses transformasi data seperti sebelumnya
+    const transformed = rawData.map((entry) => {
+      const jadwalPerHari = {};
+      days.forEach((day) => {
+        if (entry.jadwal?.[day]) {
+          jadwalPerHari[day] = {
+            mapel:
+              entry.jadwal[day]?.mapel ||
+              `Mapel ID: ${entry.jadwal[day]?.mapel_id}`,
+            mapel_id: entry.jadwal[day]?.mapel_id,
+            kelas: entry.jadwal[day]?.kelas || '-',
+            guru: entry.jadwal[day]?.guru || '-',
+            wali_kelas: entry.jadwal[day]?.wali_kelas || '-',
+            guru_id: entry.jadwal[day]?.guru_id || null,
+            tahun: entry.jadwal[day]?.tahun || '-',
+          };
+        }
+      });
+
+      return {
+        jam_ke: entry.jam_ke,
+        jam:
+          entry.jam ||
+          `${String(entry.jam_ke).padStart(2, '0')}:00 - ${String(
+            entry.jam_ke
+          ).padStart(2, '0')}:45`,
+        jadwal: jadwalPerHari,
+      };
+    });
+
+    schedule.value = transformed;
+
+    console.log('✅ Schedule loaded:', schedule.value);
+
+    // ...kode cek jam dalam range tetap seperti sebelumnya
+  } catch (error) {
+    console.error('❌ Gagal mengambil jadwal:', error.response?.data || error);
+  }
+};
+
+const getTeacherNameById = (id) => {
+  if (!props.teachers || props.teachers.length === 0) return '-';
+  const teacher = props.teachers.find((t) => t.id === id);
+  return teacher ? teacher.name : '-';
+};
+
+const formatGuru = (guru) => {
+  if (!guru) return '-';
+
+  if (Array.isArray(guru)) {
+    return guru.map((g) => g.name).join(', ');
+  }
+
+  if (typeof guru === 'number') {
+    return getTeacherNameById(guru);
+  }
+
+  if (typeof guru === 'string') {
+    return guru || '-';
+  }
+
+  return guru.name ?? '-';
+};
+
+const flatSchedule = computed(() => {
+  console.log('Mengeksekusi flatSchedule, data schedule:', schedule.value);
+
+  const scheduleArray = Object.values(schedule.value).flat();
+  let counter = 1; // mulai dari 1
+
+  return scheduleArray.flatMap((slot) => {
+    return days
+      .filter((day) => slot.jadwal[day])
+      .map((day) => {
+        const data = slot.jadwal[day];
+
+        const entry = {
+          id: counter++, // generate nomor urut, lalu tambah counter
+          jam_ke: slot.jam_ke,
+          jam: slot.jam,
+          day,
+          mapel: data?.mapel ?? '-',
+          mapel_id: data?.mapel_id ?? null,
+          kelas: data?.kelas ?? '-',
+          guru: data?.guru || null,
+          guru_id: data?.guru_id ?? null,
+          tahun: data?.tahun ?? '-',
+          wali_kelas: data?.wali_kelas ?? 'Tidak ada wali',
+        };
+
+        return entry;
+      });
+  });
+});
+
+const mergedSchedule = computed(() => {
+  if (!schedule.value) return [];
+
+  // Gabungkan semua jadwal dari tiap kelas
+  return Object.values(schedule.value).flat();
+});
+
+console.log('DEBUG — days:', days);
+const entries = ref([]);
+console.log('isi', entries.value);
+
+// MODAL STATE
+const showModal = ref(false);
+const selectedMapelModal = ref('');
+console.log(
+  'Selected Mapel:',
+  selectedMapelModal.value,
+  typeof selectedMapelModal.value
+);
+
+const editingSlot = ref({ jamKe: null, hari: '' });
+
+const isTimeSlotMatching = (timeSlot, targetTime) => {
+  const parseTime = (time) => {
+    const [hours, minutes] = time.split(':');
+    return parseInt(hours) * 60 + parseInt(minutes); // Mengubah waktu menjadi menit
+  };
+
+  // Mengubah jam yang ada menjadi format menit
+  const [start, end] = timeSlot.split(' - ').map(parseTime);
+  const [targetStart, targetEnd] = targetTime.split(' - ').map(parseTime);
+
+  // Memeriksa apakah target time berada dalam rentang waktu yang ada
+  return targetStart >= start && targetEnd <= end;
+};
+
+// Fungsi untuk mencari apakah ada slot yang sesuai
+const openEditModal = (jamKe, hari) => {
+  const jamYangDicari = editingSlot.jamKe; // Misalnya "07:00 - 07:30"
+
+  // Cari slot yang memiliki jam yang sesuai
+  const currentSlot = schedule.value.find((slot) => {
+    return isTimeSlotMatching(slot.jam, jamYangDicari);
+  });
+
+  if (currentSlot) {
+    console.log('Slot ditemukan:', currentSlot);
+    // Lakukan aksi yang diinginkan dengan currentSlot
+  } else {
+    console.log('❌ Tidak ditemukan jam untuk jam_ke:', jamYangDicari);
+  }
+};
+
+onMounted(() => {
+  fetchTeachers();
+  loadSchedule(null); // null berarti load semua jadwal
   initFlowbite();
+});
+
+watch(selectedKelas, (newVal) => {
+  console.log('Selected Kelas changed to:', newVal);
+  const id = parseInt(newVal, 10);
+  if (isNaN(id)) {
+    console.warn('❗ kelas_id tidak valid. Jadwal tidak dimuat.');
+    schedule.value = [];
+    return;
+  }
+
+  loadSchedule(id); // Pastikan loadSchedule menerima ID numerik
+});
+watch(schedule, (newVal) => {
+  if (Array.isArray(newVal) && newVal.length > 0) {
+    console.log('🎯 Jadwal masuk lewat watch:', newVal);
+    // lanjutkan logika lain di sini
+  } else {
+    console.log('⚠️ Schedule belum siap atau kosong:', newVal);
+  }
 });
 </script>
 
@@ -72,7 +334,6 @@ onMounted(() => {
             class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
           >
             <svg
-              aria-hidden="true"
               class="w-6 h-6"
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -85,7 +346,6 @@ onMounted(() => {
               ></path>
             </svg>
             <svg
-              aria-hidden="true"
               class="hidden w-6 h-6"
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -102,39 +362,21 @@ onMounted(() => {
           <a href="" class="flex items-center justify-between mr-4">
             <img src="/images/barunawati.jpeg" class="mr-3 h-8" alt="" />
             <span
-              class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
+              class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
               >SMA BARUNAWATI SURABAYA</span
             >
           </a>
         </div>
         <div class="flex items-center lg:order-2">
-          <button
-            type="button"
-            data-drawer-toggle="drawer-navigation"
-            aria-controls="drawer-navigation"
-            class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-          >
-            <span class="sr-only">Toggle search</span>
-            <svg
-              aria-hidden="true"
-              class="w-6 h-6"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clip-rule="evenodd"
-                fill-rule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              ></path>
-            </svg>
-          </button>
-
           <!-- Apps -->
+          <button
+            type="button"
+            class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+          ></button>
 
           <button
             type="button"
-            class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+            class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
             id="user-menu-button"
             aria-expanded="false"
             data-dropdown-toggle="dropdown"
@@ -157,10 +399,9 @@ onMounted(() => {
               />
             </svg>
           </button>
-
           <!-- Dropdown menu -->
           <div
-            class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+            class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
             id="dropdown"
           >
             <div class="py-3 px-3">
@@ -178,7 +419,8 @@ onMounted(() => {
                 </span>
                 <span
                   class="block text-sm text-gray-900 truncate dark:text-white"
-                ></span>
+                  >{{ form.role_type }}</span
+                >
               </div>
             </div>
             <div class="mt-3 space-y-1">
@@ -197,165 +439,111 @@ onMounted(() => {
         </div>
       </div>
     </nav>
-
     <!-- start1 -->
 
-    <main class="p-4 md:ml-64 h-auto pt-20">
-      <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
-        <!--max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 -->
-        <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
-          <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-            <form @submit.prevent="submit">
-              <div class="shadow sm:rounded-md sm:overflow-hidden">
-                <div class="bg-white py-6 px-4 space-y-6 sm:p-6">
-                  <div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">
-                      Informasi Guru
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                      Gunakan Form ini untuk memperbarui data guru
-                    </p>
-                  </div>
+    <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="p-6 space-y-6">
+          <!--LAPORAN JADWAL-->
+          <div class="mt-10">
+            <h2
+              class="text-2xl text-center font-bold text-gray-800 mb-6 tracking-wide"
+            >
+              Laporan Jadwal Mata Pelajaran
+            </h2>
 
-                  <div class="grid grid-cols-6 gap-6">
-                    <!-- Nama -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="name"
-                        class="block text-sm font-medium text-gray-700"
-                      >
-                        Nama
-                      </label>
-                      <input
-                        v-model="formData.name"
-                        type="text"
-                        id="name"
-                        placeholder="Masukkan Nama"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                            formData.errors.name,
-                        }"
-                      />
-                      <InputError
-                        class="mt-2"
-                        :message="formData.errors.name"
-                      />
-                    </div>
-
-                    <!-- NIP -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="nip"
-                        class="block text-sm font-medium text-gray-700"
-                      >
-                        NIP
-                      </label>
-                      <input
-                        v-model="formData.nip"
-                        type="text"
-                        id="nip"
-                        placeholder="Masukkan NIP"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                            formData.errors.nip,
-                        }"
-                      />
-                      <InputError class="mt-2" :message="formData.errors.nip" />
-                    </div>
-
-                    <!-- Mapel -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="class_id"
-                        class="block text-sm font-medium text-gray-700"
-                      >
-                        Mapel
-                      </label>
-                      <select
-                        v-model="formData.class_id"
-                        id="class_id"
-                        class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                            formData.errors.class_id,
-                        }"
-                      >
-                        <option value="">Pilih Mapel</option>
-                        <option
-                          v-for="item in mapels"
-                          :key="item.id"
-                          :value="item.id"
-                        >
-                          {{ item.mapel }}
-                        </option>
-                        <option v-if="mapels.length === 0" disabled>
-                          No Mapel Available
-                        </option>
-                      </select>
-                      <InputError
-                        class="mt-2"
-                        :message="formData.errors.class_id"
-                      />
-                    </div>
-
-                    <!-- Kelas -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="class_id"
-                        class="block text-sm font-medium text-gray-700"
-                      >
-                        Jabatan
-                      </label>
-                      <select
-                        v-model="formData.class_id"
-                        id="class_id"
-                        class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                            formData.errors.class_id,
-                        }"
-                      >
-                        <option value="">Pilih Jabatan</option>
-                        <option
-                          v-for="item in classes"
-                          :key="item.id"
-                          :value="item.id"
-                        >
-                          {{ item.name }}
-                        </option>
-                      </select>
-                      <InputError
-                        class="mt-2"
-                        :message="formData.errors.class_id"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
-                >
-                  <div class="flex items-center space-x-4">
-                    <Link
-                      :href="route('teachers.index')"
-                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Batal
-                    </Link>
-
-                    <button
-                      type="submit"
-                      class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Simpan
-                    </button>
-                  </div>
-                </div>
+            <div
+              v-for="day in days"
+              :key="day"
+              class="mb-10 border border-gray-300 rounded-xl shadow-sm overflow-hidden"
+            >
+              <div
+                class="bg-gradient-to-r from-blue-100 to-blue-50 px-5 py-3 text-lg text-blue-800 text-center font-semibold uppercase tracking-wide"
+              >
+                {{ day }}
               </div>
-            </form>
+
+              <table class="w-full text-sm text-left">
+                <thead class="bg-gray-200 text-gray-700">
+                  <tr>
+                    <th class="p-3 border">Mata Pelajaran</th>
+                    <th class="p-3 border">Kelas</th>
+                    <th class="p-3 border">Guru</th>
+                    <th class="p-3 border">Wali Kelas</th>
+                    <th class="p-3 border">Hari</th>
+                    <th class="p-3 border">Jam Ke</th>
+                    <th class="p-3 border">Tahun</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Looping jadwal berdasarkan hari yang ada -->
+                  <template
+                    v-for="slot in mergedSchedule"
+                    :key="`${day}-${slot.jam_ke}`"
+                  >
+                    <tr
+                      v-if="slot.jadwal && slot.jadwal[day]"
+                      class="hover:bg-blue-50 transition-colors"
+                    >
+                      <td class="p-3 border">
+                        {{ slot.jadwal[day]?.mapel || '-' }}
+                      </td>
+                      <td class="p-3 border">
+                        {{ slot.jadwal[day]?.kelas || '-' }}
+                      </td>
+                      <td class="p-3 border">
+                        <span
+                          v-if="slot.jadwal[day]?.guru"
+                          class="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium"
+                        >
+                          {{ slot.jadwal[day].guru }}
+                        </span>
+                      </td>
+                      <td class="p-3 border">
+                        <span
+                          v-if="slot.jadwal[day]?.wali_kelas"
+                          class="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium"
+                        >
+                          {{ slot.jadwal[day].wali_kelas }}
+                        </span>
+                      </td>
+                      <td class="p-3 border">
+                        {{ slot.jam || '-' }}
+                        {{ day || '-' }}
+                      </td>
+                      <td class="p-3 border">
+                        {{ day || '-' }}
+                      </td>
+                      <td class="p-3 border">
+                        {{ slot.jadwal[day]?.tahun || '-' }}
+                      </td>
+                    </tr>
+                  </template>
+
+                  <!-- Bila tidak ada jadwal -->
+                  <tr v-if="schedule.length === 0">
+                    <td
+                      colspan="6"
+                      class="p-4 border text-center text-gray-500 italic bg-gray-50"
+                    >
+                      Tidak ada jadwal
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+        </div>
+      </div>
+      <div v-for="(item, index) in schedule.value" :key="index">
+        <p>Jam Ke: {{ item.jam_ke }}</p>
+        <p>Jam: {{ item.jam }}</p>
+        <div v-for="(hari, day) in item.jadwal" :key="day">
+          <p>
+            {{ day.charAt(0).toUpperCase() + day.slice(1) }}:
+            <span v-if="hari">{{ hari.mapel }} ({{ hari.kelas }})</span>
+            <span v-else>-</span>
+          </p>
         </div>
       </div>
     </main>
@@ -373,7 +561,7 @@ onMounted(() => {
         <ul class="space-y-2">
           <li>
             <a
-              href="dashboard"
+              href="admin-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -591,12 +779,46 @@ onMounted(() => {
             <ul id="dropdown-authentication1" class="hidden py-2 space-y-2">
               <li>
                 <a
+                  href="mataPelajaran"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Mata Pelajaran</a
+                >
+              </li>
+              <li>
+                <a
                   href="settingJadwalMataPelajaran"
                   class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >Jadwal Mata Pelajaran</a
                 >
               </li>
+              <li>
+                <a
+                  href="laporanJadwalMataPelajaran"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Laporan Jadwal Mata Pelajaran</a
+                >
+              </li>
             </ul>
+          </li>
+          <li>
+            <a
+              href="#"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M9.664 1.319a.75.75 0 0 1 .672 0 41.059 41.059 0 0 1 8.198 5.424.75.75 0 0 1-.254 1.285 31.372 31.372 0 0 0-7.86 3.83.75.75 0 0 1-.84 0 31.508 31.508 0 0 0-2.08-1.287V9.394c0-.244.116-.463.302-.592a35.504 35.504 0 0 1 3.305-2.033.75.75 0 0 0-.714-1.319 37 37 0 0 0-3.446 2.12A2.216 2.216 0 0 0 6 9.393v.38a31.293 31.293 0 0 0-4.28-1.746.75.75 0 0 1-.254-1.285 41.059 41.059 0 0 1 8.198-5.424ZM6 11.459a29.848 29.848 0 0 0-2.455-1.158 41.029 41.029 0 0 0-.39 3.114.75.75 0 0 0 .419.74c.528.256 1.046.53 1.554.82-.21.324-.455.63-.739.914a.75.75 0 1 0 1.06 1.06c.37-.369.69-.77.96-1.193a26.61 26.61 0 0 1 3.095 2.348.75.75 0 0 0 .992 0 26.547 26.547 0 0 1 5.93-3.95.75.75 0 0 0 .42-.739 41.053 41.053 0 0 0-.39-3.114 29.925 29.925 0 0 0-5.199 2.801 2.25 2.25 0 0 1-2.514 0c-.41-.275-.826-.541-1.25-.797a6.985 6.985 0 0 1-1.084 3.45 26.503 26.503 0 0 0-1.281-.78A5.487 5.487 0 0 0 6 12v-.54Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span class="ml-3">Master Jabatan</span>
+            </a>
           </li>
         </ul>
       </div>

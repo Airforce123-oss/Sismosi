@@ -2,7 +2,7 @@
 import { onMounted, ref, defineProps, computed } from 'vue';
 import axios from 'axios';
 import { initFlowbite } from 'flowbite';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage, Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import VueApexCharts from 'vue3-apexcharts';
 import ApexCharts from 'apexcharts';
@@ -13,7 +13,9 @@ import '@assets/plugins/simple-calendar/jquery.simple-calendar.js';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 
 // Inisialisasi data
-const props = defineProps();
+//const props = defineProps();
+const { props } = usePage();
+const currentDate = ref('');
 const data = ref([]); // Inisialisasi data sebagai array kosong
 const loading = ref(true); // Status loading
 const userName = ref('');
@@ -23,6 +25,28 @@ const form = useForm({
   name: props.auth?.user?.name || '', // Gunakan optional chaining
   email: props.auth?.user?.email || '',
   role_type: props.auth?.user?.role_type || '',
+});
+
+const attendanceData = computed(() => props.attendanceData || {});
+const month = computed(() => props.month);
+const year = computed(() => props.year);
+
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+const studentName = computed(() => props.student?.name || ''); // nama siswa
+const studentClass = computed(() => props.student?.class?.nama_kelas || ''); // nama kelas
+const subjectName = computed(() => props.subject?.nama_mapel || '');
+
+const formattedMonth = computed(() => {
+  const date = new Date(2000, Number(props.month) - 1);
+  return date.toLocaleDateString('id-ID', { month: 'long' });
 });
 
 const fetchSessionData = async () => {
@@ -36,6 +60,11 @@ const fetchSessionData = async () => {
 
 // Menggunakan onMounted untuk mengambil data saat komponen dimuat
 onMounted(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  currentDate.value = `${year}-${month}-${day}`;
   fetchSessionData();
   initFlowbite(); // Inisialisasi Flowbite jika diperlukan
 });
@@ -189,7 +218,7 @@ const itemCount = computed(() => {
                 <span
                   class="block text-sm text-gray-900 truncate dark:text-white"
                 >
-                  {{ $page.props.auth.user.name }}
+                  {{ studentName }}
                 </span>
                 <span
                   class="block text-sm text-gray-900 truncate dark:text-white"
@@ -218,25 +247,138 @@ const itemCount = computed(() => {
     <main class="p-7 md:ml-64 h-screen pt-20">
       <Head title="Dashboard" />
       <div>
-        <h3>Daftar Absensi Siswa Dengan Kehadiran - {{ currentDate }}</h3>
-        <!--
-                                <div v-if="attendanceRecords.length > 0">
-                    <div
-                        v-for="record in attendanceRecords"
-                        :key="record.student.id"
-                        class="attendance-record"
+        <div class="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">
+            Laporan Absensi Bulan {{ formattedMonth }}/{{ year }}
+          </h2>
+          <div class="overflow-x-auto">
+            <table
+              class="min-w-full table-auto border-separate border-spacing-0 bg-gray-50 rounded-lg"
+            >
+              <caption
+                class="text-left px-6 py-3 text-gray-700 text-sm font-medium"
+              >
+                Data Absensi Siswa Bulan
+                {{
+                  month
+                }}
+                {{
+                  year
+                }}
+              </caption>
+
+              <thead>
+                <!-- Informasi Siswa -->
+                <tr class="bg-white mb-10">
+                  <th
+                    colspan="3"
+                    class="px-6 py-2 text-left text-sm text-gray-700"
+                  >
+                    Nama Siswa:
+                    <span class="font-semibold">{{ studentName }}</span>
+                  </th>
+                </tr>
+
+                <!-- Header kolom utama -->
+                <tr class="bg-gray-200">
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
+                  >
+                    Tanggal
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
+                  >
+                    Mapel
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
+                  >
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  v-for="(status, tanggal, index) in attendanceData"
+                  :key="tanggal"
+                  :class="[
+                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                    'border-b',
+                  ]"
+                >
+                  <td class="px-6 py-4 text-sm text-gray-700">
+                    {{ formatDate(tanggal) }}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700">
+                    {{ props.subject.mapel }}
+                    <!-- Menampilkan mapel -->
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700">
+                    <span
+                      v-if="status === 'H'"
+                      class="text-green-600 font-semibold"
+                      >Hadir</span
                     >
-                        <p>
-                            <strong>{{ record.student.name }}</strong>
-                        </p>
-                        <p>Status Kehadiran: {{ record.status_kehadiran }}</p>
-                        <p>Tanggal Kehadiran: {{ record.tanggal_kehadiran }}</p>
-                    </div>
-                </div>
-                <div v-else>
-                    <p>Tidak ada absensi untuk tanggal ini.</p>
-                </div>
-                -->
+                    <span
+                      v-if="status === 'A'"
+                      class="text-red-600 font-semibold"
+                      >Absen</span
+                    >
+                    <span
+                      v-if="status === 'S'"
+                      class="text-yellow-600 font-semibold"
+                      >Sakit</span
+                    >
+                    <span
+                      v-if="status === 'I'"
+                      class="text-blue-600 font-semibold"
+                      >Izin</span
+                    >
+                  </td>
+                </tr>
+
+                <tr v-if="Object.keys(attendanceData).length === 0">
+                  <td colspan="3" class="text-center py-4 text-gray-500">
+                    Tidak ada data absensi.
+                  </td>
+                </tr>
+              </tbody>
+              <!--          <pre>{{ props.subject.mapel }}</pre>-->
+            </table>
+
+            <!-- Keterangan status -->
+            <div
+              class="px-6 py-3 text-sm text-gray-700 flex flex-wrap items-center gap-4 bg-gray-100 rounded-lg mt-4"
+            >
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-block w-3 h-3 bg-green-500 rounded-full"
+                ></span>
+                Hadir
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-block w-3 h-3 bg-red-500 rounded-full"
+                ></span>
+                Absen
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-block w-3 h-3 bg-yellow-400 rounded-full"
+                ></span>
+                Sakit
+              </div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-block w-3 h-3 bg-blue-500 rounded-full"
+                ></span>
+                Izin
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -251,7 +393,7 @@ const itemCount = computed(() => {
         <ul class="space-y-2">
           <li>
             <a
-              href="dashboard"
+              href="student-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

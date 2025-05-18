@@ -44,6 +44,11 @@ class Student extends Model
     return $this->hasMany(Attendance::class, 'student_id');
     }
 
+    public function mapel()
+    {
+        return $this->belongsTo(Mapel::class, 'mapel_id');
+    }
+
         public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);

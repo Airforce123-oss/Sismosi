@@ -1,36 +1,36 @@
 <script setup>
-import { ref, onMounted, computed, watch, toRaw } from "vue";
-import { initFlowbite } from "flowbite";
-import { useForm, usePage, Head } from "@inertiajs/vue3";
-import ResponsiveNavLink from "@/Components/ResponsiveNavLink.vue";
-import axios from "axios";
+import { ref, onMounted, computed, watch, toRaw } from 'vue';
+import { initFlowbite } from 'flowbite';
+import { useForm, usePage, Head } from '@inertiajs/vue3';
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import axios from 'axios';
 
 // Define Props
 defineProps({
-    totalCourses: Number,
-    courses: Array,
-    totalTeachers: Array,
-    students: Array,
-    totalCourseHours: Number,
-    paginatedEnrollments: Array,
+  totalCourses: Number,
+  courses: Array,
+  totalTeachers: Array,
+  students: Array,
+  totalCourseHours: Number,
+  paginatedEnrollments: Array,
 });
 
 const { props } = usePage();
-console.log("Props received:", props.students);
+console.log('Props received:', props.students);
 // Initialize Page Properties
 const courses = ref(props.courses || []);
 const students = ref(props.students || []);
 
 const totalCourses = computed(() => courses.value.length);
 
-console.log("Fetching students...");
-console.log("Fetched students:", toRaw(students.value));
+console.log('Fetching students...');
+console.log('Fetched students:', toRaw(students.value));
 
 // Form Data for User Authentication
 const form = useForm({
-    name: props.auth.user.name,
-    email: props.auth.user.email,
-    role_type: props.auth.user.role_type,
+  name: props.auth.user.name,
+  email: props.auth.user.email,
+  role_type: props.auth.user.role_type,
 });
 
 // Data for Courses, Teachers, Students, and Enrollment
@@ -44,60 +44,60 @@ const isEditModalOpen = ref(false);
 
 // Task Form Data
 const taskForm = ref({
-    mapel_id: "",
-    description: "",
-    teacher_id: "",
-    student_id: "",
+  mapel_id: '',
+  description: '',
+  teacher_id: '',
+  student_id: '',
 });
 
 const editForm = ref({
-    id: null,
-    mapel_id: "",
-    description: "",
-    teacher_id: "",
-    student_id: "",
+  id: null,
+  mapel_id: '',
+  description: '',
+  teacher_id: '',
+  student_id: '',
 });
 
 const fetchTeachers = async () => {
-    try {
-        const response = await axios.get("/api/teachers");
+  try {
+    const response = await axios.get('/api/teachers');
 
-        // Memastikan response.data dan response.data.data ada dan berbentuk array
-        if (
-            response.data &&
-            response.data.data &&
-            Array.isArray(response.data.data)
-        ) {
-            // Proses data guru (seperti penambahan nama atau atribut lain)
-            response.data.data.forEach((teacher) => {
-                console.log("Nama Guru:", teacher.name);
-            });
+    // Memastikan response.data dan response.data.data ada dan berbentuk array
+    if (
+      response.data &&
+      response.data.data &&
+      Array.isArray(response.data.data)
+    ) {
+      // Proses data guru (seperti penambahan nama atau atribut lain)
+      response.data.data.forEach((teacher) => {
+        console.log('Nama Guru:', teacher.name);
+      });
 
-            // Perbarui data teachers tanpa menghapus data yang ada
-            response.data.data.forEach((newTeacher) => {
-                const index = teachers.value.findIndex(
-                    (teacher) => teacher.id === newTeacher.id
-                );
+      // Perbarui data teachers tanpa menghapus data yang ada
+      response.data.data.forEach((newTeacher) => {
+        const index = teachers.value.findIndex(
+          (teacher) => teacher.id === newTeacher.id
+        );
 
-                if (index === -1) {
-                    teachers.value.push(newTeacher); // Jika data baru, tambahkan
-                } else {
-                    teachers.value[index] = newTeacher; // Jika ada data lama, update
-                }
-            });
+        if (index === -1) {
+          teachers.value.push(newTeacher); // Jika data baru, tambahkan
         } else {
-            console.error("Invalid or empty data for teachers:", response.data);
+          teachers.value[index] = newTeacher; // Jika ada data lama, update
         }
-    } catch (error) {
-        console.error("Error fetching teachers:", error);
+      });
+    } else {
+      console.error('Invalid or empty data for teachers:', response.data);
     }
+  } catch (error) {
+    console.error('Error fetching teachers:', error);
+  }
 };
 
 // Pagination & Search Data
 const totalPages = ref(1);
 const currentPage = ref(1);
 
-const searchQuery = ref("");
+const searchQuery = ref('');
 
 // Teacher & Course Selection
 const selectedTeacherId = ref(null);
@@ -106,1290 +106,1262 @@ const selectedCourseId = ref(null);
 
 // Modal Handling Functions
 const showAddModal = () => {
-    isTaskModalOpen.value = true;
+  isTaskModalOpen.value = true;
 };
 
 const getMapelName = (mapelId) => {
-    const mapel = courses.value.find((course) => course.id === mapelId);
-    return mapel ? mapel.mapel : "Tidak ada nama mata pelajaran";
+  const mapel = courses.value.find((course) => course.id === mapelId);
+  return mapel ? mapel.mapel : 'Tidak ada nama mata pelajaran';
 };
 
 const getStudentName = (studentId) => {
-    console.log("Mencari nama untuk Student ID:", studentId);
-    console.log("Data students:", toRaw(students.value));
+  console.log('Mencari nama untuk Student ID:', studentId);
+  console.log('Data students:', toRaw(students.value));
 
-    // Cek apakah students.value adalah array sebelum menggunakan .find()
-    if (Array.isArray(students.value)) {
-        const student = students.value.find(
-            (student) => String(student.id) === String(studentId)
-        );
+  // Cek apakah students.value adalah array sebelum menggunakan .find()
+  if (Array.isArray(students.value)) {
+    const student = students.value.find(
+      (student) => String(student.id) === String(studentId)
+    );
 
-        if (student) {
-            console.log("Student ditemukan:", student);
-            return student.name;
-        } else {
-            console.log("Student tidak ditemukan untuk ID:", studentId);
-            return "Tidak ada nama siswa";
-        }
+    if (student) {
+      console.log('Student ditemukan:', student);
+      return student.name;
     } else {
-        console.error("students.value bukan array yang valid");
-        return "Data siswa tidak tersedia";
+      console.log('Student tidak ditemukan untuk ID:', studentId);
+      return 'Tidak ada nama siswa';
     }
+  } else {
+    console.error('students.value bukan array yang valid');
+    return 'Data siswa tidak tersedia';
+  }
 };
 
 const getTeacherName = (teacherId) => {
-    // Log the teachers data to ensure it's available
-    const rawTeachers = toRaw(teachers.value); // Remove the Vue proxy if needed
-    // console.log("Teachers data (raw):", rawTeachers);
+  // Log the teachers data to ensure it's available
+  const rawTeachers = toRaw(teachers.value); // Remove the Vue proxy if needed
+  // console.log("Teachers data (raw):", rawTeachers);
 
-    // Make sure teachers is an array
-    if (Array.isArray(rawTeachers)) {
-        // Find the teacher by matching the id
-        const teacher = rawTeachers.find((teacher) => teacher.id === teacherId);
+  // Make sure teachers is an array
+  if (Array.isArray(rawTeachers)) {
+    // Find the teacher by matching the id
+    const teacher = rawTeachers.find((teacher) => teacher.id === teacherId);
 
-        if (teacher) {
-            console.log("Teacher found:", teacher.name);
-            return teacher.name;
-        } else {
-            //console.log("Teacher not found for ID:", teacherId);
-            return "Tidak ada nama guru";
-        }
+    if (teacher) {
+      console.log('Teacher found:', teacher.name);
+      return teacher.name;
     } else {
-        console.log("Teachers data is not an array");
-        return "Tidak ada nama guru";
+      //console.log("Teacher not found for ID:", teacherId);
+      return 'Tidak ada nama guru';
     }
+  } else {
+    console.log('Teachers data is not an array');
+    return 'Tidak ada nama guru';
+  }
 };
 
 // Generate Dummy Enrollments Data
 const generateDummyEnrollments = () => {
-    return Array.from({ length: 10 }, (_, index) => ({
-        id: index + 1,
-        course: courses.value[index % courses.value.length],
-        student_count: students.value.length,
-    }));
+  return Array.from({ length: 10 }, (_, index) => ({
+    id: index + 1,
+    course: courses.value[index % courses.value.length],
+    student_count: students.value.length,
+  }));
 };
 
 // Watch for changes in teachers and courses
 watch(
-    () => teachers.value,
-    (newTeachers) => {
-        console.log(newTeachers);
-    }
+  () => teachers.value,
+  (newTeachers) => {
+    console.log(newTeachers);
+  }
 );
 
 watch(
-    () => students.value,
-    (newStudents) => {
-        console.log(newStudents);
-    }
+  () => students.value,
+  (newStudents) => {
+    console.log(newStudents);
+  }
 );
 
 watch(
-    () => courses.value,
-    (newCourses) => {
-        if (newCourses.length > 0 && !taskForm.value.mapel_id) {
-            taskForm.value.mapel_id = newCourses[0]?.id || null;
-        }
-        console.log("Courses updated:", newCourses);
-    },
-    { immediate: true }
+  () => courses.value,
+  (newCourses) => {
+    if (newCourses.length > 0 && !taskForm.value.mapel_id) {
+      taskForm.value.mapel_id = newCourses[0]?.id || null;
+    }
+    console.log('Courses updated:', newCourses);
+  },
+  { immediate: true }
 );
 
 watch(
-    () => taskForm.mapel_id,
-    (newValue, oldValue) => {
-        console.log("Mapel ID berubah:", oldValue, "->", newValue);
-    }
+  () => taskForm.mapel_id,
+  (newValue, oldValue) => {
+    console.log('Mapel ID berubah:', oldValue, '->', newValue);
+  }
 );
 
 watch(
-    () => taskForm.student_id,
-    (newValue, oldValue) => {
-        console.log("Student ID berubah:", oldValue, "->", newValue);
-    }
+  () => taskForm.student_id,
+  (newValue, oldValue) => {
+    console.log('Student ID berubah:', oldValue, '->', newValue);
+  }
 );
 
 // Menambahkan watch untuk update teacher_id
 watch(
-    () => selectedTeacherId.value,
-    (newTeacherId) => {
-        console.log("New Teacher ID:", newTeacherId); // Debug
-        if (newTeacherId) {
-            // Pastikan `teacher_id` berupa string
-            editForm.value.teacher_id = String(newTeacherId);
-        }
+  () => selectedTeacherId.value,
+  (newTeacherId) => {
+    console.log('New Teacher ID:', newTeacherId); // Debug
+    if (newTeacherId) {
+      // Pastikan `teacher_id` berupa string
+      editForm.value.teacher_id = String(newTeacherId);
     }
+  }
 );
 
 watch(
-    () => selectedStudentId.value,
-    (newstudentId) => {
-        console.log("New Student ID:", newstudentId); // Debug
-        if (newstudentId) {
-            // Pastikan `student_id` berupa string
-            editForm.value.student_id = String(newstudentId);
-        }
+  () => selectedStudentId.value,
+  (newstudentId) => {
+    console.log('New Student ID:', newstudentId); // Debug
+    if (newstudentId) {
+      // Pastikan `student_id` berupa string
+      editForm.value.student_id = String(newstudentId);
     }
+  }
 );
 
 const mapelName = computed(() => {
-    return (mapelId) => {
-        const mapel = courses.value.find((course) => course.id === mapelId);
-        return mapel ? mapel.mapel : "Pilih Mata Pelajaran";
-    };
+  return (mapelId) => {
+    const mapel = courses.value.find((course) => course.id === mapelId);
+    return mapel ? mapel.mapel : 'Pilih Mata Pelajaran';
+  };
 });
 
 const saveEnrollmentsToLocalStorage = () => {
-    localStorage.setItem("enrollments", JSON.stringify(enrollments.value));
+  localStorage.setItem('enrollments', JSON.stringify(enrollments.value));
 };
 
 watch(enrollments, saveEnrollmentsToLocalStorage, { deep: true });
 
 const fetchEnrollments = async () => {
-    try {
-        const response = await axios.get(
-            `/api/enrollments?page=${currentPage.value}`
-        );
-        const newEnrollments = response.data.data;
+  try {
+    const response = await axios.get(
+      `/api/enrollments?page=${currentPage.value}`
+    );
+    const newEnrollments = response.data.data;
 
-        // Proses nama guru wali kelas untuk data baru terlebih dahulu
-        newEnrollments.forEach((enrollment) => {
-            const teacherName = enrollment.teacher
-                ? enrollment.teacher.name
-                : "Belum ada wali kelas";
-            console.log("Nama Guru Wali Kelas:", teacherName);
-        });
+    // Proses nama guru wali kelas untuk data baru terlebih dahulu
+    newEnrollments.forEach((enrollment) => {
+      const teacherName = enrollment.teacher
+        ? enrollment.teacher.name
+        : 'Belum ada wali kelas';
+      console.log('Nama Guru Wali Kelas:', teacherName);
+    });
 
-        // Perbarui enrollments tanpa menghapus data yang ada
-        newEnrollments.forEach((newEnrollment) => {
-            const index = enrollments.value.findIndex(
-                (enrollment) => enrollment.id === newEnrollment.id
-            );
+    // Perbarui enrollments tanpa menghapus data yang ada
+    newEnrollments.forEach((newEnrollment) => {
+      const index = enrollments.value.findIndex(
+        (enrollment) => enrollment.id === newEnrollment.id
+      );
 
-            if (index === -1) {
-                enrollments.value.push(newEnrollment); // Jika data baru, tambahkan
-            } else {
-                enrollments.value[index] = newEnrollment; // Jika ada data lama, update
-            }
-        });
+      if (index === -1) {
+        enrollments.value.push(newEnrollment); // Jika data baru, tambahkan
+      } else {
+        enrollments.value[index] = newEnrollment; // Jika ada data lama, update
+      }
+    });
 
-        totalPages.value = response.data.last_page;
+    totalPages.value = response.data.last_page;
 
-        // Setelah menggabungkan, proses data gabungan (opsional)
-        enrollments.value.forEach((enrollment) => {
-            const teacherName = enrollment.teacher
-                ? enrollment.teacher.name
-                : "Belum ada wali kelas";
-            console.log("Nama Guru Wali Kelas:", teacherName);
-        });
-    } catch (error) {
-        console.error("Error fetching enrollments:", error);
-    }
+    // Setelah menggabungkan, proses data gabungan (opsional)
+    enrollments.value.forEach((enrollment) => {
+      const teacherName = enrollment.teacher
+        ? enrollment.teacher.name
+        : 'Belum ada wali kelas';
+      console.log('Nama Guru Wali Kelas:', teacherName);
+    });
+  } catch (error) {
+    console.error('Error fetching enrollments:', error);
+  }
 };
 
 //const modalVisible = ref(false); // Deklarasikan modalVisible
 //const isModalOpen = ref(false);
 const closeTaskModal = () => {
-    console.log("Closing modal - before", isTaskModalOpen.value);
-    isTaskModalOpen.value = false;
-    console.log("Closing modal - after", isTaskModalOpen.value);
+  console.log('Closing modal - before', isTaskModalOpen.value);
+  isTaskModalOpen.value = false;
+  console.log('Closing modal - after', isTaskModalOpen.value);
 };
 
 // Save Task Function
 const saveTask = async () => {
-    try {
-        console.log("Form Submitted:", taskForm.value);
+  try {
+    console.log('Form Submitted:', taskForm.value);
 
-        // Konversi teacher_id ke integer
-        taskForm.value.teacher_id = parseInt(taskForm.value.teacher_id);
+    // Konversi teacher_id ke integer
+    taskForm.value.teacher_id = parseInt(taskForm.value.teacher_id);
 
-        taskForm.value.student_id = parseInt(taskForm.value.student_id);
+    taskForm.value.student_id = parseInt(taskForm.value.student_id);
 
-        if (!taskForm.value.teacher_id) {
-            console.error("Teacher ID belum dipilih.");
-            return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
-        }
-
-        if (!taskForm.value.student) {
-            console.error("Student ID belum dipilih.");
-            return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
-        }
-
-        taskForm.value.teacher_id = selectedTeacherId.value;
-
-        taskForm.value.student_id = selectedStudentId.value;
-
-        // Set CSRF Token in Header
-        const token = document.head.querySelector(
-            'meta[name="csrf-token"]'
-        ).content;
-        axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
-        axios.defaults.withCredentials = true;
-
-        // Assign Mapel ID if Courses are available
-        if (
-            (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
-            courses.value &&
-            courses.value.length > 0
-        ) {
-            const rawCourses = toRaw(courses.value);
-            taskForm.value.mapel_id = rawCourses[0]?.id || null;
-            console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
-        }
-
-        console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
-
-        if (
-            (!taskForm.value.student_id ||
-                taskForm.value.student_id === null) &&
-            students.value &&
-            students.value.length > 0
-        ) {
-            const rawStudents = toRaw(students.value);
-            taskForm.value.student_id = rawStudents[0]?.id || null;
-            console.log(
-                "Students ID setelah diatur:",
-                taskForm.value.student_id
-            );
-        }
-
-        console.log("Mapel ID setelah diatur:", taskForm.value.student_id);
-
-        // Submit Task Data
-        const response = await axios.post("/api/tugas", {
-            mapel_id: taskForm.value.mapel_id,
-            description: taskForm.value.description,
-            teacher_id: taskForm.value.teacher_id,
-            student_id: taskForm.value.student_id,
-        });
-
-        console.log("Respons API setelah submit task:", response.data);
-
-        if (response.data && response.data.tugas) {
-            console.log("Tugas berhasil disimpan:", response.data);
-            closeTaskModal(); // Tutup modal setelah berhasil menyimpan
-        } else {
-            console.log("Gagal menyimpan tugas:", response.data);
-        }
-    } catch (error) {
-        console.error(
-            "Error saving task:",
-            error.response?.data || error.message || "Unknown error occurred"
-        );
-        closeTaskModal();
+    if (!taskForm.value.teacher_id) {
+      console.error('Teacher ID belum dipilih.');
+      return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
     }
+
+    if (!taskForm.value.student) {
+      console.error('Student ID belum dipilih.');
+      return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
+    }
+
+    taskForm.value.teacher_id = selectedTeacherId.value;
+
+    taskForm.value.student_id = selectedStudentId.value;
+
+    // Set CSRF Token in Header
+    const token = document.head.querySelector(
+      'meta[name="csrf-token"]'
+    ).content;
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    axios.defaults.withCredentials = true;
+
+    // Assign Mapel ID if Courses are available
+    if (
+      (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
+      courses.value &&
+      courses.value.length > 0
+    ) {
+      const rawCourses = toRaw(courses.value);
+      taskForm.value.mapel_id = rawCourses[0]?.id || null;
+      console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
+    }
+
+    console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
+
+    if (
+      (!taskForm.value.student_id || taskForm.value.student_id === null) &&
+      students.value &&
+      students.value.length > 0
+    ) {
+      const rawStudents = toRaw(students.value);
+      taskForm.value.student_id = rawStudents[0]?.id || null;
+      console.log('Students ID setelah diatur:', taskForm.value.student_id);
+    }
+
+    console.log('Mapel ID setelah diatur:', taskForm.value.student_id);
+
+    // Submit Task Data
+    const response = await axios.post('/api/tugas', {
+      mapel_id: taskForm.value.mapel_id,
+      description: taskForm.value.description,
+      teacher_id: taskForm.value.teacher_id,
+      student_id: taskForm.value.student_id,
+    });
+
+    console.log('Respons API setelah submit task:', response.data);
+
+    if (response.data && response.data.tugas) {
+      console.log('Tugas berhasil disimpan:', response.data);
+      closeTaskModal(); // Tutup modal setelah berhasil menyimpan
+    } else {
+      console.log('Gagal menyimpan tugas:', response.data);
+    }
+  } catch (error) {
+    console.error(
+      'Error saving task:',
+      error.response?.data || error.message || 'Unknown error occurred'
+    );
+    closeTaskModal();
+  }
 };
 
 const updateTask = async () => {
-    try {
-        console.log("Data sebelum update:", taskForm.value);
+  try {
+    console.log('Data sebelum update:', taskForm.value);
 
-        // Konversi teacher_id ke integer
-        editForm.value.teacher_id = parseInt(editForm.value.teacher_id);
+    // Konversi teacher_id ke integer
+    editForm.value.teacher_id = parseInt(editForm.value.teacher_id);
 
-        const response = await axios.put(
-            "/api/enrollments/" + taskForm.value.id,
-            editForm.value
-        );
+    const response = await axios.put(
+      '/api/enrollments/' + taskForm.value.id,
+      editForm.value
+    );
 
-        console.log("Respons API setelah update:", response.data);
+    console.log('Respons API setelah update:', response.data);
 
-        if (response.data && response.data.enrollment) {
-            const updatedEnrollment = response.data.enrollment;
+    if (response.data && response.data.enrollment) {
+      const updatedEnrollment = response.data.enrollment;
 
-            const index = enrollments.value.findIndex(
-                (enrollment) => enrollment.id === updatedEnrollment.id
-            );
+      const index = enrollments.value.findIndex(
+        (enrollment) => enrollment.id === updatedEnrollment.id
+      );
 
-            if (index !== -1) {
-                enrollments.value[index] = { ...updatedEnrollment };
-                console.log(
-                    "Enrollments setelah update:",
-                    toRaw(enrollments.value)
-                );
-            }
+      if (index !== -1) {
+        enrollments.value[index] = { ...updatedEnrollment };
+        console.log('Enrollments setelah update:', toRaw(enrollments.value));
+      }
 
-            localStorage.setItem("editForm", JSON.stringify(editForm.value));
-            closeEditModal();
-        } else {
-            console.log("Gagal mengupdate enrollment:", response.data);
-        }
-    } catch (error) {
-        console.error(
-            "Error updating task:",
-            error.response?.data || error.message || "Unknown error occurred"
-        );
+      localStorage.setItem('editForm', JSON.stringify(editForm.value));
+      closeEditModal();
+    } else {
+      console.log('Gagal mengupdate enrollment:', response.data);
     }
+  } catch (error) {
+    console.error(
+      'Error updating task:',
+      error.response?.data || error.message || 'Unknown error occurred'
+    );
+  }
 };
 
 const handleTask = () => {
-    if (taskForm.value.id) {
-        // Jika ID ada, berarti ini adalah update
-        updateTask();
-    } else {
-        // Jika ID tidak ada, berarti ini adalah add (tambah)
-        saveTask();
-    }
+  if (taskForm.value.id) {
+    // Jika ID ada, berarti ini adalah update
+    updateTask();
+  } else {
+    // Jika ID tidak ada, berarti ini adalah add (tambah)
+    saveTask();
+  }
 };
 
 // On Mounted Hook to Fetch Initial Data
 onMounted(async () => {
-    try {
-        // Ambil data taskForm dan enrollments dari localStorage
-        const savedTaskForm = localStorage.getItem("taskForm");
-        if (savedTaskForm) {
-            taskForm.value = JSON.parse(savedTaskForm);
-        }
-
-        const savedEnrollments = localStorage.getItem("enrollments");
-        if (savedEnrollments) {
-            enrollments.value = JSON.parse(savedEnrollments);
-        } else {
-            fetchEnrollments(); // Jika tidak ada di localStorage, ambil dari server
-        }
-
-        // Cek apakah ada data courses di localStorage
-        const savedCourses = localStorage.getItem("courses");
-        if (savedCourses) {
-            courses.value = JSON.parse(savedCourses); // Ambil data dari localStorage
-            console.log("Courses loaded from localStorage:", courses.value);
-        } else {
-            console.log("Fetching courses data from API...");
-            const response = await axios.get("/api/courses");
-            console.log("Courses received:", response.data);
-            courses.value = response.data.data;
-
-            // Simpan data courses ke localStorage
-            localStorage.setItem("courses", JSON.stringify(courses.value));
-            console.log("Courses loaded from API:", courses.value);
-        }
-
-        const savedStudents = localStorage.getItem("students");
-        if (savedStudents) {
-            students.value = JSON.parse(savedStudents); // Ambil data dari localStorage
-            console.log("Students loaded from localStorage:", students.value);
-        } else {
-            console.log("Fetching students data from API...");
-            const response = await axios.get("/api/students");
-            console.log("Students received:", response.data);
-            students.value = response.data.data;
-
-            // Simpan data courses ke localStorage
-            localStorage.setItem("students", JSON.stringify(students.value));
-            console.log("Students loaded from API:", students.value);
-        }
-
-        // Cek apakah mapel_id sudah ada, jika belum atur ke yang pertama
-        if (
-            !taskForm.value.mapel_id &&
-            courses.value &&
-            courses.value.length > 0
-        ) {
-            taskForm.value.mapel_id = courses.value[0].id;
-        }
-
-        if (courses.value && courses.value.length > 0) {
-            const rawCourses = toRaw(courses.value);
-            console.log("Raw Courses:", rawCourses); // Debug data raw
-            taskForm.value.mapel_id = rawCourses[0]?.id || null;
-        }
-
-        // Cek apakah student_id sudah ada, jika belum atur ke yang pertama
-        if (
-            !taskForm.value.student_id &&
-            students.value &&
-            students.value.length > 0
-        ) {
-            taskForm.value.student_id = students.value[0].id;
-        }
-
-        if (students.value && students.value.length > 0) {
-            const rawStudents = toRaw(students.value);
-            console.log("Raw Students:", rawStudents); // Debug data raw
-            taskForm.value.student_id = rawStudents[0]?.id || null;
-        }
-
-        console.log("Selected Teacher ID:", selectedTeacherId.value);
-
-        console.log("Mapel ID setelah diatur:", taskForm.value.mapel_id);
-
-        console.log("Selected Student ID:", selectedStudentId.value);
-
-        console.log("Mapel ID setelah diatur:", taskForm.value.student_id);
-
-        // Fetch data guru (teachers)
-        const teachersResponse = await axios.get("/api/teachers");
-        if (teachersResponse.data && teachersResponse.data.data) {
-            teachers.value = teachersResponse.data.data;
-        }
-
-        // Ambil data enrollments jika perlu
-        const enrollmentsResponse = await axios.get("/api/enrollments", {
-            params: { page: currentPage.value },
-        });
-        enrollments.value = enrollmentsResponse.data.data;
-
-        await fetchTeachers();
-
-        const coursesResponse = await axios.get("/api/courses");
-        courses.value = coursesResponse.data.data;
-        totalPages.value = enrollmentsResponse.data.last_page;
-    } catch (error) {
-        console.error("Error fetching data:", error);
+  try {
+    // Ambil data taskForm dan enrollments dari localStorage
+    const savedTaskForm = localStorage.getItem('taskForm');
+    if (savedTaskForm) {
+      taskForm.value = JSON.parse(savedTaskForm);
     }
+
+    const savedEnrollments = localStorage.getItem('enrollments');
+    if (savedEnrollments) {
+      enrollments.value = JSON.parse(savedEnrollments);
+    } else {
+      fetchEnrollments(); // Jika tidak ada di localStorage, ambil dari server
+    }
+
+    // Cek apakah ada data courses di localStorage
+    const savedCourses = localStorage.getItem('courses');
+    if (savedCourses) {
+      courses.value = JSON.parse(savedCourses); // Ambil data dari localStorage
+      console.log('Courses loaded from localStorage:', courses.value);
+    } else {
+      console.log('Fetching courses data from API...');
+      const response = await axios.get('/api/courses');
+      console.log('Courses received:', response.data);
+      courses.value = response.data.data;
+
+      // Simpan data courses ke localStorage
+      localStorage.setItem('courses', JSON.stringify(courses.value));
+      console.log('Courses loaded from API:', courses.value);
+    }
+
+    const savedStudents = localStorage.getItem('students');
+    if (savedStudents) {
+      students.value = JSON.parse(savedStudents); // Ambil data dari localStorage
+      console.log('Students loaded from localStorage:', students.value);
+    } else {
+      console.log('Fetching students data from API...');
+      const response = await axios.get('/api/students');
+      console.log('Students received:', response.data);
+      students.value = response.data.data;
+
+      // Simpan data courses ke localStorage
+      localStorage.setItem('students', JSON.stringify(students.value));
+      console.log('Students loaded from API:', students.value);
+    }
+
+    // Cek apakah mapel_id sudah ada, jika belum atur ke yang pertama
+    if (!taskForm.value.mapel_id && courses.value && courses.value.length > 0) {
+      taskForm.value.mapel_id = courses.value[0].id;
+    }
+
+    if (courses.value && courses.value.length > 0) {
+      const rawCourses = toRaw(courses.value);
+      console.log('Raw Courses:', rawCourses); // Debug data raw
+      taskForm.value.mapel_id = rawCourses[0]?.id || null;
+    }
+
+    // Cek apakah student_id sudah ada, jika belum atur ke yang pertama
+    if (
+      !taskForm.value.student_id &&
+      students.value &&
+      students.value.length > 0
+    ) {
+      taskForm.value.student_id = students.value[0].id;
+    }
+
+    if (students.value && students.value.length > 0) {
+      const rawStudents = toRaw(students.value);
+      console.log('Raw Students:', rawStudents); // Debug data raw
+      taskForm.value.student_id = rawStudents[0]?.id || null;
+    }
+
+    console.log('Selected Teacher ID:', selectedTeacherId.value);
+
+    console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
+
+    console.log('Selected Student ID:', selectedStudentId.value);
+
+    console.log('Mapel ID setelah diatur:', taskForm.value.student_id);
+
+    // Fetch data guru (teachers)
+    const teachersResponse = await axios.get('/api/teachers');
+    if (teachersResponse.data && teachersResponse.data.data) {
+      teachers.value = teachersResponse.data.data;
+    }
+
+    // Ambil data enrollments jika perlu
+    const enrollmentsResponse = await axios.get('/api/enrollments', {
+      params: { page: currentPage.value },
+    });
+    enrollments.value = enrollmentsResponse.data.data;
+
+    await fetchTeachers();
+
+    const coursesResponse = await axios.get('/api/courses');
+    courses.value = coursesResponse.data.data;
+    totalPages.value = enrollmentsResponse.data.last_page;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+  initFlowbite();
 });
 
 const saveTaskFormToLocalStorage = () => {
-    localStorage.setItem("taskForm", JSON.stringify(taskForm.value));
+  localStorage.setItem('taskForm', JSON.stringify(taskForm.value));
 };
 
 watch(taskForm, saveTaskFormToLocalStorage, { deep: true });
 
 // Change Page Function for Pagination
 const changePage = async (page) => {
-    console.log("Changing to page:", page); // Log halaman baru yang akan diakses
-    currentPage.value = page;
+  console.log('Changing to page:', page); // Log halaman baru yang akan diakses
+  currentPage.value = page;
 
-    console.log("Fetching enrollments for page:", currentPage.value); // Log sebelum memanggil API
-    await fetchEnrollments(); // Panggil API untuk halaman baru
+  console.log('Fetching enrollments for page:', currentPage.value); // Log sebelum memanggil API
+  await fetchEnrollments(); // Panggil API untuk halaman baru
 
-    console.log(
-        "Successfully fetched enrollments for page:",
-        currentPage.value
-    ); // Log setelah data berhasil diambil
+  console.log('Successfully fetched enrollments for page:', currentPage.value); // Log setelah data berhasil diambil
 };
 
 // Edit and Delete Enrollment Functions
 function editEnrollment(enrollment) {
-    console.log("Editing enrollment:", enrollment);
-    editForm.value = { ...enrollment };
-    isEditModalOpen.value = true;
-    console.log("Modal state after edit:", isEditModalOpen.value);
+  console.log('Editing enrollment:', enrollment);
+  editForm.value = { ...enrollment };
+  isEditModalOpen.value = true;
+  console.log('Modal state after edit:', isEditModalOpen.value);
 }
 
 function closeEditModal() {
-    isEditModalOpen.value = false;
+  isEditModalOpen.value = false;
 }
 
 const deleteEnrollment = (id) => {
-    console.log(`Delete enrollment dengan ID: ${id}`);
+  console.log(`Delete enrollment dengan ID: ${id}`);
 };
 
 const submitEdit = async () => {
-    try {
-        editForm.value.teacher_id = String(editForm.value.teacher_id);
-        // Log data sebelum pengiriman untuk memastikan data yang dikirim sudah benar
-        console.log("Data yang akan diperbarui:", editForm.value);
+  try {
+    editForm.value.teacher_id = String(editForm.value.teacher_id);
+    // Log data sebelum pengiriman untuk memastikan data yang dikirim sudah benar
+    console.log('Data yang akan diperbarui:', editForm.value);
 
-        // Set CSRF Token di header
-        const token = document.head.querySelector(
-            'meta[name="csrf-token"]'
-        ).content;
-        axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
-        axios.defaults.withCredentials = true;
+    // Set CSRF Token di header
+    const token = document.head.querySelector(
+      'meta[name="csrf-token"]'
+    ).content;
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    axios.defaults.withCredentials = true;
 
-        // Periksa apakah editForm memiliki ID yang valid
-        if (!editForm.value.id) {
-            console.error("ID form tidak valid.");
-            return; // Hentikan eksekusi jika ID tidak valid
-        }
-
-        // Validasi jika teacher_id belum dipilih
-        if (!editForm.value.teacher_id) {
-            console.error("Teacher ID belum dipilih.");
-            return; // Tampilkan pesan kesalahan jika `teacher_id` belum dipilih
-        }
-
-        // Kirim data update ke API
-        const response = await axios.put(
-            "/api/enrollments/" + editForm.value.id,
-            editForm.value // Kirim seluruh data dari form untuk update
-        );
-
-        // Log respons API setelah update
-        console.log("Respons API setelah update:", response.data);
-
-        // Periksa apakah update berhasil
-        if (response.data && response.data.enrollment) {
-            // Jika berhasil, perbarui data di sisi client
-            const updatedEnrollment = response.data.enrollment;
-
-            // Cari index enrollment yang perlu diperbarui
-            const index = enrollments.value.findIndex(
-                (enrollment) => enrollment.id === updatedEnrollment.id
-            );
-
-            if (index !== -1) {
-                // Update data di enrollments array
-                enrollments.value[index] = updatedEnrollment;
-
-                // Verifikasi pembaruan
-                console.log(
-                    "Enrollments setelah update:",
-                    toRaw(enrollments.value)
-                );
-            }
-
-            // Menyimpan perubahan di localStorage (optional)
-            localStorage.setItem("editForm", JSON.stringify(editForm.value));
-
-            // Menutup modal setelah berhasil menyimpan
-            closeEditModal();
-        } else {
-            console.log("Gagal mengupdate enrollment:", response.data);
-        }
-    } catch (error) {
-        console.error(
-            "Error updating enrollment:",
-            error.response?.data || error.message || "Unknown error occurred"
-        );
+    // Periksa apakah editForm memiliki ID yang valid
+    if (!editForm.value.id) {
+      console.error('ID form tidak valid.');
+      return; // Hentikan eksekusi jika ID tidak valid
     }
+
+    // Validasi jika teacher_id belum dipilih
+    if (!editForm.value.teacher_id) {
+      console.error('Teacher ID belum dipilih.');
+      return; // Tampilkan pesan kesalahan jika `teacher_id` belum dipilih
+    }
+
+    // Kirim data update ke API
+    const response = await axios.put(
+      '/api/enrollments/' + editForm.value.id,
+      editForm.value // Kirim seluruh data dari form untuk update
+    );
+
+    // Log respons API setelah update
+    console.log('Respons API setelah update:', response.data);
+
+    // Periksa apakah update berhasil
+    if (response.data && response.data.enrollment) {
+      // Jika berhasil, perbarui data di sisi client
+      const updatedEnrollment = response.data.enrollment;
+
+      // Cari index enrollment yang perlu diperbarui
+      const index = enrollments.value.findIndex(
+        (enrollment) => enrollment.id === updatedEnrollment.id
+      );
+
+      if (index !== -1) {
+        // Update data di enrollments array
+        enrollments.value[index] = updatedEnrollment;
+
+        // Verifikasi pembaruan
+        console.log('Enrollments setelah update:', toRaw(enrollments.value));
+      }
+
+      // Menyimpan perubahan di localStorage (optional)
+      localStorage.setItem('editForm', JSON.stringify(editForm.value));
+
+      // Menutup modal setelah berhasil menyimpan
+      closeEditModal();
+    } else {
+      console.log('Gagal mengupdate enrollment:', response.data);
+    }
+  } catch (error) {
+    console.error(
+      'Error updating enrollment:',
+      error.response?.data || error.message || 'Unknown error occurred'
+    );
+  }
 };
 </script>
 
 <style scoped>
-@import url("https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css");
+@import url('https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css');
 
 /* Responsif untuk tabel */
 .table {
-    width: 100%;
-    margin-bottom: 1rem;
-    border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
 }
 
 /* Responsif untuk pagination */
 .pagination {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .pagination button {
-    padding: 8px 12px;
-    margin: 5px;
-    cursor: pointer;
+  padding: 8px 12px;
+  margin: 5px;
+  cursor: pointer;
 }
 
 .pagination button:disabled {
-    cursor: not-allowed;
-    background-color: #f0f0f0;
+  cursor: not-allowed;
+  background-color: #f0f0f0;
 }
 
 /* Responsif untuk card */
 .card {
-    background-color: #fff;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    transition: transform 0.3s ease;
+  background-color: #fff;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease;
 }
 
 .card:hover {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 .card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
 }
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
 
 .modal-content {
-    background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    width: 90%;
-    max-width: 500px;
-    z-index: 10000;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  z-index: 10000;
 }
 
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .close-btn {
-    font-size: 20px;
-    background: none;
-    border: none;
-    cursor: pointer;
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .modal-footer {
-    display: flex;
-    justify-content: flex-end;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .btn-save {
-    background-color: #4caf50;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .btn-cancel {
-    background-color: #f44336;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
+  background-color: #f44336;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .btn-save:hover {
-    background-color: #45a049;
+  background-color: #45a049;
 }
 
 .btn-cancel:hover {
-    background-color: #e53935;
+  background-color: #e53935;
 }
 </style>
 
 <template>
-    <div class="antialiased bg-gray-50 dark:bg-gray-900">
-        <nav
-            class="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50"
-        >
-            <div class="flex flex-wrap justify-between items-center">
-                <div class="flex justify-start items-center">
-                    <button
-                        data-drawer-target="drawer-navigation"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                    >
-                        <svg
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                                clip-rule="evenodd"
-                            ></path>
-                        </svg>
-                        <svg
-                            class="hidden w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clip-rule="evenodd"
-                            ></path>
-                        </svg>
-                        <span class="sr-only">Toggle sidebar</span>
-                    </button>
-                    <a href="" class="flex items-center justify-between mr-4">
-                        <img
-                            src="/images/barunawati.jpeg"
-                            class="mr-3 h-8"
-                            alt=""
-                        />
-                        <span
-                            class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
-                            >SMA BARUNAWATI SURABAYA</span
-                        >
-                    </a>
-                </div>
-                <div class="flex items-center lg:order-2">
-                    <!-- Apps -->
-                    <button
-                        type="button"
-                        class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    ></button>
-
-                    <button
-                        type="button"
-                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                        id="user-menu-button"
-                        aria-expanded="false"
-                        data-dropdown-toggle="dropdown"
-                    >
-                        <span class="sr-only">Open user menu</span>
-                        <svg
-                            baseProfile="tiny"
-                            height="24px"
-                            id="Layer_1"
-                            version="1.2"
-                            viewBox="0 0 24 24"
-                            width="24px"
-                            xml:space="preserve"
-                            xmlns="http://www.w3.org/2000/svg"
-                            xmlns:xlink="http://www.w3.org/1999/xlink"
-                        >
-                            <path
-                                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
-                                fill="black"
-                            />
-                        </svg>
-                    </button>
-                    <!-- Dropdown menu -->
-                    <div
-                        class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
-                        id="dropdown"
-                        style=""
-                    >
-                        <div class="py-3 px-3">
-                            <div
-                                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
-                            >
-                                <span
-                                    class="block text-sm font-semibold text-gray-900 dark:text-white"
-                                    >{{ $page.props.auth.user.email }}
-                                </span>
-                                <span
-                                    class="block text-sm text-gray-900 truncate dark:text-white"
-                                >
-                                    {{ $page.props.auth.user.name }}
-                                </span>
-                                <span
-                                    class="block text-sm text-gray-900 truncate dark:text-white"
-                                    >{{ form.role_type }}</span
-                                >
-                            </div>
-                        </div>
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profil Saya
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Main -->
-
-        <main class="p-7 md:ml-64 h-screen">
-            <Head title="Membuat Tugas Siswa" />
-            <h2
-                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+  <div class="antialiased bg-gray-50 dark:bg-gray-900">
+    <nav
+      class="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50"
+    >
+      <div class="flex flex-wrap justify-between items-center">
+        <div class="flex justify-start items-center">
+          <button
+            data-drawer-target="drawer-navigation"
+            data-drawer-toggle="drawer-navigation"
+            aria-controls="drawer-navigation"
+            class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
             >
-                Tugas Siswa
-            </h2>
-
-            <!-- Kontrol -->
-            <div class="container mx-auto px-4 py-6">
-                <div
-                    class="flex flex-wrap sm:flex-nowrap justify-between items-center space-y-4 sm:space-y-0"
-                >
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Cari Tugas..."
-                        class="w-full sm:w-auto px-4 py-2 border rounded-md"
-                    />
-                    <button
-                        class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
-                        @click="showAddModal"
-                    >
-                        <i class="fa fa-plus mr-2"></i> Tambah Tugas
-                    </button>
-                </div>
-
-                <div
-                    v-if="isTaskModalOpen"
-                    class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
-                >
-                    <div
-                        class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"
-                    >
-                        <!-- Add Judul Modal -->
-                        <h3 class="text-xl font-bold text-center mb-6">
-                            Tambah Tugas Siswa
-                        </h3>
-                        <!-- Form -->
-                        <form @submit.prevent="handleTask">
-                            <div class="mb-4">
-                                <label
-                                    for="course_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Nama Mata Pelajaran</label
-                                >
-                                <select
-                                    v-model="taskForm.mapel_id"
-                                    :items="courses"
-                                    item-value="id"
-                                    class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
-                                >
-                                    <option value="" disabled>
-                                        Pilih Mata Pelajaran
-                                    </option>
-                                    <option
-                                        v-for="course in courses"
-                                        :key="course.id"
-                                        :value="course.id"
-                                    >
-                                        {{ course.mapel }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Input Deskripsi Tugas -->
-                            <div class="mb-4">
-                                <label
-                                    for="description"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Deskripsi</label
-                                >
-                                <textarea
-                                    v-model="editForm.description"
-                                    id="description"
-                                    class="mt-1 block w-full border-gray-300 rounded-md"
-                                    placeholder="Masukkan deskripsi"
-                                ></textarea>
-                            </div>
-
-                            <!-- Input Guru -->
-                            <div class="mb-4">
-                                <label
-                                    for="teacher_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Nama Guru</label
-                                >
-                                <select
-                                    v-model="selectedTeacherId"
-                                    id="teacher"
-                                    class="w-full px-4 py-2 border rounded-md"
-                                >
-                                    <option value="" disabled selected>
-                                        Pilih Guru
-                                    </option>
-                                    <option
-                                        v-for="teacher in teachers"
-                                        :key="teacher.id"
-                                        :value="teacher.id"
-                                    >
-                                        {{ teacher.name }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Input Siswa -->
-                            <div class="mb-4">
-                                <label
-                                    for="course_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Nama Siswa</label
-                                >
-                                <select
-                                    v-model="taskForm.student_id"
-                                    :items="students"
-                                    item-value="id"
-                                    class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
-                                >
-                                    <option value="" disabled>
-                                        Pilih Siswa
-                                    </option>
-                                    <option
-                                        v-for="student in students"
-                                        :key="student.id"
-                                        :value="student.id"
-                                    >
-                                        {{ student.student }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="flex justify-end space-x-4">
-                                <button
-                                    type="button"
-                                    @click="closeTaskModal"
-                                    class="btn btn-secondary mr-3"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    class="btn btn-primary mr-2"
-                                >
-                                    Simpan
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <div
-                    v-if="isEditModalOpen"
-                    class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
-                >
-                    <div class="bg-white p-6 rounded-lg w-96 z-50">
-                        <h2 class="text-xl text-center font-bold mb-4">
-                            Edit Enrollment
-                        </h2>
-                        <form @submit.prevent="submitEdit">
-                            <div class="mb-4">
-                                <label
-                                    for="mapel_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Mapel</label
-                                >
-                                <input
-                                    v-model="editForm.mapel_id"
-                                    type="text"
-                                    id="mapel_id"
-                                    class="mt-1 block w-full border-gray-300 rounded-md"
-                                    readonly
-                                />
-                            </div>
-                            <div class="mb-4">
-                                <label
-                                    for="description"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Description</label
-                                >
-                                <textarea
-                                    v-model="editForm.description"
-                                    id="description"
-                                    class="mt-1 block w-full border-gray-300 rounded-md"
-                                    placeholder="Masukkan deskripsi"
-                                ></textarea>
-                            </div>
-                            <div class="mb-4">
-                                <label
-                                    for="teacher_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Teacher ID</label
-                                >
-                                <select
-                                    v-model="editForm.teacher_id"
-                                    id="teacher"
-                                    class="w-full px-4 py-2 border rounded-md"
-                                >
-                                    <option value="" disabled selected>
-                                        Pilih Guru
-                                    </option>
-                                    <option
-                                        v-for="teacher in teachers"
-                                        :key="teacher.id"
-                                        :value="teacher.id"
-                                    >
-                                        {{ teacher.name }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label
-                                    for="teacher_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                    >Siswa</label
-                                >
-                                <input
-                                    v-model="editForm.student_id"
-                                    type="text"
-                                    id="mapel_id"
-                                    class="mt-1 block w-full border-gray-300 rounded-md"
-                                    readonly
-                                />
-                            </div>
-
-                            <div class="flex justify-end">
-                                <button
-                                    @click="closeEditModal"
-                                    class="btn btn-primary mr-2"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    class="btn btn-secondary mr-3"
-                                >
-                                    Simpan
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center"
+              <path
+                fill-rule="evenodd"
+                d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <svg
+              class="hidden w-6 h-6"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
             >
-                <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-                    <p
-                        class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600"
-                    >
-                        Total Tugas: {{ totalCourses }}
-                    </p>
-                </div>
-            </div>
+              <path
+                fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <span class="sr-only">Toggle sidebar</span>
+          </button>
+          <a href="" class="flex items-center justify-between mr-4">
+            <img src="/images/barunawati.jpeg" class="mr-3 h-8" alt="" />
+            <span
+              class="self-center text-base md:text-lg lg:text-xl xl:text-2xl font-semibold whitespace-nowrap dark:text-white"
+              >SMA BARUNAWATI SURABAYA</span
+            >
+          </a>
+        </div>
+        <div class="flex items-center lg:order-2">
+          <!-- Apps -->
+          <button
+            type="button"
+            class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+          ></button>
 
-            <!-- Tabel -->
-            <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
-                <table class="min-w-full table-auto">
-                    <thead>
-                        <tr class="bg-gray-100">
-                            <th class="px-4 py-3 text-left">ID</th>
-                            <th class="px-4 py-3 text-left">Mata Pelajaran</th>
-                            <th class="px-4 py-3 text-left">Deskripsi</th>
-                            <th class="px-4 py-3 text-left">Guru</th>
-                            <th class="px-4 py-3 text-left">Siswa</th>
-                            <th class="px-4 py-3 text-left">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="enrollment in enrollments"
-                            :key="enrollment.id"
-                            class="border-t"
-                        >
-                            <td class="px-4 py-3">{{ enrollment.id }}</td>
-                            <td class="px-4 py-3">
-                                <!-- Menampilkan Nama Mata Pelajaran -->
-                                <p>
-                                    {{ getMapelName(enrollment.mapel_id) }}
-                                </p>
-                            </td>
-                            <td class="px-4 py-3">
-                                <!-- Pastikan data description ada di sini -->
-                                <p>{{ enrollment.description }}</p>
-                            </td>
-                            <td class="px-4 py-3">
-                                <!-- Menampilkan Nama Guru -->
-                                <p>
-                                    {{ getTeacherName(enrollment.teacher_id) }}
-                                </p>
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ getStudentName(enrollment.student_id) }}
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-800">
-                                <div class="flex space-x-2">
-                                    <button
-                                        @click="editEnrollment(enrollment)"
-                                        class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        @click="deleteEnrollment(enrollment.id)"
-                                        class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination Controls -->
-
-            <div class="flex justify-between items-center">
-                <span class="text-gray-700">
-                    Page {{ currentPage }} of {{ totalPages }}
-                </span>
-                <button
-                    v-if="currentPage > 1"
-                    @click="changePage(currentPage - 1)"
-                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-                >
-                    Previous
-                </button>
-
-                <button
-                    @click="goToPage(currentPage + 1)"
-                    :disabled="currentPage === totalPages"
-                    class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-                >
-                    Next
-                </button>
-            </div>
-        </main>
-        <!-- Sidebar -->
-        <aside
-            class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
-            aria-label="Sidenav"
-            id="drawer-navigation"
+          <button
+            type="button"
+            class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+            id="user-menu-button"
+            aria-expanded="false"
+            data-dropdown-toggle="dropdown"
+          >
+            <span class="sr-only">Open user menu</span>
+            <svg
+              baseProfile="tiny"
+              height="24px"
+              id="Layer_1"
+              version="1.2"
+              viewBox="0 0 24 24"
+              width="24px"
+              xml:space="preserve"
+              xmlns="http://www.w3.org/2000/svg"
+              xmlns:xlink="http://www.w3.org/1999/xlink"
+            >
+              <path
+                d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
+                fill="black"
+              />
+            </svg>
+          </button>
+          <!-- Dropdown menu -->
+          <div
+            class="hidden w-full sm:w-1/2 lg:w-1/4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+            id="dropdown"
             style=""
-        >
-            <div
-                class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800"
-            >
-                <ul class="space-y-2">
-                    <li>
-                        <a
-                            href="dashboard"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                baseProfile="tiny"
-                                height="24px"
-                                id="Layer_1"
-                                version="1.2"
-                                viewBox="0 0 24 24"
-                                width="24px"
-                                xml:space="preserve"
-                                xmlns="http://www.w3.org/2000/svg"
-                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                            >
-                                <path
-                                    d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
-                                />
-                            </svg>
-                            <span class="ml-3">Beranda</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="absensiSiswa"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                viewBox="0 0 256 256"
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                            >
-                                <rect fill="none" height="256" width="256" />
-                                <path
-                                    d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
-                                />
-                            </svg>
-                            <span class="ml-3">Absensi Siswa</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="membuat-enrollment"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                viewBox="0 0 512 512"
-                                width="24"
-                                height="24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <g id="E-learning_notification">
-                                    <path
-                                        d="M243.0771,299.7515V251.3271a12.5756,12.5756,0,0,0-12.5615-12.5615H212.44a5,5,0,0,0,0,10h18.0752a2.5646,2.5646,0,0,1,2.5615,2.5615v48.4244a2.5645,2.5645,0,0,1-2.5615,2.5615H102.127a2.5645,2.5645,0,0,1-2.5616-2.5615V251.3271a2.5646,2.5646,0,0,1,2.5616-2.5615h83.8183a5,5,0,1,0,0-10H102.127a12.5757,12.5757,0,0,0-12.5616,12.5615v48.4244A12.5757,12.5757,0,0,0,102.127,312.313H230.5156A12.5756,12.5756,0,0,0,243.0771,299.7515Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M305.1309,238.7656H270.8574a10.4457,10.4457,0,0,0-10.4336,10.4336v52.68a10.4458,10.4458,0,0,0,10.4336,10.4341h34.2735a10.4458,10.4458,0,0,0,10.4336-10.4341v-52.68A10.4457,10.4457,0,0,0,305.1309,238.7656Zm.4336,63.1133a.4343.4343,0,0,1-.4336.4341H270.8574a.4343.4343,0,0,1-.4336-.4341v-52.68a.4339.4339,0,0,1,.4336-.4336h34.2735a.4339.4339,0,0,1,.4336.4336Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M309.1992,360.7461H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M309.1992,335.2017H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M467.8184,122.0205a109.7113,109.7113,0,0,0-219.3941-2.4991H145.1484V119.15a12.48,12.48,0,0,0-12.4658-12.4658H102.0312A12.48,12.48,0,0,0,89.5654,119.15v1.07a54.0392,54.0392,0,0,0-45.3833,53.2611V459.8264l0,.0193a39.83,39.83,0,0,0,39.8467,39.8467H355.6045a5.0406,5.0406,0,0,0,5-5.0474V459.8457a5,5,0,0,0-10,0v29.0819a29.8445,29.8445,0,0,1,5.24-58.8871,5.01,5.01,0,0,0,4.3484-3.0642c.0051-.0115.0122-.0215.0171-.0329a5.0159,5.0159,0,0,0,.2688-.8653c.0059-.0254.0168-.0483.022-.0738A5.0241,5.0241,0,0,0,360.6045,425l-.0022-.0217V231.7017A109.84,109.84,0,0,0,467.8184,122.0205ZM358.1055,22.3076a99.7129,99.7129,0,1,1-99.7129,99.7129A99.8261,99.8261,0,0,1,358.1055,22.3076ZM99.5654,119.15a2.4687,2.4687,0,0,1,2.4658-2.4658h30.6514a2.4686,2.4686,0,0,1,2.4658,2.4658l-.0019,61.2065-6.9883-9.3046a12.7468,12.7468,0,0,0-10.0557-5.1226c-.0693-.0015-.1386-.002-.2089-.002a12.7429,12.7429,0,0,0-10.003,4.8038L99.5654,181.11Zm217.91,340.6958a39.6352,39.6352,0,0,0,11.6631,28.1777l.0039.0035q.8613.8621,1.7695,1.6655H84.0283A29.8521,29.8521,0,0,1,55.084,467.1733H238.0771a5,5,0,1,0,0-10H54.3074A29.8832,29.8832,0,0,1,84.0283,430H330.8867A39.77,39.77,0,0,0,317.4756,459.8457ZM84.0283,420a39.7524,39.7524,0,0,0-29.8476,13.4894l.0014-.0276v-259.98A44.0226,44.0226,0,0,1,89.5654,130.37v51.1742a9.7374,9.7374,0,0,0,6.583,9.2915,10.007,10.007,0,0,0,3.3233.5733,9.7314,9.7314,0,0,0,7.624-3.7036l8.5957-10.7188a2.827,2.827,0,0,1,2.2529-1.0591,2.7824,2.7824,0,0,1,2.2178,1.13l7.2647,9.6709a9.8479,9.8479,0,0,0,17.7216-5.915V129.5214H248.6541a109.8717,109.8717,0,0,0,101.9482,101.95V420Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M309.2578,171.2344h21.2686a25.572,25.572,0,0,0,50.65-5,5,5,0,0,0-5-5h-66.919a4.84,4.84,0,0,1-4.8349-4.835V145.6577a23.5977,23.5977,0,0,0,18.5556-21.7641c1.1221-19.8521,8.1309-43.5943,35.127-44.0254,26.9961.4311,34.0049,24.1733,35.1269,44.0254a23.6,23.6,0,0,0,18.5557,21.7641v10.7417a4.84,4.84,0,0,1-4.834,4.835h-9.5557a5,5,0,0,0,0,10h9.5557a14.8511,14.8511,0,0,0,14.834-14.835V141.1709a5,5,0,0,0-5-5h-.1192a13.5457,13.5457,0,0,1-13.4521-12.8418c-1.4985-26.5106-11.5112-43.8823-28.6445-50.4795V65.6013a16.4352,16.4352,0,0,0-16.41-16.42h-1.04a16.4439,16.4439,0,0,0-16.42,16.42v7.6323c-16.5585,6.8655-26.237,24.0745-27.708,50.096a13.5441,13.5441,0,0,1-13.4511,12.8413h-.12a5,5,0,0,0-5,5v15.2285A14.8518,14.8518,0,0,0,309.2578,171.2344Zm46.3467,10.5718a15.5882,15.5882,0,0,1-14.7337-10.5718h29.4673A15.588,15.588,0,0,1,355.6045,181.8062ZM350.7021,65.6013a6.4274,6.4274,0,0,1,6.42-6.42h1.04a6.4188,6.4188,0,0,1,6.41,6.42v4.7431a53.7425,53.7425,0,0,0-6.3946-.4762c-.0488-.001-.0957-.001-.1445,0a53.2611,53.2611,0,0,0-7.3311.597Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M300.7432,101.8721c.122.0088.2431.0127.3632.0127a5.0007,5.0007,0,0,0,4.9825-4.6416c1.1465-15.9453,11.3965-21.0577,11.9209-21.3086A5,5,0,0,0,313.874,66.83c-.6592.2959-16.164,7.5039-17.76,29.6963A5,5,0,0,0,300.7432,101.8721Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                    <path
-                                        d="M397.9336,75.9316c.4394.2085,10.7773,5.295,11.9277,21.3116a5.0007,5.0007,0,0,0,4.9825,4.6416c.12,0,.2412-.0039.3632-.0127a5.0012,5.0012,0,0,0,4.6289-5.3457c-1.5947-22.1924-17.1-29.4-17.76-29.6963a5,5,0,1,0-4.1426,9.1015Z"
-                                        stroke="black"
-                                        stroke-width="4"
-                                    />
-                                </g>
-                            </svg>
-                            <span class="ml-3">Enrollment Tugas</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="membuatTugasSiswa"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                viewBox="0 0 256 256"
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                            >
-                                <rect fill="none" height="256" width="256" />
-                                <path
-                                    d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
-                                />
-                            </svg>
-                            <span class="ml-3">Tugas Siswa</span>
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="bukuPenghubung"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                viewBox="0 0 576 512"
-                                class="w-6 h-6"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
-                                />
-                            </svg>
-                            <span class="ml-3">Identitas Siswa</span>
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="bukuPenghubung1"
-                            class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-                        >
-                            <svg
-                                viewBox="0 0 576 512"
-                                class="w-6 h-6"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
-                                />
-                            </svg>
-                            <span class="ml-3">Buku Penghubung</span>
-                        </a>
-                    </li>
-                </ul>
+          >
+            <div class="py-3 px-3">
+              <div
+                class="'block w-full ps-3 pe-4 py-2 border-l-4 border-indigo-400 text-start text-base text-indigo-700 focus:outline-none focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700 transition duration-150 ease-in-out text-[12px]'"
+              >
+                <span
+                  class="block text-sm font-semibold text-gray-900 dark:text-white"
+                  >{{ $page.props.auth.user.email }}
+                </span>
+                <span
+                  class="block text-sm text-gray-900 truncate dark:text-white"
+                >
+                  {{ $page.props.auth.user.name }}
+                </span>
+                <span
+                  class="block text-sm text-gray-900 truncate dark:text-white"
+                  >{{ form.role_type }}</span
+                >
+              </div>
             </div>
-        </aside>
-    </div>
+            <div class="mt-3 space-y-1">
+              <ResponsiveNavLink :href="route('profile.edit')">
+                Profil Saya
+              </ResponsiveNavLink>
+              <ResponsiveNavLink
+                :href="route('logout')"
+                method="post"
+                as="button"
+              >
+                Log Out
+              </ResponsiveNavLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+
+    <main class="p-7 md:ml-64 h-screen">
+      <Head title="Membuat Tugas Siswa" />
+      <h2
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+      >
+        Tugas Siswa
+      </h2>
+
+      <!-- Kontrol -->
+      <div class="container mx-auto px-4 py-6">
+        <div
+          class="flex flex-wrap sm:flex-nowrap justify-between items-center space-y-4 sm:space-y-0"
+        >
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari Tugas..."
+            class="w-full sm:w-auto px-4 py-2 border rounded-md"
+          />
+          <button
+            class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
+            @click="showAddModal"
+          >
+            <i class="fa fa-plus mr-2"></i> Tambah Tugas
+          </button>
+        </div>
+
+        <div
+          v-if="isTaskModalOpen"
+          class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+        >
+          <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <!-- Add Judul Modal -->
+            <h3 class="text-xl font-bold text-center mb-6">
+              Tambah Tugas Siswa
+            </h3>
+            <!-- Form -->
+            <form @submit.prevent="handleTask">
+              <div class="mb-4">
+                <label
+                  for="course_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Nama Mata Pelajaran</label
+                >
+                <select
+                  v-model="taskForm.mapel_id"
+                  :items="courses"
+                  item-value="id"
+                  class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                >
+                  <option value="" disabled>Pilih Mata Pelajaran</option>
+                  <option
+                    v-for="course in courses"
+                    :key="course.id"
+                    :value="course.id"
+                  >
+                    {{ course.mapel }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Input Deskripsi Tugas -->
+              <div class="mb-4">
+                <label
+                  for="description"
+                  class="block text-sm font-medium text-gray-700"
+                  >Deskripsi</label
+                >
+                <textarea
+                  v-model="editForm.description"
+                  id="description"
+                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  placeholder="Masukkan deskripsi"
+                ></textarea>
+              </div>
+
+              <!-- Input Guru -->
+              <div class="mb-4">
+                <label
+                  for="teacher_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Nama Guru</label
+                >
+                <select
+                  v-model="selectedTeacherId"
+                  id="teacher"
+                  class="w-full px-4 py-2 border rounded-md"
+                >
+                  <option value="" disabled selected>Pilih Guru</option>
+                  <option
+                    v-for="teacher in teachers"
+                    :key="teacher.id"
+                    :value="teacher.id"
+                  >
+                    {{ teacher.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Input Siswa -->
+              <div class="mb-4">
+                <label
+                  for="course_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Nama Siswa</label
+                >
+                <select
+                  v-model="taskForm.student_id"
+                  :items="students"
+                  item-value="id"
+                  class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                >
+                  <option value="" disabled>Pilih Siswa</option>
+                  <option
+                    v-for="student in students"
+                    :key="student.id"
+                    :value="student.id"
+                  >
+                    {{ student.student }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  @click="closeTaskModal"
+                  class="btn btn-secondary mr-3"
+                >
+                  Batal
+                </button>
+                <button type="submit" class="btn btn-primary mr-2">
+                  Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div
+          v-if="isEditModalOpen"
+          class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+        >
+          <div class="bg-white p-6 rounded-lg w-96 z-50">
+            <h2 class="text-xl text-center font-bold mb-4">Edit Enrollment</h2>
+            <form @submit.prevent="submitEdit">
+              <div class="mb-4">
+                <label
+                  for="mapel_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Mapel</label
+                >
+                <input
+                  v-model="editForm.mapel_id"
+                  type="text"
+                  id="mapel_id"
+                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  readonly
+                />
+              </div>
+              <div class="mb-4">
+                <label
+                  for="description"
+                  class="block text-sm font-medium text-gray-700"
+                  >Description</label
+                >
+                <textarea
+                  v-model="editForm.description"
+                  id="description"
+                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  placeholder="Masukkan deskripsi"
+                ></textarea>
+              </div>
+              <div class="mb-4">
+                <label
+                  for="teacher_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Teacher ID</label
+                >
+                <select
+                  v-model="editForm.teacher_id"
+                  id="teacher"
+                  class="w-full px-4 py-2 border rounded-md"
+                >
+                  <option value="" disabled selected>Pilih Guru</option>
+                  <option
+                    v-for="teacher in teachers"
+                    :key="teacher.id"
+                    :value="teacher.id"
+                  >
+                    {{ teacher.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-4">
+                <label
+                  for="teacher_id"
+                  class="block text-sm font-medium text-gray-700"
+                  >Siswa</label
+                >
+                <input
+                  v-model="editForm.student_id"
+                  type="text"
+                  id="mapel_id"
+                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  readonly
+                />
+              </div>
+
+              <div class="flex justify-end">
+                <button @click="closeEditModal" class="btn btn-primary mr-2">
+                  Batal
+                </button>
+                <button type="submit" class="btn btn-secondary mr-3">
+                  Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-6 text-center"
+      >
+        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+          <p class="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">
+            Total Tugas: {{ totalCourses }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Tabel -->
+      <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
+        <table class="min-w-full table-auto">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="px-4 py-3 text-left">ID</th>
+              <th class="px-4 py-3 text-left">Mata Pelajaran</th>
+              <th class="px-4 py-3 text-left">Deskripsi</th>
+              <th class="px-4 py-3 text-left">Guru</th>
+              <th class="px-4 py-3 text-left">Siswa</th>
+              <th class="px-4 py-3 text-left">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="enrollment in enrollments"
+              :key="enrollment.id"
+              class="border-t"
+            >
+              <td class="px-4 py-3">{{ enrollment.id }}</td>
+              <td class="px-4 py-3">
+                <!-- Menampilkan Nama Mata Pelajaran -->
+                <p>
+                  {{ getMapelName(enrollment.mapel_id) }}
+                </p>
+              </td>
+              <td class="px-4 py-3">
+                <!-- Pastikan data description ada di sini -->
+                <p>{{ enrollment.description }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <!-- Menampilkan Nama Guru -->
+                <p>
+                  {{ getTeacherName(enrollment.teacher_id) }}
+                </p>
+              </td>
+              <td class="px-4 py-3">
+                {{ getStudentName(enrollment.student_id) }}
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-800">
+                <div class="flex space-x-2">
+                  <button
+                    @click="editEnrollment(enrollment)"
+                    class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    @click="deleteEnrollment(enrollment.id)"
+                    class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Controls -->
+
+      <div class="flex justify-between items-center">
+        <span class="text-gray-700">
+          Page {{ currentPage }} of {{ totalPages }}
+        </span>
+        <button
+          v-if="currentPage > 1"
+          @click="changePage(currentPage - 1)"
+          class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+        >
+          Previous
+        </button>
+
+        <button
+          @click="goToPage(currentPage + 1)"
+          :disabled="currentPage === totalPages"
+          class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+        >
+          Next
+        </button>
+      </div>
+    </main>
+    <!-- Sidebar -->
+    <aside
+      class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+      aria-label="Sidenav"
+      id="drawer-navigation"
+      style=""
+    >
+      <div class="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800">
+        <ul class="space-y-2">
+          <li>
+            <a
+              href="teacher-dashboard"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                baseProfile="tiny"
+                height="24px"
+                id="Layer_1"
+                version="1.2"
+                viewBox="0 0 24 24"
+                width="24px"
+                xml:space="preserve"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+              >
+                <path
+                  d="M12,3c0,0-6.186,5.34-9.643,8.232C2.154,11.416,2,11.684,2,12c0,0.553,0.447,1,1,1h2v7c0,0.553,0.447,1,1,1h3  c0.553,0,1-0.448,1-1v-4h4v4c0,0.552,0.447,1,1,1h3c0.553,0,1-0.447,1-1v-7h2c0.553,0,1-0.447,1-1c0-0.316-0.154-0.584-0.383-0.768  C18.184,8.34,12,3,12,3z"
+                />
+              </svg>
+              <span class="ml-3">Beranda</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="absensiSiswa"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 256 256"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+              >
+                <rect fill="none" height="256" width="256" />
+                <path
+                  d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
+                />
+              </svg>
+              <span class="ml-3">Absensi Siswa</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="membuat-enrollment"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 512 512"
+                width="24"
+                height="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g id="E-learning_notification">
+                  <path
+                    d="M243.0771,299.7515V251.3271a12.5756,12.5756,0,0,0-12.5615-12.5615H212.44a5,5,0,0,0,0,10h18.0752a2.5646,2.5646,0,0,1,2.5615,2.5615v48.4244a2.5645,2.5645,0,0,1-2.5615,2.5615H102.127a2.5645,2.5645,0,0,1-2.5616-2.5615V251.3271a2.5646,2.5646,0,0,1,2.5616-2.5615h83.8183a5,5,0,1,0,0-10H102.127a12.5757,12.5757,0,0,0-12.5616,12.5615v48.4244A12.5757,12.5757,0,0,0,102.127,312.313H230.5156A12.5756,12.5756,0,0,0,243.0771,299.7515Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M305.1309,238.7656H270.8574a10.4457,10.4457,0,0,0-10.4336,10.4336v52.68a10.4458,10.4458,0,0,0,10.4336,10.4341h34.2735a10.4458,10.4458,0,0,0,10.4336-10.4341v-52.68A10.4457,10.4457,0,0,0,305.1309,238.7656Zm.4336,63.1133a.4343.4343,0,0,1-.4336.4341H270.8574a.4343.4343,0,0,1-.4336-.4341v-52.68a.4339.4339,0,0,1,.4336-.4336h34.2735a.4339.4339,0,0,1,.4336.4336Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M309.1992,360.7461H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M309.1992,335.2017H215.2568a5,5,0,1,0,0,10h93.9424a5,5,0,0,0,0-10Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M467.8184,122.0205a109.7113,109.7113,0,0,0-219.3941-2.4991H145.1484V119.15a12.48,12.48,0,0,0-12.4658-12.4658H102.0312A12.48,12.48,0,0,0,89.5654,119.15v1.07a54.0392,54.0392,0,0,0-45.3833,53.2611V459.8264l0,.0193a39.83,39.83,0,0,0,39.8467,39.8467H355.6045a5.0406,5.0406,0,0,0,5-5.0474V459.8457a5,5,0,0,0-10,0v29.0819a29.8445,29.8445,0,0,1,5.24-58.8871,5.01,5.01,0,0,0,4.3484-3.0642c.0051-.0115.0122-.0215.0171-.0329a5.0159,5.0159,0,0,0,.2688-.8653c.0059-.0254.0168-.0483.022-.0738A5.0241,5.0241,0,0,0,360.6045,425l-.0022-.0217V231.7017A109.84,109.84,0,0,0,467.8184,122.0205ZM358.1055,22.3076a99.7129,99.7129,0,1,1-99.7129,99.7129A99.8261,99.8261,0,0,1,358.1055,22.3076ZM99.5654,119.15a2.4687,2.4687,0,0,1,2.4658-2.4658h30.6514a2.4686,2.4686,0,0,1,2.4658,2.4658l-.0019,61.2065-6.9883-9.3046a12.7468,12.7468,0,0,0-10.0557-5.1226c-.0693-.0015-.1386-.002-.2089-.002a12.7429,12.7429,0,0,0-10.003,4.8038L99.5654,181.11Zm217.91,340.6958a39.6352,39.6352,0,0,0,11.6631,28.1777l.0039.0035q.8613.8621,1.7695,1.6655H84.0283A29.8521,29.8521,0,0,1,55.084,467.1733H238.0771a5,5,0,1,0,0-10H54.3074A29.8832,29.8832,0,0,1,84.0283,430H330.8867A39.77,39.77,0,0,0,317.4756,459.8457ZM84.0283,420a39.7524,39.7524,0,0,0-29.8476,13.4894l.0014-.0276v-259.98A44.0226,44.0226,0,0,1,89.5654,130.37v51.1742a9.7374,9.7374,0,0,0,6.583,9.2915,10.007,10.007,0,0,0,3.3233.5733,9.7314,9.7314,0,0,0,7.624-3.7036l8.5957-10.7188a2.827,2.827,0,0,1,2.2529-1.0591,2.7824,2.7824,0,0,1,2.2178,1.13l7.2647,9.6709a9.8479,9.8479,0,0,0,17.7216-5.915V129.5214H248.6541a109.8717,109.8717,0,0,0,101.9482,101.95V420Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M309.2578,171.2344h21.2686a25.572,25.572,0,0,0,50.65-5,5,5,0,0,0-5-5h-66.919a4.84,4.84,0,0,1-4.8349-4.835V145.6577a23.5977,23.5977,0,0,0,18.5556-21.7641c1.1221-19.8521,8.1309-43.5943,35.127-44.0254,26.9961.4311,34.0049,24.1733,35.1269,44.0254a23.6,23.6,0,0,0,18.5557,21.7641v10.7417a4.84,4.84,0,0,1-4.834,4.835h-9.5557a5,5,0,0,0,0,10h9.5557a14.8511,14.8511,0,0,0,14.834-14.835V141.1709a5,5,0,0,0-5-5h-.1192a13.5457,13.5457,0,0,1-13.4521-12.8418c-1.4985-26.5106-11.5112-43.8823-28.6445-50.4795V65.6013a16.4352,16.4352,0,0,0-16.41-16.42h-1.04a16.4439,16.4439,0,0,0-16.42,16.42v7.6323c-16.5585,6.8655-26.237,24.0745-27.708,50.096a13.5441,13.5441,0,0,1-13.4511,12.8413h-.12a5,5,0,0,0-5,5v15.2285A14.8518,14.8518,0,0,0,309.2578,171.2344Zm46.3467,10.5718a15.5882,15.5882,0,0,1-14.7337-10.5718h29.4673A15.588,15.588,0,0,1,355.6045,181.8062ZM350.7021,65.6013a6.4274,6.4274,0,0,1,6.42-6.42h1.04a6.4188,6.4188,0,0,1,6.41,6.42v4.7431a53.7425,53.7425,0,0,0-6.3946-.4762c-.0488-.001-.0957-.001-.1445,0a53.2611,53.2611,0,0,0-7.3311.597Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M300.7432,101.8721c.122.0088.2431.0127.3632.0127a5.0007,5.0007,0,0,0,4.9825-4.6416c1.1465-15.9453,11.3965-21.0577,11.9209-21.3086A5,5,0,0,0,313.874,66.83c-.6592.2959-16.164,7.5039-17.76,29.6963A5,5,0,0,0,300.7432,101.8721Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M397.9336,75.9316c.4394.2085,10.7773,5.295,11.9277,21.3116a5.0007,5.0007,0,0,0,4.9825,4.6416c.12,0,.2412-.0039.3632-.0127a5.0012,5.0012,0,0,0,4.6289-5.3457c-1.5947-22.1924-17.1-29.4-17.76-29.6963a5,5,0,1,0-4.1426,9.1015Z"
+                    stroke="black"
+                    stroke-width="4"
+                  />
+                </g>
+              </svg>
+              <span class="ml-3">Enrollment Tugas</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="membuatTugasSiswa"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 256 256"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+              >
+                <rect fill="none" height="256" width="256" />
+                <path
+                  d="M226.5,56.4l-96-32a8.5,8.5,0,0,0-5,0l-95.9,32h-.2l-1,.5h-.1l-1,.6c0,.1-.1.1-.2.2l-.8.7h0l-.7.8c0,.1-.1.1-.1.2l-.6.9c0,.1,0,.1-.1.2l-.4.9h0l-.3,1.1v.3A3.7,3.7,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.6,86.3A63.2,63.2,0,0,0,64,120a64,64,0,0,0,30,54.2,96.1,96.1,0,0,0-46.5,37.4,8.1,8.1,0,0,0,2.4,11.1,7.9,7.9,0,0,0,11-2.3,80,80,0,0,1,134.2,0,8,8,0,0,0,6.7,3.6,7.5,7.5,0,0,0,4.3-1.3,8.1,8.1,0,0,0,2.4-11.1A96.1,96.1,0,0,0,162,174.2,64,64,0,0,0,192,120a63.2,63.2,0,0,0-9.6-33.7l44.1-14.7a8,8,0,0,0,0-15.2ZM128,168a48,48,0,0,1-48-48,48.6,48.6,0,0,1,9.3-28.5l36.2,12.1a8,8,0,0,0,5,0l36.2-12.1A48.6,48.6,0,0,1,176,120,48,48,0,0,1,128,168Z"
+                />
+              </svg>
+              <span class="ml-3">Tugas Siswa</span>
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="bukuPenghubung"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 576 512"
+                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                />
+              </svg>
+              <span class="ml-3">Identitas Siswa</span>
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="bukuPenghubung1"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 576 512"
+                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                />
+              </svg>
+              <span class="ml-3">Buku Penghubung</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#"
+              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            >
+              <svg
+                viewBox="0 0 576 512"
+                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M144.3 32.04C106.9 31.29 63.7 41.44 18.6 61.29c-11.42 5.026-18.6 16.67-18.6 29.15l0 357.6c0 11.55 11.99 19.55 22.45 14.65c126.3-59.14 219.8 11 223.8 14.01C249.1 478.9 252.5 480 256 480c12.4 0 16-11.38 16-15.98V80.04c0-5.203-2.531-10.08-6.781-13.08C263.3 65.58 216.7 33.35 144.3 32.04zM557.4 61.29c-45.11-19.79-88.48-29.61-125.7-29.26c-72.44 1.312-118.1 33.55-120.9 34.92C306.5 69.96 304 74.83 304 80.04v383.1C304 468.4 307.5 480 320 480c3.484 0 6.938-1.125 9.781-3.328c3.925-3.018 97.44-73.16 223.8-14c10.46 4.896 22.45-3.105 22.45-14.65l.0001-357.6C575.1 77.97 568.8 66.31 557.4 61.29z"
+                />
+              </svg>
+              <span class="ml-3">Jadwal Mata Pelajaran</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
 </template>

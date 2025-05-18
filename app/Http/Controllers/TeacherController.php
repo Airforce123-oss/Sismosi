@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\WaliKelas;
 use App\Models\Classes;
+use App\Models\AbsensiSiswa;
 use App\Models\BukuPenghubung;
 use App\Models\Teacher;
 use App\Models\Mapel;
@@ -221,7 +222,7 @@ class TeacherController extends Controller
     // Ambil semua data mata pelajaran  
     $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran  
   
-    Log::info('Data Mapel:', $mapelList->toArray());
+    //Log::info('Data Mapel:', $mapelList->toArray());
     // Query untuk mengambil data kelas    
     $classesQuery = Classes::query();    
     
@@ -234,7 +235,7 @@ class TeacherController extends Controller
   
     // Pagination, dengan jumlah per halaman 20    
     $classes = $classesQuery->paginate(20)->appends($request->only('search'));     
-    Log::info('Classes Type:', [gettype($classes)]);
+    //Log::info('Classes Type:', [gettype($classes)]);
 
   
     // Kirim data ke komponen Vue  
@@ -243,6 +244,41 @@ class TeacherController extends Controller
     'classes' => $classes, // Return the paginated classes   
     ]);   
 }  
+
+public function storeAttendance(Request $request)
+{
+    Log::info('Request received Store Attendance teacherController:', $request->all()); 
+    try {
+        $validatedData = $request->validate([
+            'siswa_id' => 'required|exists:students,id',
+            'tanggal_kehadiran' => 'required|date',
+            'status' => 'required|in:P,A,S,I'
+        ]);
+
+        $attendance = AbsensiSiswa::updateOrCreate(
+            [
+                'siswa_id' => $validatedData['siswa_id'],
+                'tanggal_kehadiran' => $validatedData['tanggal_kehadiran'],
+            ],
+            [
+                'status' => $validatedData['status'],
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Absensi berhasil diperbarui.',
+            'data' => $attendance,
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error updating attendance:', ['error' => $e->getMessage()]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memperbarui absensi.',
+        ], 500);
+    }
+}
 
 
     public function create()
@@ -261,6 +297,9 @@ class TeacherController extends Controller
     {
         try {
             $data = $request->validated();
+
+            dd(['Test dulu gak seh' => $data]);
+
     
             Teacher::create([
                 'name' => $data['name'],
@@ -416,22 +455,24 @@ class TeacherController extends Controller
     }
     public function getClassByTeacher(Request $request)
     {
-        $id = $request->input('id');
+        $id = $request->query('id');
+        Log::info('📥 Semua query param: ' . json_encode($request->query()));
+        Log::info('📥 Semua request param: ' . json_encode($request->all()));
         Log::info('Request received with ID: ' . $id);
     
         if (!$id) {
             return response()->json(['message' => 'Parameter ID tidak ditemukan'], 400);
         }
     
-        $teacher = Teacher::find($id);
+        $teacher = Teacher::with('class')->find($id); // pastikan relasi dimuat
     
         if ($teacher && $teacher->class) {
-            return response()->json(['class' => $teacher->class->name]);
+            return response()->json(['class' => $teacher->class]);
         } else {
             return response()->json(['message' => 'Tidak ada kelas terkait'], 404);
         }
     }
-
+    
     public function getMapelByTeacherId(Request $request)
     {
         $teacherId = $request->input('teacher_id');
