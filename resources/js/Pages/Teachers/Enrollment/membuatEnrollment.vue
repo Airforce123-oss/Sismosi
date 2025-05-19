@@ -931,8 +931,6 @@ button:hover {
 
       <!--      <pre>{{ JSON.stringify(students, null, 2) }}</pre>
 -->
-      >
-
       <!-- Modal tambah enrollment -->
       <div
         v-if="isEnrollmentModalVisible"

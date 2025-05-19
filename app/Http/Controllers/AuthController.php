@@ -37,35 +37,30 @@ public function login(Request $request)
     
         // Jika user adalah student
         if ($roleName === 'student') {
+            // Ambil student terkait user ini, atau dari request jika memang perlu pilih student_id
             $studentId = $request->input('student_id');
 
-            // Check if student_id is provided
-            if ($studentId) {
-                // Fetch student data where user_id matches the authenticated user's ID
-                // and the student_id matches the provided student_id
-                $student = Student::where('user_id', auth()->id())
-                ->where('id', $studentId)
-                ->first();
-        
-                // Check if student exists
+            // Kalau gak ada student_id di request, ambil yang pertama yang terkait user
+            if (!$studentId) {
+                $student = Student::where('user_id', $user->id)->first();
                 if ($student) {
-                    // Return the student data to the frontend
-                    return Inertia::render('StudentDashboard', [
-                        'student_id' => $student->id,
-                        'student_name' => $student->name,
-                    ]);
+                    $studentId = $student->id;
                 } else {
-                    // Return an error page if student not found
-                    return Inertia::render('ErrorPage', [
-                        'message' => 'Student not found.',
-                    ]);
+                    return Inertia::render('ErrorPage', ['message' => 'Student tidak ditemukan']);
                 }
-            } else {
-                // Return an error page if student_id is not provided
-                return Inertia::render('ErrorPage', [
-                    'message' => 'No student selected.',
-                ]);
             }
+
+            // Redirect ke route student-dashboard dengan student_id dan student_name di query
+            $student = Student::find($studentId);
+
+            if (!$student || $student->user_id !== $user->id) {
+                return Inertia::render('ErrorPage', ['message' => 'Student tidak ditemukan atau tidak berhak']);
+            }
+
+            return redirect()->route('student.dashboard', [
+                'student_id' => $student->id,
+                'student_name' => $student->name,
+            ]);
         }
 
         // Jika user adalah teacher

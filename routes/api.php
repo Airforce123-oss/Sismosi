@@ -135,7 +135,8 @@ Route::get('/jadwal', [MataPelajaranController::class, 'getAllJadwal']);
 
 Route::get('/tahun_ajaran', action: [MataPelajaranController::class, 'getTahunAjaran']);
 
-Route::middleware('auth:sanctum')->get('/fetch-all-students', [StudentController::class, 'fetchAllStudents']);
+Route::get('/fetch-all-students', action: [StudentController::class, 'fetchAllStudents']);
+
 
 
 

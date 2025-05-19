@@ -22,7 +22,6 @@ console.log('✅ Student Name dari props:', student_name);
 console.log('✅ Student ID dari props:', student_id);
 console.log('✅ User:', auth?.user);
 
-
 // Fungsi untuk mengambil data session
 const fetchSessionData = async () => {
   try {
@@ -35,12 +34,6 @@ const fetchSessionData = async () => {
 
 const fetchLoggedInStudent = async () => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('❗ Token missing');
-      return;
-    }
-
     const response = await axios.get('/api/logged-in-student', {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -69,7 +62,6 @@ const fetchLoggedInStudent = async () => {
 
 // Inisialisasi kalender dan ambil session data saat komponen dimount
 onMounted(() => {
-  console.log('Student ID di URL:', student_id.value);
   fetchLoggedInStudent();
   initFlowbite();
   fetchSessionData();
@@ -223,9 +215,9 @@ onMounted(() => {
         <div>
           <h3 class="page-title">Selamat Datang {{ student_name }}</h3>
           <p class="text-gray-600">
-            ID Siswa Anda: <strong>{{ student_id }}</strong>
+            <!--            ID Siswa Anda: <strong>{{ student_id }}</strong>
+-->
           </p>
-          <div></div>
         </div>
         <div class="container mx-auto py-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -278,10 +270,8 @@ onMounted(() => {
         </div>
       </div>
       <div class="row">
-        <div class="col-12 col-lg-16 col-xl-6">
-        </div>
+        <div class="col-12 col-lg-16 col-xl-6"></div>
       </div>
-
     </main>
 
     <!-- Sidebar -->

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import vSelect from 'vue-select';
 import 'vue-select/dist/vue-select.css';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -71,7 +71,7 @@ const students = ref([]);
 const studentName = ref('');
 // Watch untuk memantau perubahan student_id
 watch(
-  () => form.student_id,
+  () => form.student,
   (newValue, oldValue) => {
     console.log('Student ID berubah:', { oldValue, newValue });
   }
@@ -109,119 +109,103 @@ const fetchLoggedInStudent = async () => {
 
 const fetchAllStudents = async () => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.warn(
-        '⚠️ Token tidak ditemukan di localStorage, melewati fetchAllStudents'
-      );
-      return;
-    }
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log('memulai fetchAllStudents, isi awal: ', students.value);
+    // Ambil CSRF cookie dulu supaya Laravel Sanctum meng-set session cookie
+    await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
 
+    // Request data siswa dengan cookie session otomatis terkirim
     const response = await axios.get('/api/fetch-all-students', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      withCredentials: true,
+      withCredentials: true, // Kirim cookie session
     });
-
+    console.log('✅ Response dari server:', response.data); // <- Ini penting
     students.value = response.data.students;
     console.log('✅ Data siswa berhasil diambil:', students.value);
-    console.log('📊 Jumlah siswa yang diambil:', students.value.length);
-    console.log('🔍 Isi lengkap students:', students.value);
   } catch (error) {
     console.error(
       '❌ Gagal mengambil data siswa:',
       error.response?.data || error.message
     );
+    // Jangan langsung redirect di sini agar tidak loop
+    throw error; // biarkan error dilempar ke caller
   }
 };
 
 // Fungsi submit login
 const submit = async () => {
-  console.log('>>> submit function dipanggil');
   errorMessage.value = '';
   successMessage.value = '';
 
-  console.log('Data login yang dikirim:', {
-    email: form.email,
-    password: form.password,
-    student_id: form.student_id,
-    student_name:
-      students.value.find((s) => s.id === form.student_id)?.name || null,
-    role: form.role,
-  });
-
   try {
-    // 1. Ambil CSRF token dari meta
-    const csrfToken = document
-      .querySelector('meta[name="csrf-token"]')
-      ?.getAttribute('content');
-    if (csrfToken) {
-      axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+    // Ambil CSRF cookie & session
+    await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+
+    // Ambil data siswa yang dipilih (berisi ID dan nama)
+    let student_id = null;
+    let student_name = '';
+
+    if (form.role === 'student' && form.student) {
+      // Ambil dari selected object
+      student_id = form.student.id;
+      student_name = form.student.name;
     }
 
-    // 2. Payload login
-    const payload = {
-      email: form.email,
-      password: form.password,
-      role: form.role,
-    };
-
-    if (form.student) {
-      payload.student_id = form.student.id;
-      payload.student_name = form.student.name;
-    }
-
-    // 3. Ambil CSRF Cookie
-    await axios.get('/sanctum/csrf-cookie');
-
-    // 4. Kirim request login
-    const response = await axios.post('/api/login', payload);
-
-    // 5. Jika berhasil, simpan token
-    if (response.data.token) {
-      const token = response.data.token;
-      if (form.student) {
-        localStorage.setItem('student_name', form.student.name);
+    // Kirim login ke endpoint Laravel
+    await axios.post(
+      '/login',
+      {
+        email: form.email,
+        password: form.password,
+        role: form.role,
+        student_id,
+        student_name,
+      },
+      {
+        withCredentials: true,
       }
+    );
 
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('✅ Token berhasil disimpan dan diset:', token);
-      console.log(
-        'Token di localStorage sebelum fetchAllStudents:',
-        localStorage.getItem('token')
+    successMessage.value = 'Login berhasil!';
+
+    // Setelah login, fetch ulang data siswa (opsional)
+    await fetchAllStudents();
+
+    // Redirect sesuai role
+    if (form.role === 'student') {
+      router.visit(
+        `/student-dashboard/${student_id}?student_name=${encodeURIComponent(
+          student_name
+        )}`
       );
-
-      await fetchAllStudents();
-
-      const role = response.data.role;
-
-      if (role === 'student') {
-        router.visit('/dashboard', {
-          method: 'get',
-          data: {
-            student_id: form.student?.id,
-            student_name: form.student?.name,
-          },
-        });
-      } else if (role === 'teacher') {
-        router.visit('/teacher-dashboard');
-      } else if (role === 'admin') {
-        router.visit('/admin-dashboard');
-      }
-    } else {
-      errorMessage.value = 'Login gagal. Cek email dan password Anda.';
+    } else if (form.role === 'teacher') {
+      router.visit('/teacher-dashboard');
+    } else if (form.role === 'admin') {
+      router.visit('/admin-dashboard');
+    } else if (form.role === 'parent') {
+      router.visit('/parent-dashboard');
     }
   } catch (error) {
-    console.error('❌ Error during login:', error);
+    console.error(
+      '❌ Error during login:',
+      error.response?.data || error.message
+    );
     errorMessage.value =
       error.response?.data?.message || 'Login gagal. Silakan coba lagi.';
   }
 };
 
-fetchAllStudents();
+onMounted(async () => {
+  try {
+    await fetchAllStudents();
+  } catch (error) {
+    if (
+      error.response?.status === 401 &&
+      window.location.pathname !== '/login'
+    ) {
+      console.warn('🚫 User belum login, redirect ke login.');
+      router.visit('/login');
+    }
+  }
+});
 
 // Watch role, misal untuk reset form.student jika bukan student
 watch(
@@ -236,8 +220,14 @@ watch(
 
 watch(
   () => form.student,
-  (newStudentId) => {
-    const matched = students.value.find((s) => s.id === newStudentId);
+  (newStudent) => {
+    if (!newStudent) {
+      form.student_id = null;
+      console.log('❌ Siswa tidak ditemukan karena nilai baru null/undefined');
+      return;
+    }
+
+    const matched = students.value.find((s) => s.id === newStudent.id);
 
     if (matched) {
       form.student_id = matched.id;
@@ -247,7 +237,19 @@ watch(
       });
     } else {
       form.student_id = null;
-      console.log('❌ Siswa tidak ditemukan untuk ID:', newStudentId);
+      console.log('❌ Siswa tidak ditemukan untuk ID:', newStudent.id);
+    }
+  }
+);
+
+watch(
+  () => form.student,
+  (selected) => {
+    if (form.role === 'student' && selected) {
+      const url = `/student-dashboard/${
+        selected.id
+      }?student_name=${encodeURIComponent(selected.name)}`;
+      console.log('📌 URL yang akan digunakan untuk redirect:', url);
     }
   }
 );
@@ -307,12 +309,12 @@ watch(
               v-if="students.length"
               v-model="form.student"
               :options="students"
-              :reduce="(student) => student.id"
               label="name"
               placeholder="Cari siswa..."
               class="w-full"
               searchable
               clearable
+              @focus="fetchAllStudents"
             />
 
             <div v-else class="text-sm text-gray-500">

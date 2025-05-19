@@ -54,7 +54,8 @@ class ProfileController extends Controller
             ]);
         }
     
-        $selectedStudentId = $request->input('student_id', null);
+        $studentId = $request->input('student_id', session('student_id')); // bisa dari form atau session
+        $studentName = $request->input('student_name'); // dari request
     
         $totalStudents = cache()->remember('total_students', 60, function () {
             return Student::count();

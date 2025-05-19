@@ -47,35 +47,49 @@ Route::middleware([
 });
 
 // Authentication Routes
-Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
-Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+Route::middleware('web')->group(function () {
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+});
+
 
 // Dashboard Routes
 Route::middleware(['auth', 'verified'])->group(function () {
 // Dashboard Admin
-Route::get('/dashboard', function () {
+Route::middleware('auth')->get('/dashboard', function () {
     $user = Auth::user();
-
-    if (!$user) {
-        return redirect()->route('login');
-    }
 
     \Log::info('Redirecting user to their dashboard. Role: ' . $user->role_name);
 
     switch ($user->role_name) {
         case 'student':
-            return redirect()->route('student.dashboard');
+            // Cari data student berdasarkan user_id
+            $student = Student::where('user_id', $user->id)->first();
+
+            if ($student) {
+                // Redirect ke route student.dashboard dengan parameter lengkap
+                return Inertia::location(route('student.dashboard', [
+                    'student_id' => $student->id,
+                    'student_name' => $student->name,
+                ]));
+            } else {
+                // Jika tidak ada student terkait, log dan redirect ke dashboard umum
+                \Log::warning("User ID {$user->id} role student tapi tidak punya data student.");
+                return Inertia::location(route('dashboard'));
+            }
+
         case 'teacher':
-            return redirect()->route('teacher.dashboard');
+            return Inertia::location(route('teacher.dashboard'));
         case 'parent':
-            return redirect()->route('parent.dashboard');
+            return Inertia::location(route('parent.dashboard'));
         case 'admin':
-            return redirect()->route('admin.dashboard');
+            return Inertia::location(route('admin.dashboard'));
         default:
             \Log::info('Invalid role, redirecting to login.');
-            return redirect()->route('login');
+            return Inertia::location(route('login'));
     }
 })->name('dashboard');
+
 
     // Dashboard Admin
     Route::get('/admin-dashboard', function () {
@@ -94,32 +108,36 @@ Route::get('/dashboard', function () {
 
 
     // Dashboard Siswa
-    Route::middleware('auth')->get('/student-dashboard/{student_id?}', function ($student_id = null) {
+    Route::middleware('auth')->get('/student-dashboard/{student_id?}', function (Request $request, $student_id = null) {
         $user = Auth::user();
     
-        // Ambil siswa berdasarkan user_id
+        // Ambil student_id dari route param atau query string
+        $studentId = $student_id ?? $request->input('student_id');
+    
+        // Ambil student_name dari query string, jika tidak ada gunakan nama siswa dari DB nanti
+        $studentNameFromQuery = $request->query('student_name');
+    
+        // Query siswa dengan user_id dan student_id jika ada
         $studentQuery = Student::where('user_id', $user->id);
     
-        // Jika student_id diberikan, cari siswa dengan ID tersebut
-        if ($student_id) {
-            $studentQuery->where('id', $student_id);
+        if ($studentId) {
+            $studentQuery->where('id', $studentId);
         }
     
-        // Ambil siswa (dengan filter di atas)
         $student = $studentQuery->first();
     
-        // Jika tidak ditemukan, redirect dengan error
         if (!$student) {
-            return redirect()->route('errorPage')->with('message', 'Student not found or unauthorized access');
+            return redirect()->route('dashboard')->with('message', 'Student not found or unauthorized access');
         }
     
-        // Render halaman siswa dengan data siswa yang valid
+        // Jika student_name dari query string tidak ada, pakai nama dari DB
+        $studentName = $studentNameFromQuery ?: $student->name;
+    
         return Inertia::render('studentsDashboard', [
-            'student_id'   => $student->id,
-            'student_name' => $student->name,
+            'student_id' => $student->id,
+            'student_name' => $studentName,
         ]);
     })->name('student.dashboard');
-    
     
     Route::get('/parent-dashboard', [ParentController::class, 'parentDashboard'])->name('parentDashboard');        
     Route::get('/memeriksa-tugas', [ParentController::class, 'memeriksaTugasSubmit'])->name('memeriksa-tugas');
