@@ -337,12 +337,20 @@ onMounted(() => {
                         <td
                           class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
                         >
-                          {{ mapel.hari || 'Tidak Ditetapkan' }}
+                          {{
+                            mapel.hari !== null && mapel.hari !== ''
+                              ? mapel.hari
+                              : 'Tidak Ditetapkan'
+                          }}
                         </td>
                         <td
                           class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"
                         >
-                          {{ mapel.jam_ke || 'Tidak Ditetapkan' }}
+                          {{
+                            mapel.jam_ke !== null && mapel.jam_ke !== ''
+                              ? mapel.jam_ke
+                              : 'Tidak Ditetapkan'
+                          }}
                         </td>
                         <td
                           class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
@@ -366,7 +374,7 @@ onMounted(() => {
                     </tbody>
                   </table>
                 </div>
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -627,7 +635,7 @@ onMounted(() => {
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

@@ -135,41 +135,62 @@ const validateEntry = (entry) => {
 };
 
 const laporanJadwal = () => {
-  entries.value = [];
-  const invalidEntries = [];
+  try {
+    entries.value = [];
+    const invalidEntries = [];
 
-  schedule.value.forEach((slot) => {
-    days.forEach((day) => {
-      const jadwalItem = slot.jadwal[day];
-
-      if (!jadwalItem) return;
-
-      const entry = {
-        hari: day,
-        jam_ke: slot.jam_ke,
-        jam: slot.jam ?? null,
-        mapel_id: jadwalItem.mapel_id ?? null,
-        guru_id: jadwalItem.guru_id ?? null,
-        kelas: jadwalItem.kelas ?? null,
-        wali_kelas: jadwalItem.wali_kelas ?? null,
-        tahun: jadwalItem.tahun ?? null,
+    if (!Array.isArray(schedule.value)) {
+      console.warn('schedule.value bukan array.');
+      return {
+        valid: [],
+        invalid: [],
+        isValid: false,
       };
+    }
 
-      const errors = validateEntry(entry);
+    schedule.value.forEach((slot) => {
+      if (!slot || typeof slot !== 'object') return;
 
-      if (errors.length === 0) {
-        entries.value.push(entry);
-      } else {
-        invalidEntries.push({ ...entry, alasan: errors.join(', ') });
-      }
+      days.forEach((day) => {
+        if (!slot.jadwal || typeof slot.jadwal !== 'object') return;
+
+        const jadwalItem = slot.jadwal[day];
+        if (!jadwalItem) return;
+
+        const entry = {
+          hari: day,
+          jam_ke: slot.jam_ke,
+          jam: slot.jam ?? null,
+          mapel_id: jadwalItem.mapel_id ?? null,
+          guru_id: jadwalItem.guru_id ?? null,
+          kelas: jadwalItem.kelas ?? null,
+          wali_kelas: jadwalItem.wali_kelas ?? null,
+          tahun: jadwalItem.tahun ?? null,
+        };
+
+        const errors = validateEntry(entry) || [];
+
+        if (errors.length === 0) {
+          entries.value.push(entry);
+        } else {
+          invalidEntries.push({ ...entry, alasan: errors.join(', ') });
+        }
+      });
     });
-  });
 
-  return {
-    valid: entries.value,
-    invalid: invalidEntries,
-    isValid: invalidEntries.length === 0,
-  };
+    return {
+      valid: entries.value,
+      invalid: invalidEntries,
+      isValid: invalidEntries.length === 0,
+    };
+  } catch (err) {
+    console.error('Terjadi error saat menjalankan laporanJadwal:', err);
+    return {
+      valid: [],
+      invalid: [],
+      isValid: false,
+    };
+  }
 };
 
 watch(
@@ -1355,7 +1376,7 @@ console.log(route('settingjadwalmataPelajarans.settingJadwalMataPelajaran'));
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

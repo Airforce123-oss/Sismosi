@@ -1,6 +1,6 @@
 <script setup>
 import { initFlowbite } from 'flowbite';
-import Pagination from '../../Components/Pagination.vue';
+import Pagination from '../../Components/Pagination3.vue';
 import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { onMounted, ref, watch, computed } from 'vue';
 import Swal from 'sweetalert2';
@@ -28,6 +28,32 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+});
+
+const pageNumber = ref(props.classes_for_student.meta.current_page || 1);
+console.log('isi pagenumber:', pageNumber.value);
+const itemsPerPage = ref(10);
+const currentPage = ref(1);
+const perPage = ref(5);
+pageNumber.value = 1;
+console.log(pageNumber.value); // Akses dengan .value
+
+const updatedPageNumber = (link) => {
+  if (!link.url) {
+    console.log('❌ Link tidak memiliki URL, abaikan klik.');
+    return;
+  }
+
+  const page = new URL(link.url).searchParams.get('page');
+  console.log('🔄 Page yang diklik:', page);
+
+  pageNumber.value = Number(page); // ini akan trigger watch() dan fetch ulang data via axios
+};
+
+const paginatedFlatSchedule = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return flatSchedule.value.slice(start, end);
 });
 
 const teachers = ref([]);
@@ -74,7 +100,6 @@ const form = useForm({
   role_type: props.auth?.user?.role_type || '',
 });
 
-const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
 const searchTerm = ref('');
 
 const waliKelas = ref(props.wali_kelas || { data: [] });
@@ -108,23 +133,82 @@ console.log('Selected Kelas:', selectedKelas.value);
 // HARI
 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
 
-const schedule = ref([]);
+const schedule = ref({
+  data: [],
+  meta: {
+    total: 0,
+    current_page: 1,
+    per_page: 5,
+    last_page: 1,
+    from: 0,
+    to: 0,
+  },
+});
+
+const baseUrl = 'http://127.0.0.1:8000/jadwal';
 
 const loadSchedule = async (id) => {
-  // Jika id null/undefined, load semua jadwal tanpa filter kelas
   if (id === null || id === undefined) {
     try {
-      const response = await axios.get('/api/jadwal'); // endpoint load semua jadwal
-      schedule.value = response.data;
-      console.log('📦 Semua jadwal dari semua kelas:', response.data);
+      const response = await axios.get('/api/jadwal', {
+        params: { page: pageNumber.value, kelas_id: selectedKelas.value },
+      });
+
+      const { data, meta } = response.data;
+
+      const currentPage = Number(meta.current_page);
+      const perPage = Number(meta.per_page);
+      const total = Number(meta.total);
+      const lastPage = Number(meta.last_page);
+
+      schedule.value = {
+        data,
+        meta: {
+          current_page: currentPage,
+          per_page: perPage,
+          total: total,
+          last_page: lastPage,
+          from: (currentPage - 1) * perPage + 1,
+          to: (currentPage - 1) * perPage + data.length,
+          links: {
+            first: `${baseUrl}?page=1`,
+            last: `${baseUrl}?page=${lastPage}`,
+            next:
+              currentPage < lastPage
+                ? `${baseUrl}?page=${currentPage + 1}`
+                : null,
+            prev: currentPage > 1 ? `${baseUrl}?page=${currentPage - 1}` : null,
+          },
+        },
+      };
+
+      console.log(
+        '📦 Semua jadwal dari semua kelas (paginasi lengkap):',
+        schedule.value
+      );
     } catch (error) {
       console.error('❌ Gagal memuat semua jadwal:', error);
-      schedule.value = [];
+      schedule.value = {
+        data: [],
+        meta: {
+          current_page: 1,
+          per_page: 5,
+          total: 0,
+          last_page: 1,
+          from: 0,
+          to: 0,
+          links: {
+            first: `${baseUrl}?page=1`,
+            last: `${baseUrl}?page=1`,
+            next: null,
+            prev: null,
+          },
+        },
+      };
     }
     return;
   }
 
-  // Jika id ada, validasi dan parse seperti biasa
   const kelasId = parseInt(id, 10);
   console.log('Selected Kelas (before parsing):', id);
 
@@ -132,7 +216,23 @@ const loadSchedule = async (id) => {
     console.error(
       `❗ Kelas ID tidak valid: "${id}". Pastikan ID berupa angka lebih besar dari 0.`
     );
-    schedule.value = [];
+    schedule.value = {
+      data: [],
+      meta: {
+        current_page: 1,
+        per_page: 5,
+        total: 0,
+        last_page: 1,
+        from: 0,
+        to: 0,
+        links: {
+          first: `${baseUrl}?page=1`,
+          last: `${baseUrl}?page=1`,
+          next: null,
+          prev: null,
+        },
+      },
+    };
     return;
   }
 
@@ -140,53 +240,65 @@ const loadSchedule = async (id) => {
 
   try {
     const response = await axios.get(route('jadwal.get'), {
-      params: { kelas_id: kelasId },
+      params: {
+        page: pageNumber.value,
+        per_page: 5,
+        kelas_id: kelasId,
+      },
     });
 
-    const rawData = response.data;
+    const { data, meta } = response.data;
 
-    // Proses transformasi data seperti sebelumnya
-    const transformed = rawData.map((entry) => {
-      const jadwalPerHari = {};
-      days.forEach((day) => {
-        if (entry.jadwal?.[day]) {
-          jadwalPerHari[day] = {
-            mapel:
-              entry.jadwal[day]?.mapel ||
-              `Mapel ID: ${entry.jadwal[day]?.mapel_id}`,
-            mapel_id: entry.jadwal[day]?.mapel_id,
-            kelas: entry.jadwal[day]?.kelas || '-',
-            guru: entry.jadwal[day]?.guru || '-',
-            wali_kelas: entry.jadwal[day]?.wali_kelas || '-',
-            guru_id: entry.jadwal[day]?.guru_id || null,
-            tahun: entry.jadwal[day]?.tahun || '-',
-          };
-        }
-      });
+    schedule.value = {
+      data,
+      meta: {
+        current_page: Number(meta.current_page),
+        per_page: Number(meta.per_page),
+        total: Number(meta.total),
+        last_page: Number(meta.last_page),
+        from: (Number(meta.current_page) - 1) * Number(meta.per_page) + 1,
+        to:
+          (Number(meta.current_page) - 1) * Number(meta.per_page) + data.length,
+        links: {
+          first: `${baseUrl}?page=1&kelas_id=${kelasId}`,
+          last: `${baseUrl}?page=${meta.last_page}&kelas_id=${kelasId}`,
+          next:
+            meta.current_page < meta.last_page
+              ? `${baseUrl}?page=${meta.current_page + 1}&kelas_id=${kelasId}`
+              : null,
+          prev:
+            meta.current_page > 1
+              ? `${baseUrl}?page=${meta.current_page - 1}&kelas_id=${kelasId}`
+              : null,
+        },
+      },
+    };
 
-      return {
-        jam_ke: entry.jam_ke,
-        jam:
-          entry.jam ||
-          `${String(entry.jam_ke).padStart(2, '0')}:00 - ${String(
-            entry.jam_ke
-          ).padStart(2, '0')}:45`,
-        jadwal: jadwalPerHari,
-      };
-    });
-
-    schedule.value = transformed;
-
-    console.log('✅ Schedule loaded:', schedule.value);
-
-    // ...kode cek jam dalam range tetap seperti sebelumnya
+    console.log('✅ Schedule loaded untuk kelas tertentu:', schedule.value);
   } catch (error) {
     console.error('❌ Gagal mengambil jadwal:', error.response?.data || error);
+    schedule.value = {
+      data: [],
+      meta: {
+        current_page: 1,
+        per_page: 5,
+        total: 0,
+        last_page: 1,
+        from: 0,
+        to: 0,
+        links: {
+          first: `${baseUrl}?page=1`,
+          last: `${baseUrl}?page=1`,
+          next: null,
+          prev: null,
+        },
+      },
+    };
   }
 };
 
 function getTeacherNameById(id) {
-  console.log('📌 Mencari nama guru untuk ID:', id);
+  //console.log('📌 Mencari nama guru untuk ID:', id);
 
   if (typeof id === 'string' && id.includes(',')) {
     const ids = id.split(',').map((s) => Number(s.trim()));
@@ -201,74 +313,59 @@ function getTeacherNameById(id) {
     return foundTeachers.map((t) => t.name).join(', ');
   } else {
     const teacher = teachers.value.find((t) => t.id === Number(id));
-    console.log('✅ Guru ditemukan:', teacher?.name ?? 'Tidak ditemukan');
+    //console.log('✅ Guru ditemukan:', teacher?.name ?? 'Tidak ditemukan');
 
     return teacher ? teacher.name : null;
   }
 }
 
-const formatGuru = (guru) => {
-  if (!guru) return '-';
-
-  if (Array.isArray(guru)) {
-    return guru.map((g) => g.name).join(', ');
-  }
-
-  if (typeof guru === 'number') {
-    return getTeacherNameById(guru);
-  }
-
-  if (typeof guru === 'string') {
-    return guru || '-';
-  }
-
-  return guru.name ?? '-';
-};
-
 const flatSchedule = computed(() => {
-  console.log('Mengeksekusi flatSchedule, data schedule:', schedule.value);
+  const scheduleArray = Array.isArray(schedule.value)
+    ? schedule.value
+    : Object.values(schedule.value).flat();
 
-  const scheduleArray = Object.values(schedule.value).flat();
-  let counter = 1; // mulai dari 1
+  let counter = 1;
 
   return scheduleArray.flatMap((slot) => {
+    if (
+      !slot ||
+      typeof slot !== 'object' ||
+      !slot.jadwal ||
+      typeof slot.jadwal !== 'object' ||
+      Array.isArray(slot.jadwal)
+    ) {
+      return [];
+    }
+
     return days
-      .filter((day) => slot.jadwal[day])
+      .filter((day) => {
+        const data = slot.jadwal[day];
+        return data && typeof data === 'object' && data.mapel;
+      })
       .map((day) => {
         const data = slot.jadwal[day];
 
-        const entry = {
-          id: counter++, // generate nomor urut, lalu tambah counter
-          jam_ke: slot.jam_ke,
-          jam: slot.jam,
+        return {
+          id: counter++,
+          jam_ke: slot.jam_ke ?? '-',
+          jam: slot.jam ?? '-',
           day,
           mapel: data?.mapel ?? '-',
           mapel_id: data?.mapel_id ?? null,
           kelas: data?.kelas ?? '-',
-          guru: data?.guru || null,
+          guru: data?.guru ?? null,
           guru_id: data?.guru_id ?? null,
           tahun: data?.tahun ?? '-',
           wali_kelas: data?.wali_kelas ?? 'Tidak ada wali',
         };
-
-        return entry;
       });
   });
-});
-
-const mergedSchedule = computed(() => {
-  if (!schedule.value) return [];
-
-  // Gabungkan semua jadwal dari tiap kelas
-  return Object.values(schedule.value).flat();
 });
 
 console.log('DEBUG — days:', days);
 const entries = ref([]);
 console.log('isi', entries.value);
 
-// MODAL STATE
-const showModal = ref(false);
 const selectedMapelModal = ref('');
 console.log(
   'Selected Mapel:',
@@ -311,7 +408,7 @@ const openEditModal = (jamKe, hari) => {
 
 onMounted(() => {
   fetchTeachers();
-  loadSchedule(null); // null berarti load semua jadwal
+  loadSchedule(null);
   initFlowbite();
 });
 
@@ -326,14 +423,30 @@ watch(selectedKelas, (newVal) => {
 
   loadSchedule(id); // Pastikan loadSchedule menerima ID numerik
 });
-watch(schedule, (newVal) => {
-  if (Array.isArray(newVal) && newVal.length > 0) {
-    console.log('🎯 Jadwal masuk lewat watch:', newVal);
-    // lanjutkan logika lain di sini
+
+watch(
+  () => schedule.value.data,
+  (newVal) => {
+    if (Array.isArray(newVal) && newVal.length > 0) {
+      console.log('🎯 Jadwal masuk lewat watch:', newVal);
+      // logika lain...
+    } else {
+      console.log('⚠️ Schedule belum siap atau kosong:', newVal);
+    }
+  }
+);
+
+watch(pageNumber, () => {
+  if (selectedKelas.value === '') {
+    console.log('📦 Tidak ada kelas dipilih, muat semua jadwal.');
+    loadSchedule(null); // ini akan trigger getAllJadwal
   } else {
-    console.log('⚠️ Schedule belum siap atau kosong:', newVal);
+    console.log('🎯 Kelas dipilih:', selectedKelas.value);
+    loadSchedule(selectedKelas.value);
   }
 });
+
+console.log('schedule di parent:', schedule.value);
 </script>
 
 <template>
@@ -458,6 +571,8 @@ watch(schedule, (newVal) => {
     <!-- start1 -->
 
     <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
+      <Head title="Setting Jadwal Mata Pelajaran" />
+
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="p-6 space-y-6">
           <div class="sm:flex sm:items-center">
@@ -549,14 +664,21 @@ watch(schedule, (newVal) => {
                   </td>
                 </tr>
                 <tr
-                  v-for="(item, index) in flatSchedule"
+                  v-for="(item, index) in paginatedFlatSchedule"
                   :key="`${item.jam_ke}-${item.day}-${index}`"
                   class="hover:bg-gray-50"
                 >
                   <td
                     class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                   >
-                    {{ item.id }}
+                    <span v-if="pageNumber && perPage">
+                      {{
+                        (Number(pageNumber) - 1) * Number(perPage) +
+                        Number(index) +
+                        1
+                      }}
+                    </span>
+                    <span v-else>Loading...</span>
                   </td>
                   <td
                     class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
@@ -599,6 +721,7 @@ watch(schedule, (newVal) => {
             </table>
             <!--  <pre>{{ JSON.stringify(schedule, null, 2) }}</pre>-->
           </div>
+          <Pagination :data="schedule" :updatedPageNumber="updatedPageNumber" />
         </div>
       </div>
       <div v-for="(item, index) in schedule.value" :key="index">
@@ -868,7 +991,7 @@ watch(schedule, (newVal) => {
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

@@ -19,6 +19,8 @@ class MapelResource extends JsonResource
             'id' => $this->id,
             'kode_mapel' => $this->kode_mapel,
             'mapel' => $this->mapel,
+            'hari' => $this->hari,   
+            'jam_ke' => $this->jam_ke,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'teachers' => $this->teachers->map(function ($teacher) {

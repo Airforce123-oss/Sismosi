@@ -658,11 +658,18 @@ watch([selectedTeacher, searchNIP], () => {
                   >Jadwal Mata Pelajaran</a
                 >
               </li>
+              <li>
+                <a
+                  href="laporanJadwalMataPelajaran"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Laporan Jadwal Mata Pelajaran</a
+                >
+              </li>
             </ul>
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

@@ -25,7 +25,7 @@ defineProps({
                             Showing
                             <span class="font-medium">{{
                                 data.meta.from
-                            }}</span>
+                        }}</span>
                             to
                             <span class="font-medium">{{ data.meta.to }}</span>
                             of

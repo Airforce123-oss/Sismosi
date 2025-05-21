@@ -107,6 +107,7 @@ onMounted(async () => {
       console.log('Waiting for chart elements...');
     }
   });
+  console.log('Rendering Chart...', apexChartElement.value);
   initFlowbite();
 });
 
@@ -127,8 +128,6 @@ const observer = new MutationObserver((mutationsList) => {
     }
   });
 });
-
-console.log('Rendering Chart...', apexChartElement.value);
 
 // Setup Charts setelah elemen DOM ditemukan
 function setupCharts() {
@@ -724,10 +723,10 @@ const barChartOptions = {
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
-            <svg
+              <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"

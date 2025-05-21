@@ -1,84 +1,45 @@
 <script setup>
-import { Link, useForm, router } from '@inertiajs/vue3';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { watch, ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import { initFlowbite } from 'flowbite';
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import ApexCharts from 'apexcharts';
+
 import axios from 'axios';
-import InputError from '@/Components/InputError.vue';
-import Swal from 'sweetalert2';
-const props = defineProps({
-  classes: { type: Object },
-  genders: { type: Object, default: () => ({ data: [] }) },
-  religions: { type: Object, default: () => ({ data: [] }) },
-  students: { type: Object, default: () => ({ data: [] }) },
-});
 
-let sections = ref({});
-
-const classes = ref(props.classes.data || []);
-let genders = ref(props.genders.data || []);
-const religions = ref(props.religions.data || []);
+const userName = ref('');
+const { props } = usePage();
 const form = useForm({
-  name: '',
-  no_induk_id: '',
-  gender_id: '',
-  class_id: '',
-  religion_id: '',
+  name: props.auth.user.name,
+  email: props.auth.user.email,
+  role_type: props.auth.user.role_type,
 });
 
-watch(
-  () => form.class_id,
-  (newValue) => {
-    getSections(newValue);
-  }
-);
+defineProps({ total: Number });
 
-const getSections = async (class_id) => {
-  try {
-    const response = await axios.get('/api/sections?class_id=' + class_id);
-    sections.value = response.data;
-  } catch (error) {
-    console.error('Error fetching sections:', error);
-  }
-};
-
-const formData = {
-  name: 'John Doe',
-  gender_id: 2,
-  class_id: 1,
-  religion_id: 3,
-  no_induk_id: 24,
-};
-function submit() {
-  console.log('Submitting data:', formData);
-
-  form.post(route('students.store'), {
-    onSuccess: () => {
-      console.log('Data successfully submitted');
-      Swal.fire({
-        title: 'Berhasil!',
-        text: 'Data siswa berhasil disimpan.',
-        icon: 'success',
-        confirmButtonText: 'Ok',
-      }).then(() => {
-        router.visit(route('students.index'), { replace: true });
-      });
-    },
-    onError: (errors) => {
-      console.error('Error:', errors);
-      Swal.fire({
-        title: 'Gagal!',
-        text: 'Terjadi kesalahan saat menyimpan data siswa.',
-        icon: 'error',
-        confirmButtonText: 'Ok',
-      });
-    },
-  });
-}
 onMounted(async () => {
   initFlowbite();
 });
 </script>
+
+<style scoped>
+@import url('https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css');
+.bg-primary1 {
+  background-color: #0e70cc;
+}
+
+.bg-success {
+  background-color: #28a745;
+}
+
+.bg-warning {
+  background-color: #ffc107;
+}
+
+.bg-cyan {
+  background-color: #10b0cc;
+}
+</style>
 
 <template>
   <div class="antialiased bg-gray-50 dark:bg-gray-900">
@@ -200,194 +161,27 @@ onMounted(async () => {
       </div>
     </nav>
 
-    <!-- start1 -->
-    <main class="p-4 md:ml-64 h-auto pt-20">
-      <div class="sm:flex sm:items-center">
-        <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-20">
-          <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
-            <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
-              <form @submit.prevent="submit">
-                <div class="shadow sm:rounded-md sm:overflow-hidden">
-                  <div class="bg-white py-6 px-4 space-y-6 sm:p-6">
-                    <div>
-                      <h3 class="text-lg leading-6 font-medium text-gray-900">
-                        Informasi Siswa
-                      </h3>
-                      <p class="mt-1 text-sm text-gray-500">
-                        Gunakan Form ini untuk mengisi data siswa
-                      </p>
-                    </div>
-                    <div class="grid grid-cols-6 gap-6">
-                      <!-- Nomor Induk -->
-                      <div class="col-span-6 sm:col-span-3">
-                        <label
-                          for="nomorInduk"
-                          class="block text-sm font-medium text-gray-700"
-                        >
-                          Nomor Induk
-                        </label>
-                        <input
-                          v-model="form.no_induk_id"
-                          type="text"
-                          id="nomorInduk"
-                          placeholder="Masukkan Nomor Induk"
-                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                          :class="{
-                            'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                              form.errors.no_induk_id,
-                          }"
-                        />
-                        <InputError
-                          class="mt-2"
-                          :message="form.errors.no_induk_id"
-                        />
-                      </div>
-                      <!-- Nama -->
-                      <div class="col-span-6 sm:col-span-3">
-                        <label
-                          for="name"
-                          class="block text-sm font-medium text-gray-700"
-                        >
-                          Nama
-                        </label>
-                        <input
-                          v-model="form.name"
-                          type="text"
-                          id="name"
-                          placeholder="Masukkan Nama"
-                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                          :class="{
-                            'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                              form.errors.name,
-                          }"
-                        />
+    <!-- Main -->
 
-                        <InputError class="mt-2" :message="form.errors.name" />
-                      </div>
-                      <!-- Jenis Kelamin -->
-                      <div class="col-span-6 sm:col-span-3">
-                        <label
-                          for="gender_id"
-                          class="block text-sm font-medium text-gray-700"
-                        >
-                          Jenis Kelamin
-                        </label>
-                        <select
-                          v-model="form.gender_id"
-                          id="gender_id"
-                          class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                          :class="{
-                            'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                              form.errors.gender_id,
-                          }"
-                        >
-                          <option value="">Pilih Jenis Kelamin</option>
-                          <option
-                            v-for="item in genders"
-                            :key="item.id"
-                            :value="item.id"
-                          >
-                            {{ item.name }}
-                          </option>
-                        </select>
-                        <InputError
-                          class="mt-2"
-                          :message="form.errors.gender_id"
-                        />
-                      </div>
-                      <!-- Kelas -->
-                      <div class="col-span-6 sm:col-span-3">
-                        <label
-                          for="class_id"
-                          class="block text-sm font-medium text-gray-700"
-                        >
-                          Kelas
-                        </label>
-                        <select
-                          v-model="form.class_id"
-                          id="class_id"
-                          class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                          :class="{
-                            'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                              form.errors.class_id,
-                          }"
-                        >
-                          <option value="">Pilih Kelas</option>
-                          <option
-                            v-for="item in classes"
-                            :key="item.id"
-                            :value="item.id"
-                          >
-                            {{ item.name }}
-                          </option>
-                        </select>
-                        <InputError
-                          class="mt-2"
-                          :message="form.errors.class_id"
-                        />
-                      </div>
+    <main class="p-7 md:ml-64 h-screen pt-20">
+      <Head title="Master Jabatan" />
 
-                      <!-- Agama -->
-                      <div class="col-span-6 sm:col-span-3">
-                        <label
-                          for="religion_id"
-                          class="block text-sm font-medium text-gray-700"
-                        >
-                          Agama
-                        </label>
-                        <select
-                          v-model="form.religion_id"
-                          id="religion_id"
-                          class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                          :class="{
-                            'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
-                              form.errors.religion_id,
-                          }"
-                        >
-                          <option value="">Pilih Agama</option>
-                          <option
-                            v-for="item in religions"
-                            :key="item.id"
-                            :value="item.id"
-                          >
-                            {{ item.name }}
-                          </option>
-                        </select>
-                        <InputError
-                          class="mt-2"
-                          :message="form.errors.religion_id"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
-                  >
-                    <div class="flex items-center space-x-4">
-                      <Link
-                        :href="route('students.index')"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Batal
-                      </Link>
+      <div class="text-2xl col-sm-12 mb-10">
+        <div class="sm:flex sm:items-center">
+          <div class="sm:flex-auto">
+            <h1 class="text-3xl font-semibold text-gray-900">Master Jabatan</h1>
+            <p class="mt-2 text-sm text-gray-700">Daftar Semua Jabatan</p>
+          </div>
 
-                      <button
-                        type="submit"
-                        class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Simpan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
+          <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <!-- Link untuk tambah guru -->
+            <Link href="/master-jabatan/create" class="btn btn-primary">
+              Tambah Jabatan
+            </Link>
           </div>
         </div>
       </div>
     </main>
-
-    <!-- end1-->
 
     <!-- Sidebar -->
     <aside
@@ -664,3 +458,9 @@ onMounted(async () => {
     </aside>
   </div>
 </template>
+
+<script>
+export default {
+  setup() {},
+};
+</script>

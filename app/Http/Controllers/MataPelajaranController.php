@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Mapel;
 use App\Models\Tugas;
+use Illuminate\Support\Collection;
 use App\Models\Classes;
 use App\Models\JadwalMataPelajaran;
 use App\Http\Resources\MapelResource;
@@ -14,6 +15,7 @@ use Inertia\Inertia;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 class MataPelajaranController extends Controller
@@ -59,7 +61,7 @@ class MataPelajaranController extends Controller
 
     public function laporanJadwalMataPelajaran(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 20);
+        $itemsPerPage = $request->input('itemsPerPage', 5);
         $currentPage  = $request->input('currentPage', 1);
         $filter       = $request->only(['kelas']);
         $kelasId      = $request->input('kelas_id');
@@ -109,10 +111,9 @@ class MataPelajaranController extends Controller
             'teachers' => $teachers,
         ]);
     }
-
     public function settingJadwalMataPelajaran(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 20);
+        $itemsPerPage = $request->input('itemsPerPage', 5);
         $currentPage  = $request->input('currentPage', 1);
         $filter       = $request->only(['kelas']);
         $kelasId      = $request->input('kelas_id');
@@ -147,7 +148,7 @@ class MataPelajaranController extends Controller
         $schedule = $kelasId ? $this->getScheduleByKelas($kelasId) : [];
     
         return inertia('MataPelajaran/settingJadwalMataPelajaran', [
-            'master_mapel' => MapelResource::collection($master_mapel),
+            'master_mapel' => $master_mapel, 
             'jadwal'       => $jadwal,
             'kelas_id' => (int) $kelasId,
             'schedule'     => $schedule,
@@ -174,7 +175,7 @@ class MataPelajaranController extends Controller
     private function getClasses(Request $request)
     {
         return Classes::with('waliKelas')
-            ->paginate(20)
+            ->paginate(5)
             ->appends($request->only('search'));
     }
     
@@ -574,8 +575,7 @@ public function createJadwalMataPelajaran(Request $request)
             ], 500);
         }
     }
-    
-    
+
     public function getJadwal(Request $request)
     {
         $validated = $request->validate([
@@ -583,6 +583,8 @@ public function createJadwalMataPelajaran(Request $request)
         ]);
     
         $kelasId = $validated['kelas_id'];
+        $itemsPerPage = $request->input('itemsPerPage', 5);
+        $page = $request->input('page', 1);
     
         // Ambil semua jadwal, relasi guru tunggal (guru_id), dan wali_kelas
         $jadwals = JadwalMataPelajaran::with([
@@ -591,70 +593,92 @@ public function createJadwalMataPelajaran(Request $request)
             'guru',
         ])
         ->where('kelas_id', $kelasId)
-        ->get();
-
-        Log::info('Jadwals fetched:', $jadwals->toArray());
-    
+        ->paginate(1000);
+  
         $hariList = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
         $entries = [];
     
-        foreach ($jadwals as $jadwal) {
-            $jamKe = $jadwal->jam_ke;
-            $hari  = strtolower($jadwal->hari);
-    
-            // Gunakan relasi guru tunggal
-            $guru = $jadwal->mapel->guru;
-    
-            // Logging ID guru untuk debugging
-            \Log::info('Received guru_id:', [$guru?->id]);
-    
-            // Inisialisasi entries untuk jamKe jika belum ada
-            if (!isset($entries[$jamKe])) {
-                $entries[$jamKe] = [
-                    'jam_ke' => $jamKe,
-                    'jam'    => $jadwal->jam,
-                    'jadwal' => [],
-                ];
-    
-                // Mengisi setiap hari dengan null
-                foreach ($hariList as $h) {
-                    $entries[$jamKe]['jadwal'][$h] = null;
-                }
-            }
-    
-            // Menyimpan data jadwal untuk hari yang sesuai
-            $entries[$jamKe]['jadwal'][$hari] = [
-                'mapel'      => $jadwal->mapel->mapel ?? '-',
-                'mapel_id'   => $jadwal->mapel_id,
-                'kelas'      => $jadwal->kelas->name ?? '-',
-                'guru' => optional($jadwal->guru)->name ?? '-',
-                'guru_id'    => $jadwal->guru_id ?? null,
-                'wali_kelas' => $jadwal->kelas->waliKelas->name ?? '-',
-                'tahun'      => $jadwal->tahun ?? '-',
+   foreach ($jadwals as $jadwal) {
+        $jamKe = $jadwal->jam_ke;
+        $hari = strtolower($jadwal->hari);
+        $guru = $jadwal->mapel->guru;
+
+        if (!isset($entries[$jamKe])) {
+            $entries[$jamKe] = [
+                'jam_ke' => $jamKe,
+                'jam' => $jadwal->jam,
+                'jadwal' => [],
             ];
+
+            foreach ($hariList as $h) {
+                $entries[$jamKe]['jadwal'][$h] = null;
+            }
         }
-    
-        // Mengurutkan berdasarkan jam_ke dan memastikan data terstruktur
-        ksort($entries);
-    
-        // Logging hasil entries untuk debugging
-        \Log::info('Jadwal Entries:', $entries);
-    
-        // Mengirimkan response
-        return response()->json(array_values($entries));
+
+        $entries[$jamKe]['jadwal'][$hari] = [
+            'mapel' => $jadwal->mapel->mapel ?? '-',
+            'mapel_id' => $jadwal->mapel_id,
+            'kelas' => $jadwal->kelas->name ?? '-',
+            'guru' => optional($jadwal->guru)->name ?? '-',
+            'guru_id' => $jadwal->guru_id ?? null,
+            'wali_kelas' => $jadwal->kelas->waliKelas->name ?? '-',
+            'tahun' => $jadwal->tahun ?? '-',
+        ];
+    }
+    // Ubah ke collection dan sort
+    $entriesCollection = collect($entries)->sortKeys();
+
+    // Ambil slice untuk halaman sekarang
+    $paginated = new LengthAwarePaginator(
+        $entriesCollection->forPage($page, $itemsPerPage)->values(),
+        $entriesCollection->count(),
+        $itemsPerPage,
+        $page,
+        ['path' => $request->url(), 'query' => $request->query()]
+    );
+
+    return response()->json($paginated);
     }
     
-    public function getAllJadwal()
+public function getAllJadwal(Request $request)
 {
+    
+    $perPage = $request->input('per_page', 5);
+    $page = $request->input('page', 1);
+
+    $allKelasIds = JadwalMataPelajaran::distinct('kelas_id')->pluck('kelas_id');
+
+    $kelasIds = $allKelasIds->slice(($page - 1) * $perPage, $perPage)->values();
+
+    if ($kelasIds->isEmpty()) {
+        return response()->json([
+            'meta' => [
+                'current_page' => $page,
+                'per_page'     => $perPage,
+                'total'        => $allKelasIds->count(),
+                'last_page'    => ceil($allKelasIds->count() / $perPage),
+                'from'         => 0,
+                'to'           => 0,
+            ],
+            'links' => [
+                'first' => url()->current() . '?page=1',
+                'last'  => url()->current() . '?page=' . ceil($allKelasIds->count() / $perPage),
+                'prev'  => $page > 1 ? url()->current() . '?page=' . ($page - 1) : null,
+                'next'  => $page < ceil($allKelasIds->count() / $perPage) ? url()->current() . '?page=' . ($page + 1) : null,
+            ],
+            'data' => [],
+        ]);
+    }
     $jadwals = JadwalMataPelajaran::with([
         'mapel.teachers',
-        'kelas',
-        'guru'
+        'kelas.waliKelas',
+        'guru',
+    ])->whereIn('kelas_id', $kelasIds)->get();
 
-    ])->get();
-
+    
     $hariList = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-    $grouped = [];
+
+    $flatEntries = [];
 
     foreach ($jadwals as $jadwal) {
         $jamKe = $jadwal->jam_ke;
@@ -662,26 +686,34 @@ public function createJadwalMataPelajaran(Request $request)
         $kelasId = $jadwal->kelas_id;
         $guru = $jadwal->mapel->teachers->firstWhere('id', $jadwal->guru_id);
 
-        \Log::info('Received guru_id:', [$guru?->id]);
-
-
-        if (!isset($grouped[$kelasId])) {
-            $grouped[$kelasId] = [];
-        }
-
-        if (!isset($grouped[$kelasId][$jamKe])) {
-            $grouped[$kelasId][$jamKe] = [
-                'jam_ke' => $jamKe,
-                'jam'    => $jadwal->jam,
-                'jadwal' => [],
-            ];
-
-            foreach ($hariList as $h) {
-                $grouped[$kelasId][$jamKe]['jadwal'][$h] = null;
+        // Cari existing entry berdasarkan kelas_id dan jam_ke
+        $index = null;
+        foreach ($flatEntries as $i => $entry) {
+            if ($entry['kelas_id'] === $kelasId && $entry['jam_ke'] === $jamKe) {
+                $index = $i;
+                break;
             }
         }
 
-        $grouped[$kelasId][$jamKe]['jadwal'][$hari] = [
+        if ($index === null) {
+            // Buat entry baru dengan jadwal semua hari null dulu
+            $jadwalHari = [];
+            foreach ($hariList as $h) {
+                $jadwalHari[$h] = null;
+            }
+
+            $flatEntries[] = [
+                'kelas_id' => $kelasId,
+                'jam_ke' => $jamKe,
+                'jam' => $jadwal->jam,
+                'jadwal' => $jadwalHari,
+            ];
+
+            $index = count($flatEntries) - 1;
+        }
+
+        // Set jadwal hari yang sesuai
+        $flatEntries[$index]['jadwal'][$hari] = [
             'mapel'      => $jadwal->mapel->mapel ?? '-',
             'mapel_id'   => $jadwal->mapel_id,
             'kelas'      => $jadwal->kelas->name ?? '-',
@@ -693,16 +725,31 @@ public function createJadwalMataPelajaran(Request $request)
         ];
     }
 
-    // Sortir setiap jam_ke dalam tiap kelas
-    foreach ($grouped as $kelasId => &$jadwalKelas) {
-        ksort($jadwalKelas);
-        $jadwalKelas = array_values($jadwalKelas); // reset index ke angka biasa
-    }
-
-    return response()->json($grouped); // bentuk: {kelas_id: [array of jadwal]}
-}
-
-    
+    // Urutkan berdasarkan kelas_id dan jam_ke
+    usort($flatEntries, function ($a, $b) {
+        if ($a['kelas_id'] === $b['kelas_id']) {
+            return $a['jam_ke'] <=> $b['jam_ke'];
+        }
+        return $a['kelas_id'] <=> $b['kelas_id'];
+    });
+        return response()->json([
+            'meta' => [
+                'current_page' => $page,
+                'per_page'     => $perPage,
+                'total'        => $allKelasIds->count(),
+                'last_page'    => ceil($allKelasIds->count() / $perPage),
+                'from'         => $kelasIds->isEmpty() ? 0 : ($page - 1) * $perPage + 1,
+                'to'           => $kelasIds->isEmpty() ? 0 : ($page - 1) * $perPage + $kelasIds->count(),
+                'links' => [
+                    'first' => url()->current() . '?page=1',
+                    'last'  => url()->current() . '?page=' . ceil($allKelasIds->count() / $perPage),
+                    'prev'  => $page > 1 ? url()->current() . '?page=' . ($page - 1) : null,
+                    'next'  => $page < ceil($allKelasIds->count() / $perPage) ? url()->current() . '?page=' . ($page + 1) : null,
+                ],
+            ],
+            'data' => $flatEntries,
+        ]);
+}    
     // Menampilkan form untuk membuat mata pelajaran baru
     public function create()
     {

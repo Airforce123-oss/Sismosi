@@ -72,33 +72,13 @@ const attendanceRecords = computed(() => {
 
   const finalRecords = Array.isArray(records) ? records : records[''] || [];
 
-  console.log('Isi attendanceRecords:', finalRecords);
+  //console.log('Isi attendanceRecords:', finalRecords);
 
   return finalRecords;
 });
 
-// Temukan data yang sesuai
-/*
-const foundRecord = props.attendance.find(
-  (item) =>
-    item.teacher_id === selectedTeacherId.value &&
-    item.attendance_date === selectedDate.value
-);
-if (foundRecord) {
-  attendanceRecords.value = attendanceRecords.value.map((record) => {
-    if (
-      record.teacher_id === foundRecord.teacher_id &&
-      record.attendance_date === foundRecord.attendance_date
-    ) {
-      return foundRecord; // Update record yang sesuai
-    }
-    return record; // Biarkan record lainnya tidak berubah
-  });
-}
-*/
-
-console.log('Props Attendance:', props.attendance);
-console.log('Tipe Data:', typeof props.attendance);
+//console.log('Props Attendance:', props.attendance);
+//console.log('Tipe Data:', typeof props.attendance);
 
 if (!Array.isArray(attendanceRecords.value)) {
   console.warn(
@@ -125,7 +105,7 @@ const fetchAttendanceRecords = () => {
         return;
       }
 
-      console.log('📦 Parsed data dari localStorage:', parsedData);
+      //console.log('📦 Parsed data dari localStorage:', parsedData);
 
       const validRecords = parsedData.filter((record, index) => {
         // Pastikan record adalah object
@@ -167,12 +147,11 @@ const fetchAttendanceRecords = () => {
         }
 
         // Debug jika semua valid
-        console.log(`✅ [Record ${index}] Data absensi valid:`, record);
+        //console.log(`✅ [Record ${index}] Data absensi valid:`, record);
         return true;
       });
 
       attendanceRecords.value = validRecords;
-      console.log('📋 Valid attendance records:', attendanceRecords.value);
     } else {
       console.warn('⚠️ Tidak ada data attendanceRecords di localStorage.');
     }
@@ -181,35 +160,8 @@ const fetchAttendanceRecords = () => {
   }
 };
 
-const mergedTeachers = computed(() => {
-  return paginatedTeachers.value.map((teacher) => {
-    const matched = teacherAttendanceData.value.find(
-      (t) => t.teacher_id === teacher.id
-    );
-
-    return {
-      ...teacher,
-      attendance: matched?.attendance || {},
-    };
-  });
-});
-
 // Debugging: Tampilkan hasil akhir inisialisasi
-console.log('Initialized attendanceRecords:', attendanceRecords.value);
-function validateRecord(record) {
-  const requiredFields = ['teacher_id', 'attendance_date', 'status'];
-  for (const field of requiredFields) {
-    if (!(field in record)) {
-      console.warn(`Missing field: ${field} in record`, record);
-      return false;
-    }
-  }
-  if (!['P', 'A', 'S', 'I'].includes(record.status)) {
-    console.warn(`Invalid status in record`, record);
-    return false;
-  }
-  return true;
-}
+//console.log('Initialized attendanceRecords:', attendanceRecords.value);
 
 function addFallbackStatus(record) {
   if (!record || typeof record !== 'object') {
@@ -322,6 +274,14 @@ function deepEqual(a, b) {
 }
 
 const { teachers } = usePage().props;
+const selectedTeacherStatuses = ref({});
+const pagination = ref({
+  current_page: 1,
+  last_page: 1,
+  per_page: 5,
+  total: 0,
+});
+const isLoading = ref(false);
 if (!teachers) {
   console.error('Teacher data is missing in props.');
 } else if (Array.isArray(teachers)) {
@@ -330,7 +290,7 @@ if (!teachers) {
     console.log('Teacher found:', rawTeachers);
     rawTeachers.forEach((teacher) => {
       if (teacher && teacher.id !== undefined && !isNaN(teacher.id)) {
-        console.log(`Teacher ID: ${teacher.id}, Name: ${teacher.name}`);
+        //console.log(`Teacher ID: ${teacher.id}, Name: ${teacher.name}`);
       } else {
         console.warn('Invalid teacher.id:', teacher.id);
       }
@@ -359,6 +319,57 @@ const attendanceSummary = computed(() => {
 
 const emit = defineEmits(['update:attendance']);
 
+const fetchTeachers = async (page = 1) => {
+  isLoading.value = true;
+  try {
+    const response = await axios.get('/api/teachers', {
+      params: { page, per_page: pagination.value.per_page },
+    });
+    // Misal response bentuknya seperti ini:
+    // { data: [...], pagination: { current_page, last_page, total } }
+    teachersList.value = response.data.data;
+
+    pagination.value.current_page = response.data.current_page;
+    pagination.value.last_page = response.data.last_page;
+    pagination.value.total = response.data.total;
+  } catch (error) {
+    console.error('Gagal memuat data guru:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const getAllTeachers = async () => {
+  let currentPageUrl = 'http://127.0.0.1:8000/api/teachers?page=1';
+  let allTeachers = [];
+
+  while (currentPageUrl) {
+    try {
+      const response = await axios.get(currentPageUrl);
+
+      console.log('Response data:', response.data);
+
+      allTeachers = [...allTeachers, ...response.data.data];
+
+      currentPageUrl = response.data.next_page_url;
+    } catch (error) {
+      console.error('Error mengambil data guru:', error);
+      break;
+    }
+  }
+
+  teachers.value = allTeachers;
+
+  allTeachers.forEach((teacher) => {
+    selectedTeacherStatuses.value[teacher.id] ??= {
+      status_kehadiran: 'Belum diabsen',
+    };
+  });
+};
+
+// Panggil saat dibutuhkan (atau gunakan onMounted)
+getAllTeachers();
+
 const updateAttendance = (attendance) => {
   console.log('Updating attendance records:', attendance);
 
@@ -366,12 +377,8 @@ const updateAttendance = (attendance) => {
   emit('update:attendance', attendance);
 };
 
-const pagination = ref({
-  current_page: 1,
-  last_page: 1,
-  per_page: 5,
-  total: 0,
-});
+const isAttendanceDataSent = ref(false);
+const isAlertVisible = ref(false);
 
 const handlePageChange = (page) => {
   // Menampilkan log halaman yang dipilih
@@ -387,7 +394,7 @@ const handlePageChange = (page) => {
     }
 
     // Memanggil fungsi untuk mengambil data siswa sesuai halaman
-    fetchStudents(page);
+    fetchTeachers(page);
 
     // Menyembunyikan alert setelah perubahan halaman
     isAlertVisible.value = false;
@@ -417,8 +424,7 @@ const fetchPageData = async (page) => {
 };
 
 const students = ref([]); // <- tempat nyimpan data siswa
-
-const isLoading = ref(false);
+const teachersList = ref(teachers);
 
 const fetchStudents = async (page = 1) => {
   isLoading.value = true;
@@ -437,7 +443,6 @@ const fetchStudents = async (page = 1) => {
     isLoading.value = false;
   }
 };
-
 const mockFetchData = async (page, perPage) => {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -494,10 +499,7 @@ watch(
   () => props.attendanceRecords,
   (newRecords) => {
     // Log mentah dari props.attendanceRecords
-    console.log(
-      '📦 props.attendanceRecords:',
-      JSON.parse(JSON.stringify(newRecords))
-    );
+    //   console.log(  '📦 props.attendanceRecords:',   JSON.parse(JSON.stringify(newRecords))    );
 
     const rawRecords = toRaw(newRecords);
 
@@ -520,8 +522,8 @@ watch(
 );
 
 // Debug computed data
-console.log('Computed Attendance Summary:', attendanceSummary.value);
-console.log('Attendance records from props:', toRaw(attendanceRecords.value));
+//console.log('Computed Attendance Summary:', attendanceSummary.value);
+//console.log('Attendance records from props:', toRaw(attendanceRecords.value));
 
 const loadAttendanceRecords = async () => {
   if (attendanceRecords.value && attendanceRecords.value.length > 0) {
@@ -752,13 +754,13 @@ const selectedClass = classes[0];
 const getButtonClass = (status) => {
   switch (status) {
     case 'P':
-      return 'bg-info text-black fw-bold status-btn info-btn'; // Kelas untuk hadir
+      return 'bg-info text-black status-btn info-btn'; // Kelas untuk hadir
     case 'A':
-      return 'bg-danger text-black fw-bold status-btn danger-btn'; // Kelas untuk alpa
+      return 'bg-danger text-black status-btn danger-btn'; // Kelas untuk alpa
     case 'S':
-      return 'bg-warning text-black fw-bold status-btn warning-btn'; // Kelas untuk sakit
+      return 'bg-warning text-black status-btn warning-btn'; // Kelas untuk sakit
     case 'I':
-      return 'bg-primary text-black fw-bold status-btn primary-btn'; // Kelas untuk izin
+      return 'bg-primary text-black status-btn primary-btn'; // Kelas untuk izin
     default:
       return 'bg-light text-dark status-btn light-btn'; // Default class
   }
@@ -766,7 +768,7 @@ const getButtonClass = (status) => {
 
 /*
  Ambil data dari props yang diterima dari Inertia
-const { teachers } = usePage().props; 
+const { teachers } = usePage().props;
 console.log('Data Teachers dari usePage.props:', teachers);
 
 const triggerTeacherStatusChange = async (teacherId) => {
@@ -853,12 +855,7 @@ const paginatedTeachers = computed(() => {
 const totalPages = ref(1);
 const currentPage = ref(1);
 const itemsPerPage = 5;
-console.log('Teachers Data:', toRaw(teachers)); // Untuk mengakses data mentahnya
 const rawTeachers = toRaw(paginatedTeachers.value);
-console.log(rawTeachers.value);
-
-console.log(currentPage.value); // Periksa nilai currentPage
-console.log(itemsPerPage); // Periksa nilai itemsPerPage
 
 // 📆 Ambil tanggal hari ini sekali saat komponen dimuat
 const formattedToday = today.toISOString().split('T')[0]; // aman 'YYYY-MM-DD'
@@ -866,7 +863,7 @@ selectedDate.value = formattedToday;
 
 // 🎯 Ambil bulan sekarang (1–12)
 const currentMonth = ref(today.getMonth());
-console.log('🔍 currentMonth.value:', currentMonth.value);
+//console.log('🔍 currentMonth.value:', currentMonth.value);
 
 // 🎯 Ambil tahun sekarang
 const currentYear = ref(today.getFullYear());
@@ -983,7 +980,7 @@ watch(
   localAttendanceRecords,
   (newRecords) => {
     saveToLocalStorage();
-    console.log('Data saved to localStorage:', newRecords);
+    //console.log('Data saved to localStorage:', newRecords);
   },
   { deep: true }
 );
@@ -1152,7 +1149,7 @@ const fetchAttendanceReport = async () => {
         name: teacher.name,
         attendance: teacher.attendance ?? {},
       }));
-      console.log('📥 Data laporan guru:', teacherAttendanceData.value); // Memeriksa data yang diterima
+      //console.log('📥 Data laporan guru:', teacherAttendanceData.value);
     } else {
       teacherAttendanceData.value = [];
       console.warn('⚠️ Data laporan tidak dalam format array:', response.data);
@@ -1160,7 +1157,7 @@ const fetchAttendanceReport = async () => {
 
     teacherAttendanceData.value.forEach((teacher) => {
       const attendance = teacher.attendance;
-      console.log('👤 Attendance data:', teacher.name, attendance);
+      //console.log('👤 Attendance data:', teacher.name, attendance);
       Object.keys(attendance).forEach((date) => {
         const status = attendance[date] ?? 'Belum Diisi';
         //console.log(`👤 ${teacher.name} - ${date}: ${status}`);
@@ -1188,24 +1185,9 @@ const status = (teacher, day) => {
   return status;
 };
 
-const getStatus = (teacher, day) => {
-  const year = Number(currentYear.value);
-  const month = Number(currentMonth.value);
-  const dayNum = Number(day);
-
-  const date = new Date(year, month, dayNum);
-  const formatted = formattedDate(date); // Format seperti '2025-04-01'
-
-  const dayOfWeek = date.getDay(); // 0: Minggu, 6: Sabtu
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return 'Libur';
-  }
-
-  return teacher.attendance[formatted] || 'Belum Diisi';
-};
-
 onMounted(async () => {
   try {
+    fetchTeachers(1);
     console.log('Component mounted, mulai proses load data...');
 
     fetchAttendanceRecords();
@@ -1231,10 +1213,6 @@ onMounted(async () => {
     }
 
     localAttendanceRecords.value = stored;
-    console.log(
-      'Data localAttendanceRecords setelah validasi:',
-      localAttendanceRecords.value
-    );
 
     console.log('Sebelum dibersihkan:', toRaw(props.attendance));
 
@@ -1267,7 +1245,7 @@ onMounted(async () => {
     // Simpan ke localStorage
     attendanceRecords.value = props.attendanceRecords;
     saveToLocalStorage();
-    console.log('Data disimpan ke localStorage:', attendanceRecords.value);
+    //console.log('Data disimpan ke localStorage:', attendanceRecords.value);
 
     // Validasi wali_kelas
     const { wali_kelas } = usePage().props;
@@ -1320,15 +1298,15 @@ const formattedDate = (date) => {
 };
 
 // Debugging code where `teacher` might not be defined
-console.log('Checking if teacher is defined:', teachers);
-console.log('Debug formattedDate:', formattedDate);
+//console.log('Checking if teacher is defined:', teachers);
+//console.log('Debug formattedDate:', formattedDate);
 
 // Fungsi untuk memuat data dari localStorage
 const loadFromLocalStorage = () => {
   try {
     const data = localStorage.getItem('attendanceRecords');
 
-    console.log('Data from localStorage:', data ? JSON.parse(data) : data); // Tambahkan log disini
+    //console.log('Data from localStorage:', data ? JSON.parse(data) : data); // Tambahkan log disini
 
     if (!data) {
       console.info('No data found in localStorage.');
@@ -1706,22 +1684,24 @@ const getAttendanceClass = (teacherId, date) => {
   //console.log("Attendance status for teacherId:", teacherId, "is:", status);
   switch (status) {
     case 'P':
-      return 'bg-info text-black fw-bold'; // Hadir
+      return 'bg-info text-black'; // Hadir
     case 'A':
-      return 'bg-danger text-black fw-bold'; // Absen
+      return 'bg-danger text-black'; // Absen
     case 'S':
-      return 'bg-warning text-black fw-bold'; // Sakit
+      return 'bg-warning text-black'; // Sakit
     case 'I':
-      return 'bg-primary text-black fw-bold'; // Izin
+      return 'bg-primary text-black'; // Izin
+    case 'Libur':
+      return 'bg-blue-100 text-gray-700';
     default:
       return 'bg-light text-dark'; // Status tidak ditemukan atau belum diabsen
   }
 };
 
-console.log('Teacher ID:', teachers);
-console.log('Attendance Records:', processedRecords.value);
+//console.log('Teacher ID:', teachers);
+//console.log('Attendance Records:', processedRecords.value);
 
-console.log('Attendance Records:', toRaw(attendanceRecords.value));
+//console.log('Attendance Records:', toRaw(attendanceRecords.value));
 //console.log("usePage().propss:", usePage().props);
 //const rawProps = toRaw(usePage().props);
 //console.log("rawProps:", rawProps);
@@ -1829,7 +1809,7 @@ watch(
 
     // Bandingkan apakah data berubah
     if (JSON.stringify(rawNewValue) !== JSON.stringify(rawOldValue)) {
-      console.log('AttendanceRecords updated:', rawOldValue, '->', rawNewValue);
+      //console.log('AttendanceRecords updated:', rawOldValue, '->', rawNewValue);
 
       // Hanya menyimpan ke localStorage jika ada perubahan nyata
       localStorage.setItem(
@@ -2091,10 +2071,10 @@ watch([selectedTeacherId, selectedDate], () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="teacher in paginatedTeachers" :key="teacher.id">
-                <td>{{ teacher.name }}</td>
+              <tr v-for="teacher in teachersList" :key="teacher.id">
+                <td class="font-medium">{{ teacher.name }}</td>
                 <td
-                  v-for="(date, index) in totalDaysInMonth"
+                  v-for="date in totalDaysInMonth"
                   :key="`attendance-${teacher.id}-${formattedDate(
                     new Date(currentYear, currentMonth, date)
                   )}`"
@@ -2102,7 +2082,7 @@ watch([selectedTeacherId, selectedDate], () => {
                     getAttendanceClass(
                       teacher.id,
                       formattedDate(new Date(currentYear, currentMonth, date))
-                    ) + ' text-center'
+                    ) + ' text-center cursor-pointer'
                   "
                   @click="
                     handleTeacherStatusChange(
@@ -2111,14 +2091,7 @@ watch([selectedTeacherId, selectedDate], () => {
                     )
                   "
                 >
-                  <span
-                    :class="
-                      getAttendanceClass(
-                        teacher.id,
-                        formattedDate(new Date(currentYear, currentMonth, date))
-                      ) + ' block text-center'
-                    "
-                  >
+                  <span class="block px-1 rounded">
                     {{
                       getTeacherAttendanceStatus(
                         teacher.id,
@@ -2136,22 +2109,24 @@ watch([selectedTeacherId, selectedDate], () => {
           Current Page: {{ pagination.current_page }}
         </div>
 
-        <div class="flex flex-col items-center mt-4">
-          <!-- Help text -->
+        <div
+          v-if="pagination.last_page > 1"
+          class="flex flex-col items-center mt-4"
+        >
+          <!-- Info Halaman -->
           <span class="text-sm text-gray-700 dark:text-gray-400">
             Page
-            <span class="font-semibold text-gray-900 dark:text-white">{{
-              pagination.current_page
-            }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">
+              {{ pagination.current_page }}
+            </span>
             of
-            <span class="font-semibold text-gray-900 dark:text-white">{{
-              pagination.last_page
-            }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">
+              {{ pagination.last_page }}
+            </span>
           </span>
-          <!--         <button @click="console.log('Tombol Previous diklik')">
-            Previous
-          </button>-->
-          <div class="inline-flex mt-2 xs:mt-0">
+
+          <!-- Tombol Navigasi -->
+          <div class="inline-flex mt-2">
             <!-- Tombol Previous -->
             <button
               @click="handlePageChange(pagination.current_page - 1)"
@@ -2160,17 +2135,17 @@ watch([selectedTeacherId, selectedDate], () => {
             >
               <svg
                 class="w-3.5 h-3.5 me-2 rtl:rotate-180"
-                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 14 10"
+                aria-hidden="true"
               >
                 <path
+                  d="M13 5H1m0 0 4 4M1 5l4-4"
                   stroke="currentColor"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 5H1m0 0 4 4M1 5l4-4"
                 />
               </svg>
               Previous
@@ -2185,23 +2160,35 @@ watch([selectedTeacherId, selectedDate], () => {
               Next
               <svg
                 class="w-3.5 h-3.5 ms-2 rtl:rotate-180"
-                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 14 10"
+                aria-hidden="true"
               >
                 <path
+                  d="M1 5h12m0 0L9 1m4 4L9 9"
                   stroke="currentColor"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M1 5h12m0 0L9 1m4 4L9 9"
                 />
               </svg>
             </button>
           </div>
-          <div v-if="isLoading">Loading data...</div>
         </div>
+        <!--   
+        <ul class="mt-4 list-disc list-inside text-gray-700 dark:text-gray-300">
+          <li v-for="teacher in teachersList" :key="teacher.id">
+            {{ teacher.name }} -
+            {{
+              teacher.mapel
+                ? Array.isArray(teacher.mapel)
+                  ? teacher.mapel.map((m) => m.name).join(', ')
+                  : teacher.mapel.name ?? 'No Subject'
+                : 'No Subject'
+            }}
+          </li>
+        </ul>-->
 
         <!-- Keterangan Status Kehadiran -->
         <div class="row mt-3 me-3">
@@ -2209,111 +2196,25 @@ watch([selectedTeacherId, selectedDate], () => {
             <p class="fw-bold fs-5">Status Kehadiran:</p>
             <div class="d-flex flex-wrap align-items-center">
               <div class="me-3 mb-2">
-                <span class="badge bg-info text-black fw-bold">Hadir (P)</span>
+                <span class="badge bg-info text-black">Hadir (P)</span>
               </div>
               <div class="me-3 mb-2">
-                <span class="badge bg-danger text-black fw-bold"
-                  >Absen (A)</span
-                >
+                <span class="badge bg-danger text-black">Absen (A)</span>
               </div>
               <div class="me-3 mb-2">
-                <span class="badge bg-warning text-black fw-bold"
-                  >Sakit (S)</span
-                >
+                <span class="badge bg-warning text-black">Sakit (S)</span>
               </div>
               <div class="me-3 mb-2">
-                <span class="badge bg-primary text-black fw-bold"
-                  >Izin (I)</span
-                >
+                <span class="badge bg-primary text-black">Izin (I)</span>
               </div>
               <div class="me-3 mb-2">
-                <span class="badge bg-light text-dark fw-bold"
-                  >Belum Diabsen</span
-                >
+                <span class="badge bg-light text-dark">Belum Diabsen</span>
               </div>
             </div>
           </div>
-          <!--<pre>{{ attendanceRecords }}</pre>-->
-          <div
-            class="p-6 bg-white rounded-2xl shadow-md border border-gray-200"
-          >
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">
-              📊 Laporan Absensi Bulan {{ monthForDisplay }} Tahun
-              {{ currentYear }}
-            </h2>
-            <div class="overflow-auto rounded-lg border border-gray-200">
-              <table class="min-w-full text-sm text-center border-collapse">
-                <thead class="bg-blue-50 text-gray-700">
-                  <tr>
-                    <th class="px-3 py-2 border border-gray-300 text-left">
-                      Nama Guru
-                    </th>
-                    <th class="px-3 py-2 border border-gray-300 text-left">
-                      NIP
-                    </th>
-                    <th
-                      v-for="(date, index) in totalDaysInMonth"
-                      :key="'day-header-' + index"
-                      class="px-3 py-2 border border-gray-300"
-                    >
-                      {{ date }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="teacher in mergedTeachers"
-                    :key="teacher.id"
-                    class="hover:bg-gray-50 transition"
-                  >
-                    <td
-                      class="px-3 py-2 border border-gray-300 font-medium text-left whitespace-nowrap"
-                    >
-                      {{ teacher.name }}
-                    </td>
-                    <td
-                      class="px-3 py-2 border border-gray-300 text-left text-sm text-gray-700"
-                    >
-                      {{ teacher.nip || '-' }}
-                    </td>
-                    <td
-                      v-for="(date, index) in totalDaysInMonth"
-                      :key="`status-${teacher.teacher_id}-${formattedDate(
-                        new Date(currentYear, currentMonth, date)
-                      )}`"
-                      class="px-2 py-1 border border-gray-300 text-center"
-                    >
-                      <!-- Status tampilan -->
-                      <span
-                        :class="{
-                          'bg-green-200 text-green-800 px-2 py-1 rounded-full text-xs':
-                            getStatus(teacher, date) === 'P',
-                          'bg-red-200 text-red-800 px-2 py-1 rounded-full text-xs':
-                            getStatus(teacher, date) === 'A',
-                          'bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full text-xs':
-                            getStatus(teacher, date) === 'S',
-                          'bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-xs':
-                            getStatus(teacher, date) === 'I',
-                          'bg-gray-300 text-gray-700 italic px-2 py-1 rounded-full text-xs':
-                            getStatus(teacher, date) === 'Libur',
-                          'text-gray-400':
-                            getStatus(teacher, date) === 'Belum Diisi',
-                        }"
-                      >
-                        {{ getStatus(teacher, date) }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <!--
-                    <pre class="text-left text-xs text-gray-700 mt-4">
-  {{ JSON.stringify(teacherAttendanceData, null, 2) }}
-</pre
-          -->
         </div>
+
+        
         <!-- Modal Tambah Absensi -->
         <div
           v-if="isModalVisible"
@@ -2660,7 +2561,7 @@ watch([selectedTeacherId, selectedDate], () => {
 
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

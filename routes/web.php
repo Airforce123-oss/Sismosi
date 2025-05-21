@@ -6,6 +6,7 @@ use App\Http\Controllers\ClassController;
 use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceTeacherController;
+use App\Http\Controllers\MasterJabatanController;
 use App\Models\Student;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Inertia\Inertia;
@@ -258,6 +259,11 @@ Route::resource('student_roles', StudentRoleController::class);
 Route::put('/user/{user}/roles', [UserController::class, 'updateRoles'])->name('user.roles.update');
 
 Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
+
+Route::get('/indexMasterJabatan', [MasterJabatanController::class, 'indexMasterJabatan'])->name('indexMasterJabatan');
+
+
+Route::resource('master-jabatan', MasterJabatanController::class);
 
 
 // Include Auth Routes

@@ -7,12 +7,10 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import MagnifyingGlass from '@/Components/Icons/MagnifyingGlass.vue';
 //const { props } = usePage();
 import Swal from 'sweetalert2';
-import { type } from 'jquery';
-
 const props = defineProps({
   classes: {
     type: Object,
-    default: () => ({}), // Set default ke objek kosong jika tidak ada
+    default: () => ({ data: [] }), // Set default ke objek kosong jika tidak ada
   },
   mapel: {
     type: Array,
@@ -23,7 +21,7 @@ const props = defineProps({
     default: () => ({ data: [] }), // Set default ke objek kosong dengan data array kosong
   },
 });
-
+const page = usePage();
 const classes = props.classes?.data || [];
 if (!props.classes) {
   console.log('props.classes:', props.classes); // Cek apakah benar-benar null atau tidak dikirim
@@ -38,8 +36,6 @@ console.log('Classes:', classes);
 const waliKelas = ref(props.wali_kelas || { data: [] });
 const mapels = ref(props.mapel || []);
 console.log('Mapel yang diterima:', props.mapel);
-let pageNumber = ref(1);
-const perPage = ref(5);
 let searchTerm = ref(props.search ?? '');
 
 // Inisialisasi form dengan menambahkan properti role_type
@@ -108,9 +104,13 @@ const getTeacherMapel = (teacher) => {
     .join(', '); // Gabungkan hasil menjadi string
 };
 
-onMounted(() => {
-  initFlowbite();
-});
+const pageNumber = ref(1);
+console.log('isi pagenumber:', pageNumber.value);
+const itemsPerPage = ref(10);
+const currentPage = ref(1);
+const perPage = ref(5);
+pageNumber.value = 1;
+console.log(pageNumber.value); // Akses dengan .value
 
 const teachersUrl = computed(() => {
   const url = new URL(route('teachers.index'));
@@ -121,10 +121,45 @@ const teachersUrl = computed(() => {
   return url;
 });
 
+const updatedPageNumber = (link) => {
+  console.log('updatedPageNumber dipanggil dengan link:', link);
+
+  if (!link.url) {
+    console.warn('Link tidak memiliki properti url:', link);
+    return;
+  }
+
+  try {
+    const urlObj = new URL(link.url, window.location.origin);
+    const page = urlObj.searchParams.get('page');
+    console.log('URL yang diparsing:', urlObj.toString());
+    console.log('Nomor halaman di query param:', page);
+
+    if (page === null) {
+      console.warn('Parameter page tidak ditemukan di URL:', urlObj.toString());
+      return;
+    }
+
+    pageNumber.value = Number(page);
+    console.log('pageNumber.value di-set ke:', pageNumber.value);
+  } catch (error) {
+    console.error('Error parsing URL:', error);
+  }
+};
+
+const paginatedFlatSchedule = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return flatSchedule.value.slice(start, end);
+});
+
+onMounted(() => {
+  initFlowbite();
+});
+
 watch(
   () => teachersUrl.value,
   (updatedTeachersUrl) => {
-    console.log('Navigating to URL:', updatedTeachersUrl.toString());
     router.visit(updatedTeachersUrl.toString(), {
       preserveState: true,
       preserveScroll: true,
@@ -172,62 +207,15 @@ const deleteTeacher = (id) => {
   });
 };
 
-const updatedPageNumber = (link) => {
-  console.log('Received link:', link);
-
-  if (!link || !link.url) {
-    console.warn('Link atau link.url tidak terdefinisi, navigasi dibatalkan.');
-    return; // Keluar dari fungsi jika link tidak valid
-  }
-
-  // Periksa apakah link.url sudah memiliki protokol, jika belum, tambahkan protokol default
-  let url = link.url;
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = `https://${url}`; // Menambahkan protokol default jika tidak ada
-  }
-
-  try {
-    const page = new URL(url).searchParams.get('page');
-    if (page) {
-      pageNumber.value = page;
-      console.log('Navigating to URL:', `/teachers?page=${pageNumber.value}`);
-
-      // Gunakan router.visit, bukan router.push, ketika menggunakan Inertia.js
-      router.visit(`/teachers?page=${pageNumber.value}`, {
-        preserveScroll: true,
-        preserveState: true,
-      });
-    } else {
-      console.error('Nomor halaman tidak ditemukan dalam URL');
-    }
-  } catch (error) {
-    console.error('Terjadi kesalahan saat membuat URL:', error);
-  }
-};
-
 watch(
-  [() => waliKelas.value, () => mapels.value],
-  () => {
-    if (waliKelas.value) {
-      // Memanggil getTeacherMapel jika waliKelas tersedia
-      const mapel = getTeacherMapel(waliKelas.value);
-      console.log('Hasil Mapel:', mapel); // Menampilkan hasil
+  () => page.props.wali_kelas,
+  (newVal) => {
+    if (newVal) {
+      waliKelas.value = newVal;
     }
   },
-  { immediate: true } // Langsung panggil saat komponen di-render pertama kali
+  { immediate: true }
 );
-
-watch(pageNumber, (newPage) => {
-  // Menavigasi ke halaman baru berdasarkan pageNumber
-  console.log('Navigating to page:', newPage);
-
-  // Menggunakan router visit untuk mengunjungi halaman yang baru
-  router.visit(`/teachers?page=${newPage}`, {
-    preserveState: true, // Menjaga state saat navigasi
-    preserveScroll: true, // Menjaga posisi scroll
-    replace: true, // Mengganti URL tanpa menambahkannya ke history
-  });
-});
 </script>
 
 <template>
@@ -452,11 +440,22 @@ watch(pageNumber, (newPage) => {
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-200 bg-white">
-                        <tr v-for="teacher in waliKelas.data" :key="teacher.id">
+                        <tr
+                          v-for="(teacher, index) in waliKelas.data"
+                          :key="teacher.id"
+                        >
                           <td
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
-                            {{ teacher.id }}
+                            <span v-if="pageNumber && perPage">
+                              {{
+                                (Number(pageNumber) - 1) * Number(perPage) +
+                                Number(index) +
+                                1
+                              }}
+                            </span>
+
+                            <span v-else>Loading...</span>
                           </td>
                           <td
                             lass="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
@@ -795,7 +794,7 @@ watch(pageNumber, (newPage) => {
           </li>
           <li>
             <a
-              href="#"
+              href="indexMasterJabatan"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

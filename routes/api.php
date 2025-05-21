@@ -132,11 +132,9 @@ Route::post('/jadwal', [MataPelajaranController::class, 'storeJadwal']);
 
 Route::get('/jadwal', [MataPelajaranController::class, 'getAllJadwal']);
 
-
 Route::get('/tahun_ajaran', action: [MataPelajaranController::class, 'getTahunAjaran']);
 
 Route::get('/fetch-all-students', action: [StudentController::class, 'fetchAllStudents']);
-
 
 
 

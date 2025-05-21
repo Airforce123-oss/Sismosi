@@ -1,5 +1,6 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 const props = defineProps({
   data: {
     type: Object,
@@ -42,6 +43,44 @@ checkButtonStatus('First');
 checkButtonStatus('Previous');
 checkButtonStatus('Next');
 checkButtonStatus('Last');
+
+const validLinks = computed(() => {
+  const meta = props.data.meta;
+  const pages = [];
+
+  // Halaman angka
+  for (let i = 1; i <= meta.last_page; i++) {
+    pages.push({
+      url: `${meta.path}?page=${i}`,
+      label: i.toString(),
+      active: meta.current_page === i,
+    });
+  }
+
+  const links = [];
+
+  // Tombol Previous
+  if (meta.current_page > 1) {
+    links.push({
+      url: `${meta.path}?page=${meta.current_page - 1}`,
+      label: '« Previous',
+      active: false,
+    });
+  }
+
+  links.push(...pages);
+
+  // Tombol Next
+  if (meta.current_page < meta.last_page) {
+    links.push({
+      url: `${meta.path}?page=${meta.current_page + 1}`,
+      label: 'Next »',
+      active: false,
+    });
+  }
+
+  return links;
+});
 </script>
 
 <template>
@@ -73,47 +112,19 @@ checkButtonStatus('Last');
               <button
                 v-if="data.meta.current_page > 1"
                 @click.prevent="
-                  updatedPageNumber({
-                    url: `${data.meta.path}?page=1`,
-                  })
+                  updatedPageNumber({ url: `${data.meta.path}?page=1` })
                 "
                 class="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
               >
                 First
               </button>
 
-              <!-- Tombol Previous -->
-              <button
-                v-if="
-                  data.meta.links.some(
-                    (link) => link.label.includes('Previous') && link.url
-                  )
-                "
-                @click.prevent="
-                  updatedPageNumber(
-                    data.meta.links.find((link) =>
-                      link.label.includes('Previous')
-                    )
-                  )
-                "
-                class="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                :disabled="
-                  !data.meta.links.find((link) =>
-                    link.label.includes('Previous')
-                  )?.url
-                "
-              >
-                Previous
-              </button>
-
               <!-- Tombol Halaman -->
               <button
-                v-for="(link, index) in data.meta.links.filter(
-                  (link) => !isNaN(link.label) && link.url
-                )"
+                v-for="(link, index) in validLinks"
                 :key="'page-' + index"
                 @click.prevent="updatedPageNumber(link)"
-                :disabled="link.active"
+                :disabled="link.active || !link.url"
                 class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                 :class="{
                   'z-10 bg-indigo-50 border-indigo-500 text-indigo-600':
@@ -123,30 +134,9 @@ checkButtonStatus('Last');
                   'cursor-not-allowed': !link.url,
                 }"
               >
-                <span v-if="link.label" v-html="link.label"></span>
+                <span v-html="link.label"></span>
               </button>
-
-              <!-- Tombol Next -->
-              <button
-                v-if="
-                  data.meta.links.some(
-                    (link) => link.label.includes('Next') && link.url
-                  )
-                "
-                @click.prevent="
-                  updatedPageNumber(
-                    data.meta.links.find((link) => link.label.includes('Next'))
-                  )
-                "
-                :disabled="
-                  !data.meta.links.find((link) => link.label.includes('Next'))
-                    ?.url
-                "
-                class="relative inline-flex items-center px-4 py-2 border text-sm font-medium bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-              >
-                Next
-              </button>
-
+              
               <!-- Tombol Last -->
               <button
                 v-if="data.meta.current_page < data.meta.last_page"
