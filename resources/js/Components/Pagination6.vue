@@ -1,0 +1,127 @@
+<script setup>
+import { computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+
+const props = defineProps({
+  data: {
+    type: Object,
+    required: true,
+  },
+  updatedPageNumber: {
+    type: Function,
+    required: true,
+  },
+  links: {
+    type: Object,
+    required: true,
+  },
+  onChangePage: {
+    type: Function,
+    required: true,
+  },
+});
+
+function urlForPage(page) {
+  const baseUrl = window.location.origin + window.location.pathname;
+  return `${baseUrl}?page=${page}`;
+}
+
+const meta = computed(() => props.data?.meta ?? {});
+
+const validLinks = computed(() => {
+  if (!meta.value.last_page) return [];
+
+  const pages = [];
+  for (let i = 1; i <= meta.value.last_page; i++) {
+    pages.push({
+      url: urlForPage(i),
+      label: i.toString(),
+      active: meta.value.current_page === i,
+    });
+  }
+
+  const links = [];
+
+  if (meta.value.current_page > 1) {
+    links.push({
+      url: urlForPage(meta.value.current_page - 1),
+      label: '&laquo; Previous',
+      active: false,
+    });
+  }
+
+  links.push(...pages);
+
+  if (meta.value.current_page < meta.value.last_page) {
+    links.push({
+      url: urlForPage(meta.value.current_page + 1),
+      label: 'Next &raquo;',
+      active: false,
+    });
+  }
+
+  return links;
+});
+
+function goToPage(link) {
+  if (link.url && !link.active) {
+    const url = new URL(link.url, window.location.origin);
+    const page = url.searchParams.get('page');
+
+    router.visit(url.pathname + url.search, {
+      preserveState: false,
+      preserveScroll: true,
+    });
+  }
+}
+</script>
+
+<template>
+  <div v-if="validLinks && validLinks.length" class="max-w-7xl mx-auto py-6">
+    <div class="bg-white overflow-hidden shadow sm:rounded-lg">
+      <div
+        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
+      >
+        <div class="mr-10">
+          <p class="text-sm text-gray-700">
+            Showing
+            <span class="font-medium">{{ props.data.meta.from }}</span>
+            to
+            <span class="font-medium">{{ props.data.meta.to }}</span>
+            of
+            <span class="font-medium">{{ props.data.meta.total }}</span>
+            results
+          </p>
+        </div>
+        <div>
+          <nav
+            class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+            aria-label="Pagination"
+          >
+            <button
+              v-for="(link, index) in validLinks"
+              :key="index"
+              @click.prevent="goToPage(link)"
+              :disabled="link.active || !link.url"
+              class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+              :class="{
+                'z-10 bg-indigo-50 border-indigo-500 text-indigo-600':
+                  link.active,
+                'bg-white border-gray-300 text-gray-500 hover:bg-gray-50':
+                  !link.active,
+                'cursor-not-allowed': !link.url,
+              }"
+            >
+              <span v-html="link.label"></span>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- fallback jika tidak ada data -->
+  <div v-else class="py-6 text-center text-gray-500">
+    Tidak ada data untuk ditampilkan.
+  </div>
+</template>

@@ -1,8 +1,8 @@
 <script setup>
 import { initFlowbite } from 'flowbite';
-import Pagination from '../../Components/Pagination.vue';
+import Pagination from '../../Components/Pagination6.vue';
 import MagnifyingGlass from '../../Components/Icons/MagnifyingGlass.vue';
-import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
+import { Link, Head, useForm, router } from '@inertiajs/vue3';
 import { onMounted, ref, watch, computed } from 'vue';
 import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
@@ -13,6 +13,9 @@ const props = defineProps({
     required: true,
   },
 });
+
+// akses lewat props.master_mapel
+console.log('isi master_mapel', props.master_mapel);
 const form = useForm({
   name: props.auth?.user?.name || '',
   email: props.auth?.user?.email || '',
@@ -31,17 +34,6 @@ const kelasUrl = computed(() => {
   return url;
 });
 
-watch(
-  () => kelasUrl.value,
-  (updatedKelasUrl) => {
-    console.log('Navigating to URL:', updatedKelasUrl.toString());
-    router.visit(updatedKelasUrl.toString(), {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    });
-  }
-);
 const deleteForm = useForm({}); // Deklarasi deleteForm
 
 const deleteMapel = (mapel) => {
@@ -86,22 +78,27 @@ const deleteMapel = (mapel) => {
 };
 
 const updatedPageNumber = (link) => {
-  console.log('Form is submitting:', isSubmitting.value); // Debugging isSubmitting
-
-  if (isSubmitting.value) return; // Cek apakah form sedang disubmit
+  if (!link.url || link.active) return;
 
   const url = new URL(link.url);
   const pageNumber = url.searchParams.get('page');
-
   if (pageNumber) {
     currentPage.value = parseInt(pageNumber, 10);
-  } else {
-    console.error('Page number not found in the URL.');
   }
 };
 
 onMounted(() => {
   initFlowbite();
+});
+
+const paginationLinks = computed(() => {
+  const linksObj = props.master_mapel?.links || {};
+  return [
+    { url: linksObj.prev, label: 'Prev', active: false },
+    { url: linksObj.first, label: '1', active: false },
+    { url: linksObj.next, label: 'Next', active: false },
+    { url: linksObj.last, label: 'Last', active: false },
+  ].filter((link) => link.url !== null);
 });
 </script>
 
@@ -227,7 +224,7 @@ onMounted(() => {
     <!-- start1 -->
 
     <main class="p-4 md:ml-64 h-auto pt-20">
-        <Head title="Mata Pelajaran" />
+      <Head title="Mata Pelajaran" />
       <div class="container mx-auto p-4">
         <div class="px-4 py-4 sm:px-6 lg:px-8">
           <div class="sm:flex sm:items-center mb-10">
@@ -374,6 +371,12 @@ onMounted(() => {
                       </tr>
                     </tbody>
                   </table>
+                  <Pagination
+                    :data="master_mapel"
+                    :links="paginationLinks"
+                    :updatedPageNumber="updatedPageNumber"
+                    :onChangePage="updatedPageNumber"
+                  />
                 </div>
               </div>
             </div>

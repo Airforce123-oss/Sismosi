@@ -3,12 +3,15 @@ import { ref, onMounted, nextTick, watch } from 'vue';
 import { initFlowbite } from 'flowbite';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import Pagination from '@/Components/Pagination5.vue';
 import ApexCharts from 'apexcharts';
 
 import axios from 'axios';
 
 const userName = ref('');
 const { props } = usePage();
+const jabatan = props.jabatan;
+console.log('isi jabatan: ', jabatan);
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
@@ -180,65 +183,79 @@ onMounted(async () => {
             </Link>
           </div>
         </div>
-        <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-          <div
-            class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative mt-5 -ml-8"
-          >
-            <table class="min-w-full bg-white">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+        <div
+          class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative mt-5"
+        >
+          <table class="min-w-full bg-white">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  scope="col"
+                  class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                >
+                  ID
+                </th>
+                <th
+                  scope="col"
+                  class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                >
+                  Nama Jabatan
+                </th>
+                <th
+                  scope="col"
+                  class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                >
+                  Deskripsi
+                </th>
+                <th
+                  class="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right text-sm font-semibold text-gray-900"
+                >
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <tr v-for="(item, index) in jabatan.data" :key="item.id">
+                <td
+                  class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                >
+                  {{
+                    (jabatan.meta.current_page - 1) * jabatan.meta.per_page +
+                    index +
+                    1
+                  }}
+                </td>
+                <td
+                  class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6"
+                >
+                  {{ item.nama_jabatan }}
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  {{ item.deskripsi }}
+                </td>
+                <td
+                  class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                >
+                  <Link
+                    v-if="item.id"
+                    :href="
+                      route('master-jabatan.edit', { master_jabatan: item.id })
+                    "
+                    class="text-indigo-600 hover:text-indigo-900"
                   >
-                    ID
-                  </th>
-                  <th
-                    scope="col"
-                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                  >
-                    Nama Jabatan
-                  </th>
-                  <th
-                    scope="col"
-                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                  >
-                    Deskripsi
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white">
-                <tr>
-                  <td
-                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                  >
-                    <span v-if="pageNumber && perPage">
-                      {{
-                        (Number(pageNumber) - 1) * Number(perPage) +
-                        Number(index) +
-                        1
-                      }}
-                    </span>
-                  </td>
-                  <td
-                    lass="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                  ></td>
-                  <td
-                    class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                  >
-                    <Link class="text-indigo-600 hover:text-indigo-900">
-                      Edit
-                    </Link>
-                    <button class="ml-2 text-indigo-600 hover:text-indigo-900">
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <Pagination />
-          <!-- <pre>{{ wali_kelas.meta.links }}</pre>-->
+                    Edit
+                  </Link>
+                  <button class="ml-2 text-indigo-600 hover:text-indigo-900">
+                    Hapus
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <Pagination
+            :data="jabatan"
+            :updatedPageNumber="jabatan.meta.current_page"
+          />
         </div>
       </div>
     </main>

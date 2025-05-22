@@ -42,22 +42,55 @@ class MataPelajaranController extends Controller
     // Menampilkan daftar mata pelajaran
     public function mataPelajaran(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 20); // Default ke 10 item per halaman
-        $currentPage = $request->input('currentPage', 1); // Default ke halaman pertama
+        $user = auth()->user();
 
-        $mapelQuery = Mapel::query(); // Menggunakan model Mapel
-        $master_mapel = $mapelQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
-                                   ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
+        if (!$user) {
+            return redirect()->route('login');
+        }
 
-        Log::info('Fetching mata pelajaran list', [
-            'itemsPerPage' => $itemsPerPage,
-            'currentPage' => $currentPage,
-        ]);
+        $role = $user->roles->first()?->name ?? 'guest';
+
+        // Ambil parameter pagination dari request
+        $perPage = $request->input('itemsPerPage', 5);
+        $currentPage = $request->input('page', 1);
+
+        $query = Mapel::query();
+
+        // Optional: pencarian jika diperlukan (sesuaikan field pencarian jika ada)
+        if ($search = $request->input('search')) {
+            $query->where('nama_mapel', 'like', '%' . $search . '%');
+        }
+
+        // Paginate dengan append query string agar link pagination sesuai
+        $paginator = $query->paginate($perPage, ['*'], 'page', $currentPage)
+                        ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
+
+        // Transformasi pakai Resource dan convert jadi array
+        $mapelData = MapelResource::collection($paginator->items())->resolve();
 
         return inertia('MataPelajaran/index', [
-            'master_mapel' => MapelResource::collection($master_mapel),
+            'master_mapel' => [
+                'data' => $mapelData,
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'from' => $paginator->firstItem(),
+                    'to' => $paginator->lastItem(),
+                ],
+                'links' => [
+                    'first' => $paginator->url(1),
+                    'last' => $paginator->url($paginator->lastPage()),
+                    'prev' => $paginator->previousPageUrl(),
+                    'next' => $paginator->nextPageUrl(),
+                ],
+            ],
+            'role_type' => $role,
+            'auth' => ['user' => $user],
         ]);
     }
+
 
     public function laporanJadwalMataPelajaran(Request $request)
     {

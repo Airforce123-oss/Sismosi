@@ -265,6 +265,8 @@ Route::get('/indexMasterJabatan', [MasterJabatanController::class, 'indexMasterJ
 
 Route::resource('master-jabatan', MasterJabatanController::class);
 
+Route::get('/master-jabatan/{master_jabatan}/edit', [MasterJabatanController::class, 'edit'])->name('master-jabatan.edit');
+
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';

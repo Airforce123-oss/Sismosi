@@ -901,45 +901,6 @@ watch(
               </option>
             </select>
           </div>
-
-          <!-- Dropdown Mata Pelajaran -->
-          <!--
-                   <div class="flex flex-col space-y-2">
-            <label for="mapel" class="font-semibold text-lg text-gray-700">
-              Pilih Mata Pelajaran:
-            </label>
-            <select
-              id="mapel"
-              :value="selectedMapel"
-              @change="onMapelChange"
-              class="p-3 border rounded-lg shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors duration-200"
-            >
-              <option
-                v-for="mapel in mapelList"
-                :key="mapel.id"
-                :value="mapel.mapel"
-              >
-                {{ mapel.mapel }}
-              </option>
-            </select>
-          </div>
-           -->
-
-          <!-- Dropdown Kelas -->
-          <!--         <div class="flex flex-col space-y-2">
-            <label for="kelas" class="font-semibold text-lg text-gray-700">
-              Pilih Kelas:
-            </label>
-            <select
-              id="kelas"
-              v-model="selectedKelas"
-              class="p-3 border rounded-lg shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors duration-200"
-            >
-              <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas">
-                {{ kelas.name }}
-              </option>
-            </select>
-          </div>-->
         </div>
       </div>
       <div :selectedMapel="selectedMapel"></div>
