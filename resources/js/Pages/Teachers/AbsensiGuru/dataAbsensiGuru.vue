@@ -1,25 +1,16 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUpdated } from 'vue';
 import { initFlowbite } from 'flowbite';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Pagination from '../../../Components/Pagination4.vue';
 import { Link, useForm, usePage, Head, router } from '@inertiajs/vue3';
-import ApexCharts from 'apexcharts';
-
-import axios from 'axios';
-
-const userName = ref('');
 const { props } = usePage();
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
-
-const filterTeacherName = ref('');
-const filterNIP = ref('');
-const selectedTeacher = ref('');
-const searchNIP = ref('');
 
 const months = [
   'Januari',
@@ -53,10 +44,36 @@ const totalDaysInMonth = computed(() => {
   return Array.from({ length: days }, (_, i) => i + 1);
 });
 
-const mergedTeachers = ref(props.teachers || []);
+const teachers = ref(props.teachers);
+const allTeachers = ref(props.teachers?.data || []);
+const paginatedTeachers = ref(props.teachers?.data || []);
+const paginationInfo = ref(props.teachers?.meta || {});
+const paginationLinks = ref(props.teachers?.links || []);
+const filterTeacherName = ref('');
+const filterNIP = ref('');
+
+onUpdated(() => {
+  teachers.value = props.teachers;
+  paginatedTeachers.value = props.teachers?.data || [];
+  paginationInfo.value = props.teachers?.meta || {};
+  paginationLinks.value = props.teachers?.links || [];
+  console.log('🌀 onUpdated terpicu, data di-refresh dari props.teachers');
+});
+
 const today = new Date();
 const selectedDate = ref(today.toISOString().split('T')[0]);
 const dateObj = new Date(selectedDate.value);
+function applyFilter() {
+  paginatedTeachers.value = allTeachers.value.filter((teacher) => {
+    const nameMatch = teacher.name
+      .toLowerCase()
+      .includes(filterTeacherName.value.toLowerCase());
+    const nipMatch = teacher.nip
+      ? teacher.nip.toLowerCase().includes(filterNIP.value.toLowerCase())
+      : true;
+    return nameMatch && nipMatch;
+  });
+}
 const formattedDate = (dateObj) => {
   //console.log('Checking dateObj:', dateObj);
   const date = new Date(dateObj);
@@ -89,39 +106,74 @@ const getStatus = (teacher, date) => {
   return teacher.attendance?.[dateKey] || 'Belum Diabsen';
 };
 
-const filteredTeachers = computed(() => {
-  return mergedTeachers.value.filter((teacher) => {
-    const nameMatch = teacher.name
-      .toLowerCase()
-      .includes(filterTeacherName.value.toLowerCase());
-    const nipMatch = teacher.nip
-      ? teacher.nip.toLowerCase().includes(filterNIP.value.toLowerCase())
-      : true;
-    return nameMatch && nipMatch;
-  });
-});
-
-const fetchData = () => {
+const fetchData = (page = 1) => {
+  isLoading.value = true;
   router.get(
     '/dataAbsensiGuru',
     {
-      bulan: selectedMonth.value + 1, // karena bulan di JS dimulai dari 0
+      bulan: selectedMonth.value + 1,
       tahun: selectedYear.value,
+      filter_nama: filterTeacherName.value,
+      filter_nip: filterNIP.value,
+      page: page,
     },
     {
       preserveState: true,
       preserveScroll: true,
+      onFinish: () => {
+        isLoading.value = false;
+      },
     }
   );
 };
 
+const isLoading = ref(false);
+const updatedPageNumber = (link) => {
+  if (!link || !link.url) return;
+
+  const url = new URL(link.url, window.location.origin);
+  const page = url.searchParams.get('page') || '1';
+
+  // Cegah permintaan ulang jika halaman sama dengan yang sekarang
+  if (page === String(paginationInfo.value.current_page)) return;
+
+  // Panggil fetchData dengan halaman yang diinginkan
+  fetchData(Number(page));
+};
+
 onMounted(async () => {
+  if (paginatedTeachers.value.length > 0) {
+    console.log(
+      'Attendance Guru pertama:',
+      paginatedTeachers.value[3].attendance
+    );
+  }
   fetchData();
   initFlowbite();
 });
 
-watch([selectedTeacher, searchNIP], () => {
-  fetchData();
+watch(
+  [() => paginationInfo.value.current_page, selectedMonth, selectedYear],
+  ([currentPage, month, year], [oldPage, oldMonth, oldYear]) => {
+    // Ketika halaman, bulan, atau tahun berubah, ambil data baru
+    fetchData();
+  }
+);
+
+watch(
+  () => props.teachers,
+  (newVal, oldVal) => {
+    console.log('🔥 props.teachers berubah:', newVal, oldVal);
+    allTeachers.value = newVal?.data || [];
+    paginationInfo.value = newVal?.meta || {};
+    paginationLinks.value = newVal?.links || [];
+    applyFilter();
+  },
+  { immediate: true, deep: true }
+);
+
+watch([filterTeacherName, filterNIP], () => {
+  applyFilter();
 });
 </script>
 
@@ -338,10 +390,42 @@ watch([selectedTeacher, searchNIP], () => {
                 </th>
               </tr>
             </thead>
-            <tbody>
+
+            <!-- Spinner tampil jika isLoading true -->
+            <tbody v-if="isLoading">
+              <tr>
+                <td :colspan="2 + totalDaysInMonth.length" class="py-8">
+                  <div class="flex justify-center">
+                    <svg
+                      class="animate-spin h-6 w-6 text-indigo-600"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Data tabel tampil saat isLoading false -->
+            <tbody v-else>
               <tr
-                v-for="teacher in filteredTeachers"
-                :key="teacher.id"
+                v-for="(teacher, index) in paginatedTeachers"
+                :key="`${teacher.teacher_id}-${index}`"
                 class="hover:bg-gray-50 transition-colors duration-150"
               >
                 <td
@@ -382,7 +466,7 @@ watch([selectedTeacher, searchNIP], () => {
             </tbody>
           </table>
         </div>
-
+        <Pagination :data="teachers" :updatxedPageNumber="updatedPageNumber" />
         <div class="row mt-3 me-3">
           <div class="col-12">
             <p class="fw-bold">Status Kehadiran:</p>
@@ -668,9 +752,11 @@ watch([selectedTeacher, searchNIP], () => {
             </ul>
           </li>
           <li>
-            <a
-              href="indexMasterJabatan"
-              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            <button
+              type="button"
+              class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+              aria-controls="dropdown-authentication"
+              data-collapse-toggle="dropdown-authentication11"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -684,8 +770,33 @@ watch([selectedTeacher, searchNIP], () => {
                   clip-rule="evenodd"
                 />
               </svg>
-              <span class="ml-3">Master Jabatan</span>
-            </a>
+
+              <span class="flex-1 ml-3 text-left whitespace-nowrap"
+                >Master Jabatan</span
+              >
+              <svg
+                class="w-6 h-6"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+            </button>
+
+            <ul id="dropdown-authentication11" class="hidden py-2 space-y-2">
+              <li>
+                <a
+                  href="indexMasterJabatan"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Master Jabatan</a
+                >
+              </li>
+            </ul>
           </li>
         </ul>
       </div>

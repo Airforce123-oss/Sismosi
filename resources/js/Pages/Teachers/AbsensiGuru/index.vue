@@ -196,7 +196,7 @@ const filteredStatuses = computed(() => {
   }
   return statuses.value.filter((status) => status !== 'Belum diabsen');
 });
-console.log('Filtered Statuses:', filteredStatuses.value);
+//console.log('Filtered Statuses:', filteredStatuses.value);
 
 function checkDataConsistency(newRecords, storedRecords) {
   if (!deepEqual(newRecords, storedRecords)) {
@@ -216,7 +216,7 @@ const processedRecords = computed(() => {
   // Bersihkan attendanceRecords sebelum diproses
   const sanitizedRecords = cleanAttendanceRecords(attendanceRecords.value);
 
-  console.log('Sanitized Records:', sanitizedRecords);
+  //console.log('Sanitized Records:', sanitizedRecords);
 
   return sanitizedRecords.map((record) => {
     if (!record || typeof record !== 'object') {
@@ -262,7 +262,7 @@ const processedRecords = computed(() => {
   });
 });
 
-console.log('Processed Records:', processedRecords.value);
+//console.log('Processed Records:', processedRecords.value);
 
 /*
 const processedRecords = computed(() => {
@@ -287,7 +287,7 @@ if (!teachers) {
 } else if (Array.isArray(teachers)) {
   const rawTeachers = teachers; // Jangan reactive
   if (rawTeachers.length > 0) {
-    console.log('Teacher found:', rawTeachers);
+    //console.log('Teacher found:', rawTeachers);
     rawTeachers.forEach((teacher) => {
       if (teacher && teacher.id !== undefined && !isNaN(teacher.id)) {
         //console.log(`Teacher ID: ${teacher.id}, Name: ${teacher.name}`);
@@ -347,7 +347,7 @@ const getAllTeachers = async () => {
     try {
       const response = await axios.get(currentPageUrl);
 
-      console.log('Response data:', response.data);
+      //console.log('Response data:', response.data);
 
       allTeachers = [...allTeachers, ...response.data.data];
 
@@ -766,52 +766,6 @@ const getButtonClass = (status) => {
   }
 };
 
-/*
- Ambil data dari props yang diterima dari Inertia
-const { teachers } = usePage().props;
-console.log('Data Teachers dari usePage.props:', teachers);
-
-const triggerTeacherStatusChange = async (teacherId) => {
-  console.log('Triggering status change for Teacher ID:', teacherId);
-
-  // Cek jika classes sudah ada, jika belum ambil dari API
-  if (classes.value.length === 0) {
-    await fetchClasses();
-  }
-
-  if (!classes.value.length) {
-    alert('No classes available.');
-    return;
-  }
-
-  // Tentukan rentang tanggal (misalnya 7 hari terakhir)
-  const dates = getDateRange('2025-01-01', '2025-01-07');
-
-  // Iterasi setiap kombinasi class_id dan tanggal
-  classes.value.forEach((classId) => {
-    dates.forEach((date) => {
-      console.log(
-        'Processing Teacher ID:',
-        teacherId,
-        'Date:',
-        date,
-        'Class ID:',
-        classId
-      );
-
-      // Validasi class_id
-      if (!Number.isInteger(classId) || classId <= 0) {
-        console.error('Invalid class_id:', classId);
-        return; // Skip class_id yang tidak valid
-      }
-
-      // Panggil fungsi untuk memproses status
-      handleTeacherStatusChange(teacherId, date, classId);
-    });
-  });
-};
- */
-
 const getDateRange = (startDate, endDate) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -998,22 +952,6 @@ watch(
   { deep: true }
 );
 
-const addAttendanceRecord = (newRecord) => {
-  if (
-    !localAttendanceRecords.value.some(
-      (record) =>
-        record.teacher_id === newRecord.teacher_id &&
-        record.attendance_date === newRecord.attendance_date
-    )
-  ) {
-    localAttendanceRecords.value.push(newRecord);
-    console.log('New attendance record added:', newRecord);
-    saveToLocalStorage(); // Simpan data baru ke localStorage
-  } else {
-    console.warn('Attendance record already exists:', newRecord);
-  }
-};
-
 const handleAttendance = async (status) => {
   console.log(`Status selected: ${status}`);
 
@@ -1066,7 +1004,7 @@ const handleAttendance = async (status) => {
       'attendanceRecords',
       JSON.stringify(attendanceRecords.value)
     );
-    console.log('📦 Data disimpan ke localStorage.');
+    //console.log('📦 Data disimpan ke localStorage.');
   } catch (error) {
     console.error('❌ Gagal menyimpan:', error);
     alert('Gagal menyimpan data kehadiran!');
@@ -1767,7 +1705,7 @@ if (propsData) {
         console.log('Attendance record not found');
       }
     } else {
-      console.log('Attendance records is empty or not an array');
+      //console.log('Attendance records is empty or not an array');
     }
   }
 } else {
@@ -2214,7 +2152,6 @@ watch([selectedTeacherId, selectedDate], () => {
           </div>
         </div>
 
-        
         <!-- Modal Tambah Absensi -->
         <div
           v-if="isModalVisible"
@@ -2560,9 +2497,11 @@ watch([selectedTeacherId, selectedDate], () => {
           </li>
 
           <li>
-            <a
-              href="indexMasterJabatan"
-              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            <button
+              type="button"
+              class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+              aria-controls="dropdown-authentication"
+              data-collapse-toggle="dropdown-authentication11"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -2576,8 +2515,33 @@ watch([selectedTeacherId, selectedDate], () => {
                   clip-rule="evenodd"
                 />
               </svg>
-              <span class="ml-3">Master Jabatan</span>
-            </a>
+
+              <span class="flex-1 ml-3 text-left whitespace-nowrap"
+                >Master Jabatan</span
+              >
+              <svg
+                class="w-6 h-6"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+            </button>
+
+            <ul id="dropdown-authentication11" class="hidden py-2 space-y-2">
+              <li>
+                <a
+                  href="indexMasterJabatan"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Master Jabatan</a
+                >
+              </li>
+            </ul>
           </li>
         </ul>
       </div>

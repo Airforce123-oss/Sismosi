@@ -18,3 +18,4 @@ class MasterJabatanResource extends JsonResource
         ];
     }
 }
+ 

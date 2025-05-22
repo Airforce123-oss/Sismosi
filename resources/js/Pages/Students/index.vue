@@ -234,47 +234,45 @@ onMounted(() => {
 
     <!-- start1 -->
 
-    <main class="p-4 md:ml-64 h-auto pt-20">
+    <main class="p-7 md:ml-64 h-auto pt-20">
       <Head title="Students" />
-
       <div class="flex-1 p-6">
-        <div class="mx-auto max-w-7xl sm:items-center">
-          <div class="px-4 py-4 sm:px-6 lg:px-8">
-            <div class="sm:flex sm:items-center">
-              <div class="sm:flex-auto">
-                <h1 class="text-3xl font-semibold text-gray-900">Siswa</h1>
-                <p class="mt-2 text-sm text-gray-700">Daftar Semua Siswa</p>
-              </div>
+        <div class="text-2xl col-sm-12 mb-10">
+          <div class="sm:flex sm:items-center">
+            <div class="sm:flex-auto">
+              <h1 class="text-3xl font-semibold text-gray-900">Siswa</h1>
+              <p class="mt-2 text-sm text-gray-700">Daftar Semua Siswa</p>
+              <div class="flex flex-col justify-between sm:flex-row mt-6">
+                <div class="relative text-sm text-gray-800 col-span-3">
+                  <div
+                    class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
+                  >
+                    <MagnifyingGlass />
+                  </div>
 
-              <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                <Link
-                  :href="route('students.create')"
-                  class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <i class="fa fa-plus"></i>
-                  <span>Tambah Siswa</span>
-                </Link>
-              </div>
-            </div>
-            <!-- mt-8 flex flex-auto p-4 md:ml-14 h-auto pt-10 -->
-            <div class="flex flex-col justify-between sm:flex-row mt-6">
-              <div class="relative text-sm text-gray-800 col-span-3">
-                <div
-                  class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
-                >
-                  <MagnifyingGlass />
+                  <input
+                    type="text"
+                    v-model="searchTerm"
+                    placeholder="Cari Data Siswa.."
+                    id="search"
+                    class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  />
                 </div>
-
-                <input
-                  type="text"
-                  v-model="searchTerm"
-                  placeholder="Cari Data Siswa.."
-                  id="search"
-                  class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                />
               </div>
             </div>
-
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+              <!-- Link untuk tambah guru -->
+              <Link
+                :href="route('students.create')"
+                class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Tambah Siswa
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div class="mx-auto max-w-7xl sm:items-center">
+          <div class="mx-auto max-w-7xl sm:items-center -mt-3">
             <div class="mt-8 flex flex-col mr-20">
               <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div
@@ -699,9 +697,11 @@ onMounted(() => {
             </ul>
           </li>
           <li>
-            <a
-              href="indexMasterJabatan"
-              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            <button
+              type="button"
+              class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+              aria-controls="dropdown-authentication"
+              data-collapse-toggle="dropdown-authentication11"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -715,8 +715,33 @@ onMounted(() => {
                   clip-rule="evenodd"
                 />
               </svg>
-              <span class="ml-3">Master Jabatan</span>
-            </a>
+
+              <span class="flex-1 ml-3 text-left whitespace-nowrap"
+                >Master Jabatan</span
+              >
+              <svg
+                class="w-6 h-6"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+            </button>
+
+            <ul id="dropdown-authentication11" class="hidden py-2 space-y-2">
+              <li>
+                <a
+                  href="indexMasterJabatan"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Master Jabatan</a
+                >
+              </li>
+            </ul>
           </li>
         </ul>
       </div>

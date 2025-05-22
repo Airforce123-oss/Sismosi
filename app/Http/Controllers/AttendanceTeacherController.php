@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AttendanceTeacher;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Teacher;
 use App\Models\AbsensiSiswa;
 use App\Models\User;
@@ -19,43 +20,95 @@ class AttendanceTeacherController extends Controller
     {
         return inertia('Teachers/AbsensiGuru/indexx');
     }
-    public function dataAbsensiGuru(Request $request)
-    {
-        $bulan = $request->input('bulan', now()->format('m'));
-        $tahun = $request->input('tahun', now()->format('Y'));
-        
-        // Ambil semua absensi berdasarkan bulan & tahun
-        $attendance = AttendanceTeacher::with('teacher.waliKelas') // pastikan 'waliKelas' di-relasi-kan
-            ->whereMonth('attendance_date', $bulan)
-            ->whereYear('attendance_date', $tahun)
-            ->get();
-        
-        // Kelompokkan absensi berdasarkan teacher_id
-        $groupedAttendance = $attendance->groupBy('teacher_id');
-        
-        // Format hasil akhir
-        $result = $groupedAttendance->map(function ($records, $teacherId) {
-            $teacher = $records->first()->teacher; // Ambil data guru
-            $waliKelas = $teacher->waliKelas; // Ambil data wali_kelas
-            
-            // Ambil data absensi per tanggal
-            $attendanceMap = collect($records)->mapWithKeys(function ($item) {
-                return [Carbon::parse($item->attendance_date)->format('Y-m-d') => $item->status];
-            });
-            
-            return [
-                'id' => $teacher->id,
-                'teacher_id' => $teacher->id,
-                'name' => $teacher->name,
-                'nip' => optional($waliKelas)->nip ?? '-',
-                'attendance' => $attendanceMap,
-            ];
-        })->values(); // convert ke array biasa (indexed)
-    
-        return inertia('Teachers/AbsensiGuru/dataAbsensiGuru', [
-            'teachers' => $result,
-        ]);
-    }
+
+public function dataAbsensiGuru(Request $request)
+{
+    $bulan = $request->input('bulan', now()->format('m'));
+    $tahun = $request->input('tahun', now()->format('Y'));
+
+    $perPage = 5;
+
+    // Ambil teacher_id yang punya absensi di bulan dan tahun tersebut
+    $teacherIdsQuery = AttendanceTeacher::select('teacher_id')
+        ->whereMonth('attendance_date', $bulan)
+        ->whereYear('attendance_date', $tahun)
+        ->groupBy('teacher_id')
+        ->orderBy('teacher_id', 'asc');
+
+    $totalTeachers = $teacherIdsQuery->count();
+
+    // Ambil teacher_id dengan pagination manual (offset & limit)
+    $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    $skip = ($currentPage - 1) * $perPage;
+    $teacherIds = $teacherIdsQuery->skip($skip)->take($perPage)->pluck('teacher_id');
+
+    // Ambil data teacher dengan relasi waliKelas
+    $teachers = Teacher::with('waliKelas')
+        ->whereIn('id', $teacherIds)
+        ->orderBy('id')
+        ->get();
+
+    // Ambil absensi untuk teacher yang di halaman ini
+    $attendances = AttendanceTeacher::whereIn('teacher_id', $teacherIds)
+        ->whereMonth('attendance_date', $bulan)
+        ->whereYear('attendance_date', $tahun)
+        ->get()
+        ->groupBy('teacher_id');
+
+    // Transformasi data per teacher
+    $transformed = $teachers->map(function ($teacher) use ($attendances) {
+        $waliKelas = $teacher->waliKelas;
+
+        $attendanceMap = collect($attendances[$teacher->id] ?? [])->mapWithKeys(function ($item) {
+            return [Carbon::parse($item->attendance_date)->format('Y-m-d') => $item->status];
+        })->toArray();
+
+        return [
+            'id' => $teacher->id,
+            'teacher_id' => $teacher->id,
+            'name' => $teacher->name,
+            'nip' => $teacher->nip ?? '-',
+            'attendance' => $attendanceMap,
+        ];
+    });
+
+    // Buat paginator manual dari data teacher
+    $paginated = new LengthAwarePaginator(
+        $transformed,
+        $totalTeachers,
+        $perPage,
+        $currentPage,
+        [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]
+    );
+
+    return inertia('Teachers/AbsensiGuru/dataAbsensiGuru', [
+        'teachers' => [
+            'data' => $paginated->items(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
+            'links' => [
+                'first' => $paginated->url(1),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
+            ],
+        ],
+      'bulan' => $bulan,
+      'tahun' => $tahun,
+      'filter_nama' => $request->input('filter_nama', ''),
+      'filter_nip' => $request->input('filter_nip', ''),
+    ]);
+
+}
 
     public function getAttendances(Request $request)
     {
@@ -72,7 +125,7 @@ class AttendanceTeacherController extends Controller
     
         return response()->json($query->get());
     }
-    
+       
     public function absensiGuru()
     {
         // Ambil semua absensi guru dengan relasi teacher dan class
@@ -185,7 +238,7 @@ class AttendanceTeacherController extends Controller
     public function updateAttendance(Request $request)
     {
         $validated = $request->validate([
-            'teacher_id' => 'required|exists:users,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'attendance_date' => 'required|date',
             'status' => 'required|string|in:P,A,S,I',
         ]);
@@ -220,7 +273,7 @@ class AttendanceTeacherController extends Controller
         //Log::info('Request data:', $request->all());
     
         $validated = $request->validate([
-            'teacher_id' => 'required|exists:users,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'class_id' => 'nullable|exists:classes,id|integer|min:1',
             'attendance_date' => 'required|date_format:Y-m-d H:i:s',
             'is_present' => 'required|boolean',
@@ -242,7 +295,7 @@ class AttendanceTeacherController extends Controller
     
         // Validasi data yang diterima (tanpa class_id)
         $validated = $request->validate([
-            'teacher_id' => 'required|exists:users,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'attendance_date' => 'required|date', // Pastikan format tanggal valid
             'status' => 'required|string|in:P,A,S,I', // Validasi status
         ]);
@@ -268,7 +321,7 @@ class AttendanceTeacherController extends Controller
     {
         // Validasi data yang diterima
         $validated = $request->validate([
-            'teacher_id' => 'required|exists:users,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'class_id' => 'required|exists:classes,id|integer|min:1',
             'attendance_date' => 'required|date',
             'is_present' => 'required|boolean',

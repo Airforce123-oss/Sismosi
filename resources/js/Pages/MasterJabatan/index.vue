@@ -180,6 +180,66 @@ onMounted(async () => {
             </Link>
           </div>
         </div>
+        <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+          <div
+            class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative mt-5 -ml-8"
+          >
+            <table class="min-w-full bg-white">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                  >
+                    ID
+                  </th>
+                  <th
+                    scope="col"
+                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                  >
+                    Nama Jabatan
+                  </th>
+                  <th
+                    scope="col"
+                    class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                  >
+                    Deskripsi
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                <tr>
+                  <td
+                    class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                  >
+                    <span v-if="pageNumber && perPage">
+                      {{
+                        (Number(pageNumber) - 1) * Number(perPage) +
+                        Number(index) +
+                        1
+                      }}
+                    </span>
+                  </td>
+                  <td
+                    lass="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                  ></td>
+                  <td
+                    class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                  >
+                    <Link class="text-indigo-600 hover:text-indigo-900">
+                      Edit
+                    </Link>
+                    <button class="ml-2 text-indigo-600 hover:text-indigo-900">
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <Pagination />
+          <!-- <pre>{{ wali_kelas.meta.links }}</pre>-->
+        </div>
       </div>
     </main>
 
@@ -434,9 +494,11 @@ onMounted(async () => {
             </ul>
           </li>
           <li>
-            <a
-              href="indexMasterJabatan"
-              class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            <button
+              type="button"
+              class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+              aria-controls="dropdown-authentication"
+              data-collapse-toggle="dropdown-authentication11"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -450,8 +512,33 @@ onMounted(async () => {
                   clip-rule="evenodd"
                 />
               </svg>
-              <span class="ml-3">Master Jabatan</span>
-            </a>
+
+              <span class="flex-1 ml-3 text-left whitespace-nowrap"
+                >Master Jabatan</span
+              >
+              <svg
+                class="w-6 h-6"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+            </button>
+
+            <ul id="dropdown-authentication11" class="hidden py-2 space-y-2">
+              <li>
+                <a
+                  href="indexMasterJabatan"
+                  class="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >Data Master Jabatan</a
+                >
+              </li>
+            </ul>
           </li>
         </ul>
       </div>
