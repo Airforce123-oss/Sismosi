@@ -1,30 +1,36 @@
 <script setup>
 import { ref, onMounted, computed, watch, toRaw } from 'vue';
 import { initFlowbite } from 'flowbite';
+import Pagination from '../../../Components/Pagination7.vue';
 import { useForm, usePage, Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import axios from 'axios';
 
-// Define Props
-defineProps({
-  totalCourses: Number,
-  courses: Array,
-  totalTeachers: Array,
-  students: Array,
-  totalCourseHours: Number,
-  paginatedEnrollments: Array,
-});
-
+// Amb
 const { props } = usePage();
-console.log('Props received:', props.students);
-// Initialize Page Properties
-const courses = ref(props.courses || []);
+
+console.log('🔍 Props.students:', props.students);
+console.log('🔍 Props.teachers:', props.teachers);
+console.log('🔍 Props.tugas:', props.tugas);
+console.log('🔍 Props.classes_for_student:', props.classes_for_student);
+
 const students = ref(props.students || []);
+const teachers = ref(props.teachers || []);
+const mapels = ref(props.mapels || []);
+const courses = ref(props.courses || []);
+const tugas = ref(props.tugas || []);
+const classesForStudent = ref(props.classes_for_student || []);
 
-const totalCourses = computed(() => courses.value.length);
+const meta = ref(props.meta || {});
+const links = ref(props.links || {});
 
-console.log('Fetching students...');
-console.log('Fetched students:', toRaw(students.value));
+const totalCourses = computed(() => tugas.value.data.length);
+
+console.log(' Students:', toRaw(students.value));
+console.log(' Teachers:', toRaw(teachers.value));
+console.log(' Mapels:', toRaw(mapels.value));
+console.log(' Tugas:', toRaw(tugas.value));
+console.log(' Classes for Student:', toRaw(classesForStudent.value));
 
 // Form Data for User Authentication
 const form = useForm({
@@ -34,7 +40,6 @@ const form = useForm({
 });
 
 // Data for Courses, Teachers, Students, and Enrollment
-const teachers = ref([]);
 
 const enrollments = ref([]);
 
@@ -48,6 +53,7 @@ const taskForm = ref({
   description: '',
   teacher_id: '',
   student_id: '',
+  class_id: '',
 });
 
 const editForm = ref({
@@ -56,42 +62,8 @@ const editForm = ref({
   description: '',
   teacher_id: '',
   student_id: '',
+  class_id: '',
 });
-
-const fetchTeachers = async () => {
-  try {
-    const response = await axios.get('/api/teachers');
-
-    // Memastikan response.data dan response.data.data ada dan berbentuk array
-    if (
-      response.data &&
-      response.data.data &&
-      Array.isArray(response.data.data)
-    ) {
-      // Proses data guru (seperti penambahan nama atau atribut lain)
-      response.data.data.forEach((teacher) => {
-        console.log('Nama Guru:', teacher.name);
-      });
-
-      // Perbarui data teachers tanpa menghapus data yang ada
-      response.data.data.forEach((newTeacher) => {
-        const index = teachers.value.findIndex(
-          (teacher) => teacher.id === newTeacher.id
-        );
-
-        if (index === -1) {
-          teachers.value.push(newTeacher); // Jika data baru, tambahkan
-        } else {
-          teachers.value[index] = newTeacher; // Jika ada data lama, update
-        }
-      });
-    } else {
-      console.error('Invalid or empty data for teachers:', response.data);
-    }
-  } catch (error) {
-    console.error('Error fetching teachers:', error);
-  }
-};
 
 // Pagination & Search Data
 const totalPages = ref(1);
@@ -107,34 +79,6 @@ const selectedCourseId = ref(null);
 // Modal Handling Functions
 const showAddModal = () => {
   isTaskModalOpen.value = true;
-};
-
-const getMapelName = (mapelId) => {
-  const mapel = courses.value.find((course) => course.id === mapelId);
-  return mapel ? mapel.mapel : 'Tidak ada nama mata pelajaran';
-};
-
-const getStudentName = (studentId) => {
-  console.log('Mencari nama untuk Student ID:', studentId);
-  console.log('Data students:', toRaw(students.value));
-
-  // Cek apakah students.value adalah array sebelum menggunakan .find()
-  if (Array.isArray(students.value)) {
-    const student = students.value.find(
-      (student) => String(student.id) === String(studentId)
-    );
-
-    if (student) {
-      console.log('Student ditemukan:', student);
-      return student.name;
-    } else {
-      console.log('Student tidak ditemukan untuk ID:', studentId);
-      return 'Tidak ada nama siswa';
-    }
-  } else {
-    console.error('students.value bukan array yang valid');
-    return 'Data siswa tidak tersedia';
-  }
 };
 
 const getTeacherName = (teacherId) => {
@@ -160,23 +104,15 @@ const getTeacherName = (teacherId) => {
   }
 };
 
-// Generate Dummy Enrollments Data
-const generateDummyEnrollments = () => {
-  return Array.from({ length: 10 }, (_, index) => ({
-    id: index + 1,
-    course: courses.value[index % courses.value.length],
-    student_count: students.value.length,
-  }));
-};
-
 // Watch for changes in teachers and courses
 watch(
-  () => teachers.value,
+  () => props.teachers,
   (newTeachers) => {
-    console.log(newTeachers);
-  }
+    teachers.value = newTeachers;
+    console.log('Teachers updated from props:', newTeachers);
+  },
+  { immediate: true }
 );
-
 watch(
   () => students.value,
   (newStudents) => {
@@ -231,13 +167,6 @@ watch(
     }
   }
 );
-
-const mapelName = computed(() => {
-  return (mapelId) => {
-    const mapel = courses.value.find((course) => course.id === mapelId);
-    return mapel ? mapel.mapel : 'Pilih Mata Pelajaran';
-  };
-});
 
 const saveEnrollmentsToLocalStorage = () => {
   localStorage.setItem('enrollments', JSON.stringify(enrollments.value));
@@ -300,79 +229,101 @@ const saveTask = async () => {
   try {
     console.log('Form Submitted:', taskForm.value);
 
-    // Konversi teacher_id ke integer
-    taskForm.value.teacher_id = parseInt(taskForm.value.teacher_id);
-
-    taskForm.value.student_id = parseInt(taskForm.value.student_id);
-
-    if (!taskForm.value.teacher_id) {
-      console.error('Teacher ID belum dipilih.');
-      return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
+    // Pastikan classesForStudent sudah ada isinya
+    if (!classesForStudent.value || classesForStudent.value.length === 0) {
+      console.warn(
+        'Warning: classesForStudent kosong, tidak bisa set default class_id.'
+      );
     }
 
-    if (!taskForm.value.student) {
-      console.error('Student ID belum dipilih.');
-      return; // Tampilkan pesan kesalahan jika `teacher_id` belum diatur
+    // Set nilai default class_id sebelum validasi
+    if (
+      (!taskForm.value.class_id || taskForm.value.class_id === null) &&
+      classesForStudent.value?.length > 0
+    ) {
+      const rawClasses = toRaw(classesForStudent.value);
+      taskForm.value.class_id = rawClasses[0]?.id || null;
+      console.log('Class ID setelah diatur:', taskForm.value.class_id);
     }
 
-    taskForm.value.teacher_id = selectedTeacherId.value;
+    // Set default mapel_id jika belum ada
+    if (
+      (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
+      courses.value?.length > 0
+    ) {
+      taskForm.value.mapel_id = toRaw(courses.value)[0]?.id || null;
+      console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
+    }
 
-    taskForm.value.student_id = selectedStudentId.value;
+    // Set default student_id jika belum ada
+    if (
+      (!taskForm.value.student_id || taskForm.value.student_id === null) &&
+      students.value?.length > 0
+    ) {
+      taskForm.value.student_id = toRaw(students.value)[0]?.id || null;
+      console.log('Student ID setelah diatur:', taskForm.value.student_id);
+    }
 
-    // Set CSRF Token in Header
+    // Validasi: pastikan semua id valid dan sudah jadi number
+    const teacherId = parseInt(taskForm.value.teacher_id);
+    const studentId = parseInt(taskForm.value.student_id);
+    const classId = parseInt(taskForm.value.class_id);
+
+    if (isNaN(teacherId)) {
+      console.error('Teacher ID belum dipilih atau tidak valid.');
+      return;
+    }
+    if (isNaN(studentId)) {
+      console.error('Student ID belum dipilih atau tidak valid.');
+      return;
+    }
+    if (isNaN(classId)) {
+      console.error('Class ID belum dipilih atau tidak valid.');
+      return;
+    }
+
+    // Assign kembali nilai numerik ke taskForm
+    taskForm.value.teacher_id = teacherId;
+    taskForm.value.student_id = studentId;
+    taskForm.value.class_id = classId;
+
+    // Setup CSRF Token dan axios credentials
     const token = document.head.querySelector(
       'meta[name="csrf-token"]'
     ).content;
     axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
     axios.defaults.withCredentials = true;
 
-    // Assign Mapel ID if Courses are available
-    if (
-      (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
-      courses.value &&
-      courses.value.length > 0
-    ) {
-      const rawCourses = toRaw(courses.value);
-      taskForm.value.mapel_id = rawCourses[0]?.id || null;
-      console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
-    }
+    console.log('Data yang akan dikirim ke backend:', {
+      mapel_id: taskForm.value.mapel_id,
+      description: taskForm.value.description,
+      teacher_id: taskForm.value.teacher_id,
+      student_id: taskForm.value.student_id,
+      class_id: taskForm.value.class_id,
+    });
 
-    console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
-
-    if (
-      (!taskForm.value.student_id || taskForm.value.student_id === null) &&
-      students.value &&
-      students.value.length > 0
-    ) {
-      const rawStudents = toRaw(students.value);
-      taskForm.value.student_id = rawStudents[0]?.id || null;
-      console.log('Students ID setelah diatur:', taskForm.value.student_id);
-    }
-
-    console.log('Mapel ID setelah diatur:', taskForm.value.student_id);
-
-    // Submit Task Data
+    // Kirim data ke backend API
     const response = await axios.post('/api/tugas', {
       mapel_id: taskForm.value.mapel_id,
       description: taskForm.value.description,
       teacher_id: taskForm.value.teacher_id,
       student_id: taskForm.value.student_id,
+      class_id: taskForm.value.class_id,
     });
 
-    console.log('Respons API setelah submit task:', response.data);
+    console.log('Response dari API:', response.data);
 
-    if (response.data && response.data.tugas) {
-      console.log('Tugas berhasil disimpan:', response.data);
-      closeTaskModal(); // Tutup modal setelah berhasil menyimpan
+    if (response.data?.id || response.data?.data?.id) {
+      console.log('Tugas berhasil disimpan.');
+      closeTaskModal();
     } else {
-      console.log('Gagal menyimpan tugas:', response.data);
+      console.warn('Gagal menyimpan tugas, response:', response.data);
     }
   } catch (error) {
     console.error(
-      'Error saving task:',
+      'Error saat menyimpan tugas:',
       error.response?.data || error.message || 'Unknown error occurred'
     );
-    closeTaskModal();
   }
 };
 
@@ -425,107 +376,82 @@ const handleTask = () => {
   }
 };
 
+const pageNumber = ref(1);
+
+const updatedPageNumber = (page) => {
+  if (!page || isNaN(page)) {
+    console.warn('❌ Halaman tidak valid:', page);
+    return;
+  }
+
+  console.log('🔄 Berpindah ke halaman:', page);
+  pageNumber.value = Number(page); // Akan memicu fetch ulang jika ada watch()
+};
+
 // On Mounted Hook to Fetch Initial Data
 onMounted(async () => {
   try {
-    // Ambil data taskForm dan enrollments dari localStorage
+    // Ambil data taskForm dari localStorage
     const savedTaskForm = localStorage.getItem('taskForm');
     if (savedTaskForm) {
       taskForm.value = JSON.parse(savedTaskForm);
     }
 
+    // Ambil enrollments dari localStorage atau fetch jika tidak ada
     const savedEnrollments = localStorage.getItem('enrollments');
     if (savedEnrollments) {
       enrollments.value = JSON.parse(savedEnrollments);
     } else {
-      fetchEnrollments(); // Jika tidak ada di localStorage, ambil dari server
+      const enrollmentsResponse = await axios.get('/api/enrollments', {
+        params: { page: currentPage.value },
+      });
+      enrollments.value = enrollmentsResponse.data.data;
+      totalPages.value = enrollmentsResponse.data.last_page;
+      localStorage.setItem('enrollments', JSON.stringify(enrollments.value));
     }
 
-    // Cek apakah ada data courses di localStorage
+    // Courses
     const savedCourses = localStorage.getItem('courses');
     if (savedCourses) {
-      courses.value = JSON.parse(savedCourses); // Ambil data dari localStorage
-      console.log('Courses loaded from localStorage:', courses.value);
+      courses.value = JSON.parse(savedCourses);
     } else {
-      console.log('Fetching courses data from API...');
-      const response = await axios.get('/api/courses');
-      console.log('Courses received:', response.data);
-      courses.value = response.data.data;
-
-      // Simpan data courses ke localStorage
+      const { data } = await axios.get('/api/courses');
+      courses.value = data.data;
       localStorage.setItem('courses', JSON.stringify(courses.value));
-      console.log('Courses loaded from API:', courses.value);
     }
 
+    // Students
     const savedStudents = localStorage.getItem('students');
     if (savedStudents) {
-      students.value = JSON.parse(savedStudents); // Ambil data dari localStorage
-      console.log('Students loaded from localStorage:', students.value);
+      students.value = JSON.parse(savedStudents);
     } else {
-      console.log('Fetching students data from API...');
-      const response = await axios.get('/api/students');
-      console.log('Students received:', response.data);
-      students.value = response.data.data;
-
-      // Simpan data courses ke localStorage
+      const { data } = await axios.get('/api/students');
+      students.value = data.data;
       localStorage.setItem('students', JSON.stringify(students.value));
-      console.log('Students loaded from API:', students.value);
     }
 
-    // Cek apakah mapel_id sudah ada, jika belum atur ke yang pertama
-    if (!taskForm.value.mapel_id && courses.value && courses.value.length > 0) {
+    // Set default mapel_id dan student_id jika belum diisi
+    if (!taskForm.value.mapel_id && courses.value.length) {
       taskForm.value.mapel_id = courses.value[0].id;
     }
 
-    if (courses.value && courses.value.length > 0) {
-      const rawCourses = toRaw(courses.value);
-      console.log('Raw Courses:', rawCourses); // Debug data raw
-      taskForm.value.mapel_id = rawCourses[0]?.id || null;
-    }
-
-    // Cek apakah student_id sudah ada, jika belum atur ke yang pertama
-    if (
-      !taskForm.value.student_id &&
-      students.value &&
-      students.value.length > 0
-    ) {
+    if (!taskForm.value.student_id && students.value.length) {
       taskForm.value.student_id = students.value[0].id;
     }
 
-    if (students.value && students.value.length > 0) {
-      const rawStudents = toRaw(students.value);
-      console.log('Raw Students:', rawStudents); // Debug data raw
-      taskForm.value.student_id = rawStudents[0]?.id || null;
-    }
-
-    console.log('Selected Teacher ID:', selectedTeacherId.value);
-
-    console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
-
-    console.log('Selected Student ID:', selectedStudentId.value);
-
-    console.log('Mapel ID setelah diatur:', taskForm.value.student_id);
-
-    // Fetch data guru (teachers)
+    // Fetch teachers
     const teachersResponse = await axios.get('/api/teachers');
-    if (teachersResponse.data && teachersResponse.data.data) {
+    if (teachersResponse.data?.data) {
       teachers.value = teachersResponse.data.data;
     }
 
-    // Ambil data enrollments jika perlu
-    const enrollmentsResponse = await axios.get('/api/enrollments', {
-      params: { page: currentPage.value },
-    });
-    enrollments.value = enrollmentsResponse.data.data;
-
-    await fetchTeachers();
-
-    const coursesResponse = await axios.get('/api/courses');
-    courses.value = coursesResponse.data.data;
-    totalPages.value = enrollmentsResponse.data.last_page;
+    console.log('Selected Teacher ID:', selectedTeacherId.value);
+    console.log('Mapel ID:', taskForm.value.mapel_id);
+    console.log('Student ID:', taskForm.value.student_id);
   } catch (error) {
     console.error('Error fetching data:', error);
   }
+
   initFlowbite();
 });
 
@@ -534,6 +460,19 @@ const saveTaskFormToLocalStorage = () => {
 };
 
 watch(taskForm, saveTaskFormToLocalStorage, { deep: true });
+
+watch(
+  () => props.classes_for_student,
+  (newVal) => {
+    classesForStudent.value = newVal || [];
+    // Set default class_id juga di sini
+    if (classesForStudent.value.length > 0) {
+      taskForm.value.class_id = toRaw(classesForStudent.value)[0].id || null;
+      console.log('Set class_id via watch:', taskForm.value.class_id);
+    }
+  },
+  { immediate: true }
+);
 
 // Change Page Function for Pagination
 const changePage = async (page) => {
@@ -912,9 +851,7 @@ const submitEdit = async () => {
                 >
                 <select
                   v-model="taskForm.mapel_id"
-                  :items="courses"
-                  item-value="id"
-                  class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                  class="w-full px-4 py-2 border rounded-md"
                 >
                   <option value="" disabled>Pilih Mata Pelajaran</option>
                   <option
@@ -935,7 +872,7 @@ const submitEdit = async () => {
                   >Deskripsi</label
                 >
                 <textarea
-                  v-model="editForm.description"
+                  v-model="taskForm.description"
                   id="description"
                   class="mt-1 block w-full border-gray-300 rounded-md"
                   placeholder="Masukkan deskripsi"
@@ -947,16 +884,17 @@ const submitEdit = async () => {
                 <label
                   for="teacher_id"
                   class="block text-sm font-medium text-gray-700"
-                  >Nama Guru</label
                 >
+                  Nama Guru
+                </label>
                 <select
-                  v-model="selectedTeacherId"
-                  id="teacher"
+                  v-model="taskForm.teacher_id"
+                  id="teacher_id"
                   class="w-full px-4 py-2 border rounded-md"
                 >
-                  <option value="" disabled selected>Pilih Guru</option>
+                  <option value="" disabled>Pilih Guru</option>
                   <option
-                    v-for="teacher in teachers"
+                    v-for="teacher in props.teachers"
                     :key="teacher.id"
                     :value="teacher.id"
                   >
@@ -968,23 +906,47 @@ const submitEdit = async () => {
               <!-- Input Siswa -->
               <div class="mb-4">
                 <label
-                  for="course_id"
+                  for="student_id"
                   class="block text-sm font-medium text-gray-700"
-                  >Nama Siswa</label
                 >
+                  Nama Siswa
+                </label>
                 <select
                   v-model="taskForm.student_id"
-                  :items="students"
-                  item-value="id"
-                  class="w-full px-4 py-2 border rounded-md bg-gray-100 text-gray-700"
+                  id="student_id"
+                  class="w-full px-4 py-2 border rounded-md"
+                  required
                 >
                   <option value="" disabled>Pilih Siswa</option>
                   <option
-                    v-for="student in students"
+                    v-for="student in props.students"
                     :key="student.id"
                     :value="student.id"
                   >
-                    {{ student.student }}
+                    {{ student.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Input Kelas -->
+              <div class="mb-4">
+                <label
+                  for="class_id"
+                  class="block text-sm font-medium text-gray-700"
+                >
+                  Kelas
+                </label>
+                <select
+                  v-model="taskForm.class_id"
+                  class="w-full px-4 py-2 border rounded-md"
+                >
+                  <option value="" disabled>Pilih Kelas</option>
+                  <option
+                    v-for="kelas in props.classes_for_student"
+                    :key="kelas.id"
+                    :value="kelas.id"
+                  >
+                    {{ kelas.name }}
                   </option>
                 </select>
               </div>
@@ -1032,7 +994,7 @@ const submitEdit = async () => {
                   >Description</label
                 >
                 <textarea
-                  v-model="editForm.description"
+                  v-model="taskForm.description"
                   id="description"
                   class="mt-1 block w-full border-gray-300 rounded-md"
                   placeholder="Masukkan deskripsi"
@@ -1098,57 +1060,113 @@ const submitEdit = async () => {
       </div>
 
       <!-- Tabel -->
-      <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
-        <table class="min-w-full table-auto">
-          <thead>
-            <tr class="bg-gray-100">
-              <th class="px-4 py-3 text-left">ID</th>
-              <th class="px-4 py-3 text-left">Mata Pelajaran</th>
-              <th class="px-4 py-3 text-left">Deskripsi</th>
-              <th class="px-4 py-3 text-left">Guru</th>
-              <th class="px-4 py-3 text-left">Siswa</th>
-              <th class="px-4 py-3 text-left">Aksi</th>
+      <div
+        class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
+      >
+        <table class="min-w-full table-auto border-collapse">
+          <thead class="bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                ID
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Mata Pelajaran
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Deskripsi
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Siswa
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Guru
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Kelas
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="text-gray-700 text-sm md:text-base">
             <tr
-              v-for="enrollment in enrollments"
-              :key="enrollment.id"
-              class="border-t"
+              v-for="task in tugas.data"
+              :key="task.id"
+              class="border-b hover:bg-gray-50 transition duration-150"
             >
-              <td class="px-4 py-3">{{ enrollment.id }}</td>
-              <td class="px-4 py-3">
-                <!-- Menampilkan Nama Mata Pelajaran -->
-                <p>
-                  {{ getMapelName(enrollment.mapel_id) }}
-                </p>
+              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.mapel?.mapel ?? '—' }}
+              </td>
+              <td class="px-4 py-3 whitespace-pre-wrap">
+                {{ task.description }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.student?.name ?? '—' }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.teacher?.name ?? '—' }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.kelas?.name ?? '—' }}
               </td>
               <td class="px-4 py-3">
-                <!-- Pastikan data description ada di sini -->
-                <p>{{ enrollment.description }}</p>
-              </td>
-              <td class="px-4 py-3">
-                <!-- Menampilkan Nama Guru -->
-                <p>
-                  {{ getTeacherName(enrollment.teacher_id) }}
-                </p>
-              </td>
-              <td class="px-4 py-3">
-                {{ getStudentName(enrollment.student_id) }}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-800">
-                <div class="flex space-x-2">
+                <div class="flex items-center justify-center space-x-2">
                   <button
-                    @click="editEnrollment(enrollment)"
-                    class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    @click="editTask(task)"
+                    class="inline-flex items-center gap-2 bg-blue-500 text-white h-9 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
                   >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536M9 11l6-6m2 2L11 15H9v-2l6-6z"
+                      />
+                    </svg>
                     Edit
                   </button>
+
                   <button
-                    @click="deleteEnrollment(enrollment.id)"
-                    class="bg-red-500 text-white py-1 px-4 rounded-lg hover:bg-red-700"
+                    @click="deleteTask(task.id)"
+                    class="inline-flex items-center gap-2 bg-red-500 text-white h-9 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 transition"
                   >
-                    Delete
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z"
+                      />
+                    </svg>
+                    Hapus
                   </button>
                 </div>
               </td>
@@ -1157,28 +1175,7 @@ const submitEdit = async () => {
         </table>
       </div>
 
-      <!-- Pagination Controls -->
-
-      <div class="flex justify-between items-center">
-        <span class="text-gray-700">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button
-          v-if="currentPage > 1"
-          @click="changePage(currentPage - 1)"
-          class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-        >
-          Previous
-        </button>
-
-        <button
-          @click="goToPage(currentPage + 1)"
-          :disabled="currentPage === totalPages"
-          class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-        >
-          Next
-        </button>
-      </div>
+      <Pagination :data="props.tugas" :updatedPageNumber="updatedPageNumber" />
     </main>
     <!-- Sidebar -->
     <aside

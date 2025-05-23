@@ -267,6 +267,9 @@ Route::resource('master-jabatan', MasterJabatanController::class);
 
 Route::get('/master-jabatan/{master_jabatan}/edit', [MasterJabatanController::class, 'edit'])->name('master-jabatan.edit');
 
+Route::post('/tugas-siswa', [TeacherController::class, 'createTugasSiswa'])->name('tugas-siswa.create');
+
+
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';

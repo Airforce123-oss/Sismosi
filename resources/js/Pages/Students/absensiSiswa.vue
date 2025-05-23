@@ -850,7 +850,7 @@ watch(
                         ? `${selectedMapel[0].mapel} dan ${selectedMapel[1].mapel}`
                         : selectedMapel
                             .slice(0, -1)
-                            .map((m) => m.mapel) // Mengakses 'mapel' dari objek
+                            .map((m) => m.mapel)
                             .join(', ') +
                           ', dan ' +
                           selectedMapel[selectedMapel.length - 1].mapel
@@ -947,19 +947,7 @@ watch(
           </span>
         </div>
       </div>
-      <!--      <pre>{{ teacherClass.name }}</pre>
--->
     </main>
-
-    <!--
-        <AbsensiSiswaSatu
-      :selectedKelas="selectedKelas"
-      :selectedMapel="selectedMapel"
-      :student="student"
-      :kelasList="kelasList"
-      v-if="selectedKelas && selectedKelas.id"
-    />
-    -->
 
     <!-- Sidebar -->
     <aside

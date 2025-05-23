@@ -5,31 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * 
- *
- * @property int $id
- * @property int $mapel_id
- * @property int $teacher_id
- * @property string $description
- * @property int|null $student_id
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\Mapel $mapel
- * @property-read \App\Models\Student|null $student
- * @property-read \App\Models\Teacher $teacher
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas query()
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereDescription($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereMapelId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereStudentId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereTeacherId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Tugas whereUpdatedAt($value)
- * @mixin \Eloquent
- */
 class Tugas extends Model
 {
     use HasFactory;
@@ -52,6 +27,7 @@ class Tugas extends Model
         'student_id',
         'teacher_id',  // Foreign key ke tabel teachers
         'description', // Deskripsi tugas
+        'class_id',
     ];
 
     // Relasi ke model Mapel
@@ -67,9 +43,14 @@ class Tugas extends Model
 
 
     // Relasi ke model Teacher
-    public function teacher()
-{
-    return $this->belongsTo(Teacher::class, 'teacher_id');
-}
+        public function teacher()
+    {
+        return $this->belongsTo(Teacher::class, 'teacher_id');
+    }
+
+    public function kelas()
+    {
+        return $this->belongsTo(Classes::class, 'class_id');
+    }
 
 }

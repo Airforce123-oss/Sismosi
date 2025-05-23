@@ -13,6 +13,7 @@ use App\Http\Requests\UpdateTeacherRequest;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\Student;
+use App\Models\Tugas;
 use App\Models\WaliKelas;
 use App\Models\Classes;
 use App\Models\AbsensiSiswa;
@@ -78,10 +79,70 @@ class TeacherController extends Controller
             'classes_for_student' => $classes_for_student,
         ]);
     }
-
     public function membuatTugasSiswa()
     {
-        return inertia('Teachers/TugasSiswa/membuatTugasSiswa');
+        $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])  // Jangan lupa include relasi kelas
+            ->paginate(5)
+            ->appends(request()->query());
+
+        $teachers = Teacher::all();
+        $students = Student::all();
+        $mapels = Mapel::all();
+        $classes_for_student = Classes::all();
+
+        return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', [
+            'tugas' => [
+                'data' => $tugas->items(),
+                'meta' => [
+                    'current_page' => $tugas->currentPage(),
+                    'from' => $tugas->firstItem(),
+                    'to' => $tugas->lastItem(),
+                    'last_page' => $tugas->lastPage(),
+                    'per_page' => $tugas->perPage(),
+                    'total' => $tugas->total(),
+                ],
+                'links' => [
+                    'first' => $tugas->url(1),
+                    'last' => $tugas->url($tugas->lastPage()),
+                    'prev' => $tugas->previousPageUrl(),
+                    'next' => $tugas->nextPageUrl(),
+                ],
+            ],
+            'teachers' => $teachers,
+            'students' => $students,
+            'mapels' => $mapels,
+            'classes_for_student' => $classes_for_student,
+        ]);
+    }
+
+
+    public function createTugasSiswa(Request $request)
+    {
+        $validated = $request->validate([
+            'mapel_id' => 'required|exists:master_mapel,id',
+            'description' => 'nullable|string',
+            'student_id' => 'required|exists:students,id',
+            'teacher_id' => 'required|exists:wali_kelas,id',
+            'class_id' => 'required|exists:classes,id',
+        ]);
+
+        $tugas = new Tugas();
+        $tugas->mapel_id = $validated['mapel_id'];
+        $tugas->description = $validated['description'] ?? null;
+        $tugas->student_id = $validated['student_id'];
+        $tugas->teacher_id = $validated['teacher_id'];
+        $tugas->class_id = $validated['class_id'];
+
+        $tugas->save();
+
+        // Ambil ulang data kelas (jika perlu)
+        $classes_for_student = Classes::all();
+
+        return response()->json([
+            'message' => 'Tugas berhasil ditambahkan.',
+            'data' => $tugas->load(['mapel', 'student', 'teacher']),
+            'classes_for_student' => $classes_for_student,
+        ], 201);
     }
 
     public function index(Request $request)
@@ -194,28 +255,6 @@ class TeacherController extends Controller
             $query->where('name', 'like', '%' . $search . '%');
         });
     }
-
-    /*
-        public function showAbsensiSiswa(Request $request)
-    {
-        // Ambil semua data mata pelajaran
-        $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran
-        // Query untuk mengambil data kelas  
-        $classesQuery = Classes::query();  
-        // Terapkan filter pencarian jika ada
-        $this->applySearch($classesQuery, $request->search);
-        // Urutkan berdasarkan ID kelas  
-        $classesQuery->orderBy('id');  
-        // Pagination, dengan jumlah per halaman 10  
-        $classes = $classesQuery->paginate(20)->appends($request->only('search'));    
-
-        // Kirim data ke komponen Vue
-        return response()->json([  
-            'data' => $mapelList, // Return the mapelList in a data property  
-            'classes' => $classes, // Return the paginated classes 
-        ]); 
-    }
-    */
 
     public function showAbsensiSiswa(Request $request)  
 {  
@@ -476,21 +515,21 @@ public function storeAttendance(Request $request)
     public function getMapelByTeacherId(Request $request)
     {
         $teacherId = $request->input('teacher_id');
-    
+
         if (!$teacherId) {
             return response()->json(['error' => 'teacher_id wajib dikirim'], 400);
         }
-    
+
         $mapel = DB::table('teacher_mapel')
-            ->where('teacher_id', $teacherId) // ← filter penting!
+            ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
+            ->where('teacher_mapel.teacher_id', $teacherId)
+            ->select('master_mapel.mapel', 'master_mapel.id as mapel_id') // gunakan 'mapel'
             ->get();
-    
+
         return response()->json(['mapel' => $mapel]);
     }
-    
-    
 
-        
+                
         
     
 

@@ -136,6 +136,9 @@ Route::get('/tahun_ajaran', action: [MataPelajaranController::class, 'getTahunAj
 
 Route::get('/fetch-all-students', action: [StudentController::class, 'fetchAllStudents']);
 
+Route::post('/tugas', [TeacherController::class, 'createTugasSiswa']);
+
+
 
 
 
