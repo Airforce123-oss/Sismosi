@@ -2,35 +2,58 @@
 import { ref, onMounted, computed, watch, toRaw } from 'vue';
 import { initFlowbite } from 'flowbite';
 import Pagination from '../../../Components/Pagination7.vue';
-import { useForm, usePage, Head } from '@inertiajs/vue3';
+import { useForm, usePage, Head, router } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import axios from 'axios';
 
 // Amb
 const { props } = usePage();
-
-console.log('🔍 Props.students:', props.students);
-console.log('🔍 Props.teachers:', props.teachers);
-console.log('🔍 Props.tugas:', props.tugas);
-console.log('🔍 Props.classes_for_student:', props.classes_for_student);
-
 const students = ref(props.students || []);
 const teachers = ref(props.teachers || []);
 const mapels = ref(props.mapels || []);
 const courses = ref(props.courses || []);
-const tugas = ref(props.tugas || []);
+const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
 const classesForStudent = ref(props.classes_for_student || []);
 
 const meta = ref(props.meta || {});
 const links = ref(props.links || {});
 
-const totalCourses = computed(() => tugas.value.data.length);
+//const totalCourses = computed(() => tugas.value?.data?.length ?? 0);
+const totalCourses = computed(() => props.tugas?.meta?.total ?? 0);
 
-console.log(' Students:', toRaw(students.value));
-console.log(' Teachers:', toRaw(teachers.value));
-console.log(' Mapels:', toRaw(mapels.value));
-console.log(' Tugas:', toRaw(tugas.value));
-console.log(' Classes for Student:', toRaw(classesForStudent.value));
+
+//console.log('🔍 Props.students:', props.students);
+//console.log('Props.teachers toRaw:', toRaw(props.teachers));
+//console.log('🔎 Contoh teacher id 1:', toRaw(teachers.value)[1]);
+for (let i = 0; i < props.teachers.length; i++) {
+  const teacher = props.teachers[i];
+  const masterMapel = toRaw(teacher.masterMapel);
+
+  //console.log(`--- Guru ke-${i} ---`);
+  //console.log(`Nama Guru: ${teacher.name}`);
+  //console.log(`NIP: ${teacher.nip}`);
+
+  if (Array.isArray(masterMapel)) {
+    if (masterMapel.length === 0) {
+      //console.log(`⚠️ masterMapel kosong untuk guru ke-${i}`);
+    } else {
+      masterMapel.forEach((mapel, index) => {
+        //console.log(`  Mapel ${index}:`, mapel);
+
+        if (mapel.id && mapel.nama_mapel) {
+          //console.log(`    → ID: ${mapel.id}, Nama: ${mapel.nama_mapel}`);
+        } else {
+          console.log(`    ⚠️ Mapel tidak lengkap:`, mapel);
+        }
+      });
+    }
+  } else {
+    console.log(`❌ masterMapel bukan array di guru ke-${i}:`, masterMapel);
+  }
+}
+
+console.log('🔍 Props.tugas:', props.tugas);
+console.log('🔍 Props.classes_for_student:', props.classes_for_student);
 
 // Form Data for User Authentication
 const form = useForm({
@@ -38,8 +61,6 @@ const form = useForm({
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
-
-// Data for Courses, Teachers, Students, and Enrollment
 
 const enrollments = ref([]);
 
@@ -69,67 +90,17 @@ const editForm = ref({
 const totalPages = ref(1);
 const currentPage = ref(1);
 
-const searchQuery = ref('');
+console.log('taskForm yang dikirim:', taskForm.value);
 
-// Teacher & Course Selection
-const selectedTeacherId = ref(null);
-const selectedStudentId = ref(null);
-const selectedCourseId = ref(null);
+const searchQuery = ref('');
 
 // Modal Handling Functions
 const showAddModal = () => {
   isTaskModalOpen.value = true;
 };
 
-const getTeacherName = (teacherId) => {
-  // Log the teachers data to ensure it's available
-  const rawTeachers = toRaw(teachers.value); // Remove the Vue proxy if needed
-  // console.log("Teachers data (raw):", rawTeachers);
-
-  // Make sure teachers is an array
-  if (Array.isArray(rawTeachers)) {
-    // Find the teacher by matching the id
-    const teacher = rawTeachers.find((teacher) => teacher.id === teacherId);
-
-    if (teacher) {
-      console.log('Teacher found:', teacher.name);
-      return teacher.name;
-    } else {
-      //console.log("Teacher not found for ID:", teacherId);
-      return 'Tidak ada nama guru';
-    }
-  } else {
-    console.log('Teachers data is not an array');
-    return 'Tidak ada nama guru';
-  }
-};
-
-// Watch for changes in teachers and courses
-watch(
-  () => props.teachers,
-  (newTeachers) => {
-    teachers.value = newTeachers;
-    console.log('Teachers updated from props:', newTeachers);
-  },
-  { immediate: true }
-);
-watch(
-  () => students.value,
-  (newStudents) => {
-    console.log(newStudents);
-  }
-);
-
-watch(
-  () => courses.value,
-  (newCourses) => {
-    if (newCourses.length > 0 && !taskForm.value.mapel_id) {
-      taskForm.value.mapel_id = newCourses[0]?.id || null;
-    }
-    console.log('Courses updated:', newCourses);
-  },
-  { immediate: true }
-);
+const selectedId = ref(null);
+const selectedMapelTeachers = ref([]);
 
 watch(
   () => taskForm.mapel_id,
@@ -145,26 +116,42 @@ watch(
   }
 );
 
-// Menambahkan watch untuk update teacher_id
 watch(
-  () => selectedTeacherId.value,
-  (newTeacherId) => {
-    console.log('New Teacher ID:', newTeacherId); // Debug
-    if (newTeacherId) {
-      // Pastikan `teacher_id` berupa string
-      editForm.value.teacher_id = String(newTeacherId);
-    }
-  }
-);
+  () => taskForm.value.mapel_id,
+  (newMapelId) => {
+    taskForm.value.teacher_id = '';
+    selectedMapelTeachers.value = [];
 
-watch(
-  () => selectedStudentId.value,
-  (newstudentId) => {
-    console.log('New Student ID:', newstudentId); // Debug
-    if (newstudentId) {
-      // Pastikan `student_id` berupa string
-      editForm.value.student_id = String(newstudentId);
-    }
+    const selectedIdNum = newMapelId ? Number(newMapelId) : null;
+    selectedId.value = selectedIdNum;
+
+    if (!selectedIdNum) return;
+
+    console.log('Mapel dipilih:', selectedIdNum);
+    console.log('Jumlah guru saat ini:', teachers.value.length);
+    console.log(
+      'teacher ids di teachers.value:',
+      teachers.value.map((t) => t.id)
+    );
+
+    const filteredTeachers = toRaw(teachers.value).filter((teacher) => {
+      const mapels = Array.isArray(teacher.masterMapel)
+        ? teacher.masterMapel
+        : [];
+
+      const isMengajar = mapels.some((m) => Number(m.id) === selectedIdNum);
+
+      if (isMengajar) {
+        const mapelNames = mapels
+          .filter((m) => Number(m.id) === selectedIdNum)
+          .map((m) => m.nama_mapel || '[Tanpa Nama]');
+        console.log(`Guru ${teacher.name} mengajar mapel ini:`, mapelNames);
+      }
+
+      return isMengajar;
+    });
+
+    selectedMapelTeachers.value = filteredTeachers;
   }
 );
 
@@ -174,49 +161,6 @@ const saveEnrollmentsToLocalStorage = () => {
 
 watch(enrollments, saveEnrollmentsToLocalStorage, { deep: true });
 
-const fetchEnrollments = async () => {
-  try {
-    const response = await axios.get(
-      `/api/enrollments?page=${currentPage.value}`
-    );
-    const newEnrollments = response.data.data;
-
-    // Proses nama guru wali kelas untuk data baru terlebih dahulu
-    newEnrollments.forEach((enrollment) => {
-      const teacherName = enrollment.teacher
-        ? enrollment.teacher.name
-        : 'Belum ada wali kelas';
-      console.log('Nama Guru Wali Kelas:', teacherName);
-    });
-
-    // Perbarui enrollments tanpa menghapus data yang ada
-    newEnrollments.forEach((newEnrollment) => {
-      const index = enrollments.value.findIndex(
-        (enrollment) => enrollment.id === newEnrollment.id
-      );
-
-      if (index === -1) {
-        enrollments.value.push(newEnrollment); // Jika data baru, tambahkan
-      } else {
-        enrollments.value[index] = newEnrollment; // Jika ada data lama, update
-      }
-    });
-
-    totalPages.value = response.data.last_page;
-
-    // Setelah menggabungkan, proses data gabungan (opsional)
-    enrollments.value.forEach((enrollment) => {
-      const teacherName = enrollment.teacher
-        ? enrollment.teacher.name
-        : 'Belum ada wali kelas';
-      console.log('Nama Guru Wali Kelas:', teacherName);
-    });
-  } catch (error) {
-    console.error('Error fetching enrollments:', error);
-  }
-};
-
-//const modalVisible = ref(false); // Deklarasikan modalVisible
 //const isModalOpen = ref(false);
 const closeTaskModal = () => {
   console.log('Closing modal - before', isTaskModalOpen.value);
@@ -224,19 +168,27 @@ const closeTaskModal = () => {
   console.log('Closing modal - after', isTaskModalOpen.value);
 };
 
+const fetchTugas = (page = 1) => {
+  //console.log('fetchTugas dipanggil dengan page:', page);
+  router.visit(route('membuatTugasSiswa'), {
+    method: 'get',
+    data: { page },
+    preserveScroll: true,
+    preserveState: true,
+    only: ['tugas'],
+    onSuccess: () => {
+      //console.log('Navigasi ke halaman tugas berhasil');
+    },
+    onError: (errors) => {
+      console.error('Gagal fetch tugas (Inertia):', errors);
+    },
+  });
+};
+
 // Save Task Function
 const saveTask = async () => {
   try {
-    console.log('Form Submitted:', taskForm.value);
-
-    // Pastikan classesForStudent sudah ada isinya
-    if (!classesForStudent.value || classesForStudent.value.length === 0) {
-      console.warn(
-        'Warning: classesForStudent kosong, tidak bisa set default class_id.'
-      );
-    }
-
-    // Set nilai default class_id sebelum validasi
+    // Set default class_id
     if (
       (!taskForm.value.class_id || taskForm.value.class_id === null) &&
       classesForStudent.value?.length > 0
@@ -246,16 +198,16 @@ const saveTask = async () => {
       console.log('Class ID setelah diatur:', taskForm.value.class_id);
     }
 
-    // Set default mapel_id jika belum ada
+    // Set default mapel_id dari courses yang berisi pivot + mapel + guru
     if (
       (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
       courses.value?.length > 0
     ) {
-      taskForm.value.mapel_id = toRaw(courses.value)[0]?.id || null;
+      taskForm.value.mapel_id = toRaw(courses.value)[0]?.mapel_id || null;
       console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
     }
 
-    // Set default student_id jika belum ada
+    // Set default student_id
     if (
       (!taskForm.value.student_id || taskForm.value.student_id === null) &&
       students.value?.length > 0
@@ -264,10 +216,11 @@ const saveTask = async () => {
       console.log('Student ID setelah diatur:', taskForm.value.student_id);
     }
 
-    // Validasi: pastikan semua id valid dan sudah jadi number
+    // Validasi id numerik
     const teacherId = parseInt(taskForm.value.teacher_id);
     const studentId = parseInt(taskForm.value.student_id);
     const classId = parseInt(taskForm.value.class_id);
+    const mapelId = parseInt(taskForm.value.mapel_id);
 
     if (isNaN(teacherId)) {
       console.error('Teacher ID belum dipilih atau tidak valid.');
@@ -281,13 +234,18 @@ const saveTask = async () => {
       console.error('Class ID belum dipilih atau tidak valid.');
       return;
     }
+    if (isNaN(mapelId)) {
+      console.error('Mapel ID belum dipilih atau tidak valid.');
+      return;
+    }
 
     // Assign kembali nilai numerik ke taskForm
     taskForm.value.teacher_id = teacherId;
     taskForm.value.student_id = studentId;
     taskForm.value.class_id = classId;
+    taskForm.value.mapel_id = mapelId;
 
-    // Setup CSRF Token dan axios credentials
+    // Setup axios & csrf
     const token = document.head.querySelector(
       'meta[name="csrf-token"]'
     ).content;
@@ -378,13 +336,18 @@ const handleTask = () => {
 
 const pageNumber = ref(1);
 
+watch(pageNumber, (newPage) => {
+  console.log('Watcher: pageNumber berubah jadi', newPage);
+  fetchTugas(newPage);
+});
+
 const updatedPageNumber = (page) => {
   if (!page || isNaN(page)) {
-    console.warn('❌ Halaman tidak valid:', page);
+    console.warn('Halaman tidak valid:', page);
     return;
   }
 
-  console.log('🔄 Berpindah ke halaman:', page);
+  console.log('Berpindah ke halaman:', page);
   pageNumber.value = Number(page); // Akan memicu fetch ulang jika ada watch()
 };
 
@@ -440,14 +403,18 @@ onMounted(async () => {
     }
 
     // Fetch teachers
-    const teachersResponse = await axios.get('/api/teachers');
+    const teachersResponse = await axios.get('/api/teachers/all');
     if (teachersResponse.data?.data) {
+      console.warn(
+        '🎓 Teachers fetched from API:',
+        teachersResponse.data.data.length
+      );
+      console.log(
+        '🆔 IDs:',
+        teachersResponse.data.data.map((t) => t.id)
+      );
       teachers.value = teachersResponse.data.data;
     }
-
-    console.log('Selected Teacher ID:', selectedTeacherId.value);
-    console.log('Mapel ID:', taskForm.value.mapel_id);
-    console.log('Student ID:', taskForm.value.student_id);
   } catch (error) {
     console.error('Error fetching data:', error);
   }
@@ -468,23 +435,45 @@ watch(
     // Set default class_id juga di sini
     if (classesForStudent.value.length > 0) {
       taskForm.value.class_id = toRaw(classesForStudent.value)[0].id || null;
-      console.log('Set class_id via watch:', taskForm.value.class_id);
     }
   },
   { immediate: true }
 );
 
-// Change Page Function for Pagination
-const changePage = async (page) => {
-  console.log('Changing to page:', page); // Log halaman baru yang akan diakses
-  currentPage.value = page;
+watch(
+  pageNumber,
+  (newPage) => {
+    if (!newPage || isNaN(newPage)) return;
 
-  console.log('Fetching enrollments for page:', currentPage.value); // Log sebelum memanggil API
-  await fetchEnrollments(); // Panggil API untuk halaman baru
+    // Update URL tanpa reload halaman
+    const baseUrl = window.location.origin + window.location.pathname;
+    const newUrl = `${baseUrl}?page=${newPage}`;
+    window.history.pushState({}, '', newUrl);
 
-  console.log('Successfully fetched enrollments for page:', currentPage.value); // Log setelah data berhasil diambil
-};
+    // Panggil ulang data untuk halaman baru
+    fetchTugas(newPage);
+  },
+  { immediate: true }
+);
 
+watch(
+  () => props.mapels,
+  (newVal) => {
+    mapels.value = newVal || [];
+  }
+);
+
+// Optional: Watch untuk teacher_id hanya jika kamu ingin logging atau validasi tambahan
+watch(
+  () => taskForm.teacher_id,
+  (newTeacherId) => {
+    const selectedTeacher = selectedMapelTeachers.value.find(
+      (teacher) => teacher.id === parseInt(newTeacherId)
+    );
+
+    console.log('Selected Teacher:', selectedTeacher);
+  }
+);
 // Edit and Delete Enrollment Functions
 function editEnrollment(enrollment) {
   console.log('Editing enrollment:', enrollment);
@@ -894,7 +883,7 @@ const submitEdit = async () => {
                 >
                   <option value="" disabled>Pilih Guru</option>
                   <option
-                    v-for="teacher in props.teachers"
+                    v-for="teacher in selectedMapelTeachers"
                     :key="teacher.id"
                     :value="teacher.id"
                   >
@@ -994,7 +983,7 @@ const submitEdit = async () => {
                   >Description</label
                 >
                 <textarea
-                  v-model="taskForm.description"
+                  v-model="editForm.description"
                   id="description"
                   class="mt-1 block w-full border-gray-300 rounded-md"
                   placeholder="Masukkan deskripsi"
@@ -1174,12 +1163,13 @@ const submitEdit = async () => {
           </tbody>
         </table>
       </div>
+      <pre>{{ JSON.stringify(selectedMapelTeachers.value, null, 2) }}</pre>
 
       <Pagination :data="props.tugas" :updatedPageNumber="updatedPageNumber" />
     </main>
     <!-- Sidebar -->
     <aside
-      class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+      class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
       aria-label="Sidenav"
       id="drawer-navigation"
       style=""

@@ -25,14 +25,13 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/auth/refresh-token', [AuthController::class, 'refreshToken']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->get('/attendance', [AttendanceController::class, 'indexApi1']);
-Route::middleware('auth:sanctum')->put('/attendance/{studentId}', [AttendanceController::class, 'update']);
 
 Route::get('sections', SectionController::class)->name('sections.index');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendance1', [AttendanceController::class, 'indexApi1']);
     Route::get('/attendance2', [AttendanceController::class, 'getAttendances']);
-    Route::post('/attendance3', [AttendanceController::class, 'store']);
+    Route::post('/attendance3', action: [AttendanceController::class, 'store']);
 });
 
 Route::get('/students/count', function () {
@@ -138,12 +137,8 @@ Route::get('/fetch-all-students', action: [StudentController::class, 'fetchAllSt
 
 Route::post('/tugas', [TeacherController::class, 'createTugasSiswa']);
 
+Route::get('/teachers/all', [TeacherController::class, 'getAllTeachers']);
 
+Route::post('/attendances/batch-update', [AttendanceController::class, 'batchUpdate']);
 
-
-
-
-
-
-
-
+Route::get('/api-schedule', [MataPelajaranController::class, 'apiJadwal']);

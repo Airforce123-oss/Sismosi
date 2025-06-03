@@ -270,7 +270,6 @@ Route::get('/master-jabatan/{master_jabatan}/edit', [MasterJabatanController::cl
 Route::post('/tugas-siswa', [TeacherController::class, 'createTugasSiswa'])->name('tugas-siswa.create');
 
 
-
 // Include Auth Routes
 require __DIR__ . '/auth.php';
 require __DIR__ . '/admin-auth.php';

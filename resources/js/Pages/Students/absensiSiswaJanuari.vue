@@ -11,6 +11,7 @@ import {
   isProxy,
 } from 'vue';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { initFlowbite } from 'flowbite';
@@ -41,35 +42,16 @@ const props = defineProps({
 
 const studentsList = ref([]);
 const currentPage = ref(1);
-console.log('currentPage:', currentPage.value);
-const perPage = 5;
-console.log('🧑‍🎓 Students yang diterima:', props.students);
+//console.log('currentPage:', currentPage.value);
+//console.log('🧑‍🎓 Students yang diterima:', props.students);
+//console.log('isi props: ', props);
 
-const mapelNames = computed(() => {
-  let list = [];
-
-  if (Array.isArray(props.selectedMapel)) {
-    list = props.selectedMapel.map((m) => m.mapel);
-  } else if (props.selectedMapel && props.selectedMapel.mapel) {
-    list = [props.selectedMapel.mapel];
-  }
-
-  if (list.length === 0) return '—';
-  if (list.length === 1) return list[0];
-  const last = list.pop();
-  return `${list.join(', ')} dan ${last}`;
-});
-
-console.log('Props di Komponen Anak:', props);
-console.log('Received selectedMapel:', props.selectedMapel);
-console.log('Kelas List:', props.kelasList);
 const kelasList = ref([]);
-console.log('Received selectedKelas:', props.selectedKelas);
 
 const emit = defineEmits();
 emit('debug', props.selectedKelas);
 
-console.log('📥 selectedKelas di Child (props):', props.selectedKelas);
+//console.log('📥 selectedKelas di Child (props):', props.selectedKelas);
 
 // Fungsi untuk mengambil data mata pelajaran
 const fetchMapelByMonth = async () => {
@@ -93,7 +75,7 @@ const fetchMapelByMonth = async () => {
       attendanceData.value = response.data.data.filter((mapel) => {
         return mapel.mapel === props.selectedMapel.mapel; // Hanya ambil mapel yang dipilih
       });
-      console.log('Filtered Mapel List:', attendanceData.value); // Log untuk memeriksa data yang difilter
+      //console.log('Filtered Mapel List:', attendanceData.value); // Log untuk memeriksa data yang difilter
     } else {
       console.error(
         'Response does not contain valid mapel data:',
@@ -124,21 +106,9 @@ const isValidSelectedMapel = (selectedMapel) => {
     selectedMapel = selectedMapel.mapel ?? ''; // Pastikan mengambil key yang benar
   }
 
-  console.log(
-    '🔍 After processing:',
-    `"${selectedMapel}"`,
-    `(${typeof selectedMapel})`
-  );
-
   // Validasi harus string
   if (typeof selectedMapel !== 'string') {
     console.error('❌ Error: selectedMapel is not a string');
-    return false;
-  }
-
-  // Jangan validasi jika kosong
-  if (selectedMapel.trim() === '') {
-    console.warn('⚠️ Mapel belum dipilih');
     return false;
   }
 
@@ -215,7 +185,7 @@ const fetchKelasMapel = async () => {
     const response = await axios.get(
       `/api/absensi-siswa?month=${currentMonth + 1}&year=${currentYear}`
     );
-    console.log('API Response fetchKelasMapel:', response.data.data); // Log respons API
+    //console.log('API Response fetchKelasMapel:', response.data.data); // Log respons API
 
     // Memastikan bahwa response.data.data ada dan berisi data mata pelajaran
     if (response.data.data && Array.isArray(response.data.data)) {
@@ -239,16 +209,8 @@ const fetchKelasMapel = async () => {
 
 //const student = props.student;
 const selectedStudentStatuses = ref({});
-//const currentMonthYear = ref("");
-const pageNumber = ref(1);
-const newStatus = ref('');
-//const newStatus = selectedStudentStatuses.value[studentId]?.status_kehadiran[0]; // Mengambil status dari array
-
-const date = ref(new Date());
 ///const date = new Date();
 const userInputDate = ref('');
-// Mendapatkan tanggal saat ini (tanggal hari ini)
-const currentDay = new Date().getDate();
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth();
 const currentMonthYear = computed(() => {
@@ -306,37 +268,6 @@ const getDayName = (date) => {
   return dayName;
 };
 
-const dayIndex = 0;
-console.log('Nilai dayIndex:', dayIndex);
-
-const getFormattedDate = (dayIndex) => {
-  if (dayIndex === undefined || isNaN(dayIndex)) {
-    console.error('dayIndex tidak valid:', dayIndex);
-    return 'Tanggal tidak valid';
-  }
-
-  //const currentDate = new Date();
-  const currentDate = ref(new Date());
-
-  //console.log('currentDate sebelum setDate:', currentDate.value);
-  if (dayIndex !== 0) {
-    currentDate.value.setDate(currentDate.value.getDate() + dayIndex); // Gunakan .value
-  }
-  //console.log('currentDate setelah setDate:', currentDate.value);
-  // Validasi jika tanggal valid
-  if (isNaN(currentDate.value.getTime())) {
-    // Gunakan .value
-    console.error('Tanggal tidak valid untuk dayIndex:', dayIndex);
-    return 'Tanggal tidak valid';
-  }
-
-  const day = currentDate.value.getDate().toString().padStart(2, '0'); // Format 2 digit
-  const month = (currentDate.value.getMonth() + 1).toString().padStart(2, '0'); // Bulan dalam format 2 digit
-  const year = currentDate.value.getFullYear();
-  const dayName = getDayName(dayIndex); // Mendapatkan nama hari
-  return `${dayName}, ${day}-${month}-${year}`; // Format: "Senin, 07-12-2024"
-};
-
 const defaultTanggal = computed(() => {
   const today = new Date();
   const day = today.getDate().toString().padStart(2, '0');
@@ -350,45 +281,17 @@ const totalDaysInMonth = Array.from(
   (_, i) => i + 1
 );
 
-console.log('totalDaysInMonth ' + totalDaysInMonth);
+//console.log('totalDaysInMonth ' + totalDaysInMonth);
 
 const isSunday = (day) => {
   const dateObj = new Date(currentYear, currentMonth, day);
   return dateObj.getDay() === 0; // 0 berarti Minggu
 };
 
-console.log(defaultTanggal.value);
-
-//const tanggal_kehadiran = ref(
-//  `${currentYear}-${(currentMonth + 1)
-//    .toString()
-//  .padStart(2, "0")}-${currentDay.toString().padStart(2, "0")}`
-///);
-
 const tanggal_kehadiran = ref('');
-
-console.log('Tanggal Kehadiran:', tanggal_kehadiran.value);
-const pageChanged = ref(false);
 const isNavigating = ref(false);
 const isSelectVisible = ref(false);
-const nextMonthYear = ref('');
-const nextNextMonthYear = ref('');
 const isAddModalVisible = ref(false);
-
-// Helper functions
-const getCurrentMonthYear = () => {
-  const today = new Date();
-  return today.toLocaleDateString('id-ID', {
-    month: 'long',
-    year: 'numeric',
-  });
-};
-
-// Modal handling functions
-function toggleModalSave() {
-  console.log('toggleModalSave dipanggil');
-  isAddModalVisible.value = !isAddModalVisible.value;
-}
 
 // Logs for debugging
 //console.log(studentId.value);
@@ -405,7 +308,6 @@ const data = {
   tanggal_kehadiran: tanggal_kehadiran.value,
   attendances: Object.values(selectedStudentStatuses.value), // Contoh pengiriman status absensi
 };
-console.log('Tanggal Kehadiran:', tanggal_kehadiran.value);
 
 console.log('Data yang dikirim ke API ||const data: ', data);
 
@@ -433,8 +335,14 @@ const formattedDate = (date) => {
 };
 const isFetchingData = ref(false);
 
+function normalizeDate(rawDate) {
+  if (!rawDate) return '';
+  return rawDate.__v_isRef ? rawDate.value : rawDate;
+}
+
 const fetchData = async () => {
-  if (isFetchingData.value) return; // Cegah duplicate request
+  if (isFetchingData.value) return;
+
   isFetchingData.value = true;
   loading.value = true;
 
@@ -446,73 +354,73 @@ const fetchData = async () => {
       return;
     }
 
-    console.log('✅ Student IDs:', studentId.value);
+    const response = await axios.get('/api/attendances', {
+      params: { student_ids: studentId.value },
+    });
 
-    const response = await axios.get('/api/attendance1'); // Panggil API
+    const attendancesArray = response.data;
 
-    if (!response.data || !response.data.attendances) {
+    if (!Array.isArray(attendancesArray) || attendancesArray.length === 0) {
       console.warn('⚠️ Data absensi kosong atau tidak ditemukan.');
       return;
     }
 
-    console.log('📩 Data absensi yang diterima:', response.data.attendances);
+    console.log('📩 Data absensi dari API:', attendancesArray);
 
-    const absensiArray = Object.entries(response.data.attendances).map(
-      ([id, attendance]) => ({
-        studentId: id,
-        status: Object.entries(attendance).map(([date, status]) => ({
-          date,
-          status,
-        })),
-      })
-    );
+    const updatedStatuses = {};
 
-    absensiArray.forEach(({ studentId, status }) => {
-      status.forEach((attendance) => {
-        let rawDate = attendance.date || tanggal_kehadiran.value;
+    attendancesArray.forEach((item) => {
+      const id = item.siswa_id ?? item.student_id; // fallback untuk backward compatibility
 
-        if (rawDate && rawDate.__v_isRef) {
-          rawDate = rawDate.value;
-        }
-
-        if (!isValidDate(rawDate)) {
-          console.warn(`❌ Tanggal tidak valid untuk siswa ID: ${studentId}`);
-          return;
-        }
-
-        const formattedDateString = formattedDate(new Date(rawDate));
-
-        console.log(
-          `🔄 Memperbarui status untuk siswa ID: ${studentId} pada ${formattedDateString}`
-        );
-
-        selectedStudentStatuses.value[studentId] =
-          selectedStudentStatuses.value[studentId] || {};
-        selectedStudentStatuses.value[studentId][formattedDateString] =
-          attendance.status || 'Belum diabsen';
-      });
-    });
-
-    attendances.value = absensiArray;
-
-    paginatedStudents.value = attendances.value.filter((student) => {
-      const idNumber = parseInt(student.studentId);
-      if (!studentId.value.includes(idNumber)) return false;
-
-      if (!student.studentId || !Array.isArray(student.status)) {
-        console.warn('⚠️ Data siswa tidak valid:', student);
-        return false;
+      if (id === null || id === undefined) {
+        console.warn('⚠️ item absensi tanpa student_id/siswa_id:', item);
+        return;
       }
 
-      return student.status.every((s) =>
-        ['P', 'A', 'S', 'I'].includes(s.status)
-      );
+      const studentIdNum = Number(id);
+      if (isNaN(studentIdNum)) {
+        console.warn('⚠️ student_id bukan angka valid:', id);
+        return;
+      }
+
+      if (!updatedStatuses[studentIdNum]) {
+        updatedStatuses[studentIdNum] = {};
+      }
+
+      const formatted = formattedDate(new Date(item.tanggal_kehadiran));
+      updatedStatuses[studentIdNum][formatted] =
+        item.status_kehadiran?.trim() || item.status?.trim() || 'Belum diabsen';
     });
+
+    selectedStudentStatuses.value = updatedStatuses;
+
+    // ✅ Gabungkan dengan data siswa
+    const allowedStatuses = ['P', 'A', 'S', 'I'];
+
+    paginatedStudents.value = Object.entries(updatedStatuses)
+      .map(([studentId, statuses]) => {
+        const studentData = students.value.find(
+          (s) => Number(s.id) === Number(studentId)
+        );
+
+        if (!studentData) return null;
+
+        return {
+          id: studentData.id,
+          name: studentData.name,
+          status: Object.entries(statuses).map(([date, status]) => ({
+            date,
+            status,
+          })),
+        };
+      })
+      .filter(Boolean); // filter student yg tidak ditemukan
 
     console.log('✅ Selected Student Statuses:', selectedStudentStatuses.value);
     console.log('✅ Paginated Students:', paginatedStudents.value);
   } catch (error) {
-    console.error('❌ Error fetching data:', error);
+    console.error('❌ Gagal mengambil data absensi:', error);
+    alert('Gagal mengambil data absensi. Silakan coba lagi.');
   } finally {
     isFetchingData.value = false;
     loading.value = false;
@@ -521,11 +429,6 @@ const fetchData = async () => {
 
 // Panggil fungsi fetchData untuk memulai pemanggilan data
 fetchData();
-
-const statusChanged = ref(false);
-
-console.log(date);
-
 // Fungsi untuk menyimpan status ke localStorage
 const saveStatusToLocalStorage = () => {
   // Pastikan data sudah berupa objek biasa tanpa ref
@@ -783,20 +686,30 @@ const fetchAttendances = async () => {
     const response = await axios.get('/api/attendances');
     console.log('Response Data:', response.data);
 
-    // Validasi: response.data harus array
-    if (!Array.isArray(response.data)) {
-      console.error('Data absensi tidak valid: response.data bukan array.');
+    // Cek apakah response.data adalah objek dan memiliki properti 'attendances' yang array
+    if (
+      typeof response.data !== 'object' ||
+      !Array.isArray(response.data.attendances)
+    ) {
+      console.error(
+        'Data absensi tidak valid: response.data.attendances bukan array.'
+      );
       attendanceData.value = [];
       newAttendance.value = [];
       return;
     }
 
-    // Simpan data
-    attendanceData.value = response.data;
-    newAttendance.value = response.data;
+    // Simpan data absensi yang ada di dalam 'attendances'
+    attendanceData.value = response.data.attendances;
+    newAttendance.value = response.data.attendances;
+
     console.log('Absensi Data Valid:', attendanceData.value);
 
-    // Periksa apakah kosong
+    // Jika ingin juga simpan tanggal kehadiran
+    const tanggalKehadiran = response.data.tanggal_kehadiran;
+    console.log('Tanggal Kehadiran:', tanggalKehadiran);
+
+    // Periksa apakah data kosong
     if (attendanceData.value.length === 0) {
       console.warn('Data absensi kosong.');
       alert(
@@ -804,7 +717,7 @@ const fetchAttendances = async () => {
       );
     }
 
-    // Proses data absensi (jika ada fungsi khusus)
+    // Jika ada proses lanjutan
     processAttendances();
   } catch (error) {
     console.error('Error fetching attendances:', error);
@@ -932,7 +845,7 @@ const paginatedStudents = computed(() => {
   }
 
   // Menampilkan data studentsList sebelum melakukan pagination
-  console.log('Data studentsList sebelum pagination:', studentsList.value);
+  //console.log('Data studentsList sebelum pagination:', studentsList.value);
 
   // Hitung start dan end berdasarkan pagination
   const start = (pagination.value.current_page - 1) * pagination.value.per_page;
@@ -959,7 +872,7 @@ const paginatedStudents = computed(() => {
   const paginatedData = studentsList.value.slice(start, end);
 
   // Menampilkan data setelah pagination
-  console.log('Data yang ditampilkan pada halaman ini:', paginatedData);
+  //console.log('Data yang ditampilkan pada halaman ini:', paginatedData);
 
   return paginatedData;
 });
@@ -1104,49 +1017,58 @@ const handleStatusChange = (studentId, date) => {
   }
 };
 
-const selectStatus = (status) => {
-  if (['P', 'A', 'S', 'I'].includes(status)) {
+const selectStatus = async (status) => {
+  if (!['P', 'A', 'S', 'I'].includes(status)) {
+    console.warn(`Status "${status}" tidak valid.`);
+    return;
+  }
+
+  if (!selectedStudentId.value || !selectedDate.value) {
+    console.warn('ID siswa atau tanggal belum dipilih.');
+    return;
+  }
+
+  try {
+    const dateKey = formattedDate(selectedDate.value);
+
     console.log(
-      `Status kehadiran siswa ${selectedStudentId.value} pada ${selectedDate.value} diperbarui menjadi: ${status}`
+      `Status kehadiran siswa ${selectedStudentId.value} pada ${dateKey} diperbarui menjadi: ${status}`
     );
 
-    // Update status pada selectedStudentStatuses
-    const dateKey = formattedDate(selectedDate.value);
-    const statusKey = `${selectedStudentId.value}-${dateKey}`;
-
-    // Perbarui status di selectedStudentStatuses
-    selectedStudentStatuses.value[selectedStudentId.value] =
-      selectedStudentStatuses.value[selectedStudentId.value] || {};
+    // Update status di reactive state
+    if (!selectedStudentStatuses.value[selectedStudentId.value]) {
+      selectedStudentStatuses.value[selectedStudentId.value] = {};
+    }
     selectedStudentStatuses.value[selectedStudentId.value][dateKey] = {
       status_kehadiran: status,
     };
 
-    // Update status pada localStorage
+    // Update localStorage
     let storedStatuses = JSON.parse(localStorage.getItem('attendances')) || {};
-
-    // Perbarui status di storedStatuses
-    storedStatuses[selectedStudentId.value] =
-      storedStatuses[selectedStudentId.value] || {};
+    if (!storedStatuses[selectedStudentId.value]) {
+      storedStatuses[selectedStudentId.value] = {};
+    }
     storedStatuses[selectedStudentId.value][dateKey] = status;
 
-    // Bandingkan jika data di localStorage berbeda dengan yang baru diubah
-    if (
-      JSON.stringify(storedStatuses) !==
-      JSON.stringify(selectedStudentStatuses.value)
-    ) {
-      console.log('Data status di localStorage telah diperbarui.');
-      localStorage.setItem('attendances', JSON.stringify(storedStatuses));
-    } else {
-      console.log('Tidak ada perubahan, data tidak disimpan.');
-    }
+    localStorage.setItem('attendances', JSON.stringify(storedStatuses));
+    console.log('Data status di localStorage telah diperbarui.');
 
-    updateAttendance({
+    // Kirim update ke backend satu per satu
+    await updateAttendance({
       siswa_id: selectedStudentId.value,
-      tanggal_kehadiran: formattedDate(selectedDate.value),
+      tanggal_kehadiran: dateKey,
       status: status,
+      mapel: props.selectedMapel.length > 0 ? props.selectedMapel[0].mapel : '',
     });
 
-    closeModal(); // Menutup modal setelah memilih status
+    // Kirim batch semua data sekaligus
+    await saveAllAttendancesBatch();
+
+    // Tutup modal setelah update berhasil
+    closeModal();
+  } catch (error) {
+    console.error('Gagal memperbarui status kehadiran:', error);
+    alert('Terjadi kesalahan saat menyimpan data absensi. Silakan coba lagi.');
   }
 };
 
@@ -1264,12 +1186,12 @@ const submitAttendance = async () => {
         selectedStudentStatuses.value[student.id]?.status_kehadiran || 'P';
 
       // Format tanggal sebelum digunakan
-      const dateKey = formattedDate(tanggal_kehadiran.value);
+      // const dateKey = formattedDate(tanggal_kehadiran.value); // Tidak perlu ini di item attendance
 
       return {
         student_id: student.id,
         status_kehadiran: status,
-        tanggal_kehadiran: dateKey,
+        // tanggal_kehadiran: dateKey, // Hapus ini agar sesuai backend
       };
     });
 
@@ -1304,13 +1226,7 @@ const submitAttendance = async () => {
 };
 
 // Fungsi untuk mereset form input absensi setelah data berhasil disimpan
-const resetAttendanceForm = () => {
-  // Reset tanggal kehadiran
-  //tanggal_kehadiran.value = null; // Atur ini ke null atau sesuai dengan kebutuhan
-  // Reset status absensi siswa
-};
-
-console.log('Attending data:', attendanceData);
+const resetAttendanceForm = () => {};
 
 if (selectedStudentStatuses.value[studentId]) {
   selectedStudentStatuses.value[studentId].status_kehadiran = status;
@@ -1346,7 +1262,7 @@ const csrfToken = document.head.querySelector(
 axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
 
 // memverifikasi apakah token disetel dengan benar sebelum mengirimkan permintaan
-console.log('CSRF Token:', axios.defaults.headers.common['X-CSRF-TOKEN']);
+//console.log('CSRF Token:', axios.defaults.headers.common['X-CSRF-TOKEN']);
 
 const mapStudentStatuses = () => {
   const savedStatuses = localStorage.getItem('studentStatuses');
@@ -1500,10 +1416,8 @@ const initializeStatuses = () => {
     }
 
     if (!selectedStudentStatuses.value[student.id][tanggal_kehadiran.value]) {
-      selectedStudentStatuses.value[student.id][tanggal_kehadiran.value] = {
-        status_kehadiran: 'Belum diabsen',
-        tanggal_kehadiran: tanggal_kehadiran.value,
-      };
+      selectedStudentStatuses.value[student.id][tanggal_kehadiran.value] =
+        'Belum diabsen';
     }
   });
 };
@@ -1513,35 +1427,125 @@ if (!Object.keys(selectedStudentStatuses.value).length) {
   initializeStatuses();
 }
 
-const newData = ref([]); // Hanya mendeklarasikan newData sekali di luar
-
 const updateAttendance = async (newData) => {
   try {
     const token = localStorage.getItem('auth_token');
     const csrfToken = document
       .querySelector('meta[name="csrf-token"]')
-      .getAttribute('content');
+      ?.getAttribute('content');
 
-    if (
-      !newData ||
-      !newData.tanggal_kehadiran ||
-      !newData.siswa_id ||
-      !newData.status
-    ) {
+    // Mendukung newData berupa ref atau objek biasa
+    const data = newData?.value || newData || {};
+    const { siswa_id, tanggal_kehadiran, status } = data;
+
+    // Validasi input sebelum dikirim ke server
+    if (!siswa_id || !tanggal_kehadiran || !status) {
+      console.warn('❌ Data absensi tidak lengkap:', data);
       return;
     }
 
-    console.log('Mengirim PUT ke', '/attendances/update');
-    console.log('Mengirim data absensi ke backend:', newData);
+    // Format tanggal ke YYYY-MM-DD
+    const tanggalFormatted = new Date(tanggal_kehadiran)
+      .toISOString()
+      .split('T')[0];
 
+    console.log('📤 Mengirim data ke backend:', {
+      siswa_id,
+      tanggal_kehadiran: tanggalFormatted,
+      status,
+    });
+
+    // Kirim PUT request ke API Laravel
     const response = await axios.put(
-      '/api/attendances/update', // Menggunakan route yang baruRoute::put('/attendances/update', [TeacherController::class, 'storeAttendance'])->name('attendances.update');
-
+      '/api/attendances/update',
       {
-        siswa_id: newData.siswa_id,
-        tanggal_kehadiran: newData.tanggal_kehadiran,
-        status: newData.status,
+        siswa_id,
+        tanggal_kehadiran: tanggalFormatted,
+        status,
       },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-CSRF-TOKEN': csrfToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('✅ Response dari server:', response.data);
+
+    // Simpan ke localStorage cache (opsional)
+    const cacheKey = 'local_attendance_cache';
+    const existingCache = JSON.parse(localStorage.getItem(cacheKey)) || {};
+
+    if (!existingCache[siswa_id]) {
+      existingCache[siswa_id] = {};
+    }
+    existingCache[siswa_id][tanggalFormatted] = status;
+
+    localStorage.setItem(cacheKey, JSON.stringify(existingCache));
+    console.log('🗂️ Disimpan ke LocalStorage:', existingCache);
+
+    // Refresh data jika tersedia method fetchData
+    fetchData?.();
+  } catch (error) {
+    console.error('❌ Gagal update absensi:', error);
+
+    if (error.response) {
+      console.error('🔁 Response error:', error.response.data);
+    }
+
+    alert('Gagal memperbarui absensi. Silakan coba lagi.');
+  }
+};
+
+const saveAllAttendancesBatch = async () => {
+  const token = localStorage.getItem('auth_token');
+  const csrfToken = document
+    .querySelector('meta[name="csrf-token"]')
+    ?.getAttribute('content');
+
+  const payload = [];
+
+  for (const student of paginatedStudents.value) {
+    const statusMap = selectedStudentStatuses.value[student.id];
+
+    for (const tanggal of Object.keys(statusMap)) {
+      // Validasi: hanya push jika tanggal valid format YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+        console.warn('⛔ Dilewati karena key tanggal tidak valid:', tanggal);
+        continue;
+      }
+
+      const statusRaw = statusMap[tanggal];
+      // Konversi ke string jika status adalah object (misalnya { status_kehadiran: 'P' })
+      const status =
+        typeof statusRaw === 'object' && statusRaw !== null
+          ? statusRaw.status_kehadiran
+          : statusRaw;
+
+      console.log('✅ Push payload:', {
+        siswa_id: student.id,
+        tanggal_kehadiran: tanggal,
+        status: status,
+        mapel:
+          props.selectedMapel.length > 0 ? props.selectedMapel[0].mapel : '',
+      });
+
+      payload.push({
+        siswa_id: student.id,
+        tanggal_kehadiran: tanggal,
+        status: status,
+        mapel:
+          props.selectedMapel.length > 0 ? props.selectedMapel[0].mapel : '',
+      });
+    }
+  }
+
+  try {
+    const response = await axios.post(
+      '/api/attendances/batch-update',
+      { data: payload },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1550,27 +1554,58 @@ const updateAttendance = async (newData) => {
       }
     );
 
-    console.log('Absensi berhasil diperbarui:', response.data);
-    //alert('Absensi berhasil diperbarui!');
-    fetchAttendances(); // Ambil data absensi terbaru
+    console.log('✅ Batch response:', response.data);
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil',
+      text: 'Data absensi berhasil disimpan.',
+      timer: 2000,
+      showConfirmButton: false,
+    });
   } catch (error) {
-    // Log error secara lebih lengkap
-    console.error('Error memperbarui absensi:', error);
-
-    // Jika ada response error, tampilkan status dan pesan error dari server
-    if (error.response) {
-      console.log('Response error:', error.response);
-      console.log('Error status:', error.response.status);
-      console.log('Error data:', error.response.data);
-      console.log('Error headers:', error.response.headers);
-    }
-
-    // Menampilkan pesan error pada alert
-    alert('Gagal memperbarui absensi. Silakan coba lagi.');
+    console.error('❌ Gagal batch update:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal',
+      text: 'Gagal menyimpan data absensi.',
+    });
   }
 };
 
-updateAttendance(newData);
+//updateAttendance(data);
+
+const getAttendanceStatus = (studentId, date) => {
+  if (
+    typeof studentId !== 'number' ||
+    typeof date !== 'string' ||
+    !date.trim()
+  ) {
+    console.warn('ID atau tanggal absensi tidak valid:', studentId, date);
+    return 'Belum diabsen';
+  }
+
+  const allStatuses = selectedStudentStatuses.value;
+
+  if (
+    !allStatuses ||
+    typeof allStatuses !== 'object' ||
+    !(studentId in allStatuses) ||
+    typeof allStatuses[studentId] !== 'object' ||
+    allStatuses[studentId] === null
+  ) {
+    return 'Belum diabsen';
+  }
+
+  return allStatuses[studentId][date] || 'Belum diabsen';
+};
+
+const status = getAttendanceStatus(students.id, selectedDate.value);
+
+updateAttendance({
+  siswa_id: students.id,
+  tanggal_kehadiran: selectedDate.value,
+  status,
+});
 
 // Ambil semua data siswa
 const getAllStudents = async () => {
@@ -1583,7 +1618,7 @@ const getAllStudents = async () => {
       const response = await axios.get(currentPageUrl);
 
       // Debugging: Menampilkan response yang diterima
-      console.log('Response data:', response.data);
+      //console.log('Response data:', response.data);
 
       // Menambahkan data siswa ke dalam array allStudents
       allStudents = [...allStudents, ...response.data.data];
@@ -1622,13 +1657,13 @@ getAllStudents(); // Memanggil fungsi untuk mengambil semua siswa
 
 //const date = new Date();
 
-console.log('date:', date.value);
-console.log('Calling updateAttendanceStatus with:');
-console.log('date:', date.value);
-console.log('newStatus:', newAttendance.value);
-console.log('studentId:', studentId.value);
-console.log('newStatus:', newAttendance.value);
-console.log('newData:', newData.value);
+//console.log('date:', date.value);
+//console.log('Calling updateAttendanceStatus with:');
+//console.log('date:', date.value);
+//console.log('newStatus:', newAttendance.value);
+//console.log('studentId:', studentId.value);
+//console.log('newStatus:', newAttendance.value);
+//console.log('newData:', newData.value);
 
 const updateSelectedStatuses = (newAttendance) => {
   // Membersihkan selectedStudentStatuses.value
@@ -1700,36 +1735,6 @@ const getAttendanceData = async () => {
   } catch (error) {
     console.error('Gagal mengambil data absensi:', error);
   }
-};
-
-const getAttendanceStatus = (studentId, date) => {
-  // Validasi awal
-  if (
-    !studentId ||
-    !date ||
-    typeof studentId !== 'number' ||
-    typeof date !== 'string' ||
-    date.trim() === ''
-  ) {
-    console.warn('ID atau tanggal absensi tidak valid:', studentId, date);
-    return 'Belum diabsen';
-  }
-
-  if (
-    !selectedStudentStatuses.value ||
-    typeof selectedStudentStatuses.value !== 'object'
-  ) {
-    return 'Belum diabsen';
-  }
-
-  const studentStatuses = selectedStudentStatuses.value[studentId];
-
-  if (studentStatuses && studentStatuses[date]) {
-    const statusObj = studentStatuses[date];
-    return statusObj.status_kehadiran;
-  }
-
-  return 'Belum diabsen';
 };
 
 console.log('Nilai isAddModalVisible:', isAddModalVisible.value);
@@ -1880,6 +1885,14 @@ onMounted(async () => {
 // Tambahkan watchEffect untuk memantau perubahan props.selectedMapel
 watchEffect(() => {
   console.log('🔄 selectedMapel berubah:', props.selectedMapel);
+  console.log('selectedMapel.value:', props.selectedMapel);
+  console.log('Tipe selectedMapel.value:', typeof props.selectedMapel);
+
+  if (Array.isArray(props.selectedMapel)) {
+    console.log('selectedMapel.value adalah Array');
+  } else {
+    console.log('selectedMapel.value bukan Array');
+  }
 });
 
 watch(
@@ -1921,6 +1934,35 @@ watch(
     pagination.value.total = studentsList.value.length;
     pagination.value.last_page = Math.ceil(
       pagination.value.total / pagination.value.per_page
+    );
+  },
+  { immediate: true }
+);
+
+watch(
+  () => paginatedStudents.value,
+  (newStudents) => {
+    const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+    newStudents.forEach((student) => {
+      if (!selectedStudentStatuses.value[student.id]) {
+        selectedStudentStatuses.value[student.id] = {
+          [today]: 'Belum diabsen',
+        };
+        console.log(
+          `🆕 Inisialisasi status untuk siswa ID ${student.id} dengan tanggal ${today}`
+        );
+      } else {
+        console.log(
+          `✅ Status siswa ID ${student.id} sudah ada:`,
+          toRaw(selectedStudentStatuses.value[student.id])
+        );
+      }
+    });
+
+    console.log(
+      '📦 selectedStudentStatuses setelah inisialisasi:',
+      selectedStudentStatuses.value
     );
   },
   { immediate: true }
@@ -2628,7 +2670,7 @@ watch(
 
     <!-- Sidebar -->
     <aside
-      class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+      class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
       aria-label="Sidenav"
       id="drawer-navigation"
       style=""
@@ -2637,7 +2679,7 @@ watch(
         <ul class="space-y-2">
           <li>
             <a
-              href="teacher-dashboard"
+              href="/teacher-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2660,7 +2702,7 @@ watch(
           </li>
           <li>
             <a
-              href="absensiSiswa"
+              href="/absensiSiswa"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2679,7 +2721,7 @@ watch(
           </li>
           <li>
             <a
-              href="membuat-enrollment"
+              href="/membuat-enrollment"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2736,7 +2778,7 @@ watch(
           </li>
           <li>
             <a
-              href="membuatTugasSiswa"
+              href="/membuatTugasSiswa"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -2756,7 +2798,7 @@ watch(
 
           <li>
             <a
-              href="bukuPenghubung1"
+              href="/bukuPenghubung1"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

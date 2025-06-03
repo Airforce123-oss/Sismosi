@@ -45,7 +45,7 @@ class JadwalMataPelajaran extends Model
             Classes::class,  
             'id',            
             'id',         
-            'kelas_id',  
+        'kelas_id', 
             'wali_kelas_id'
         );
     }

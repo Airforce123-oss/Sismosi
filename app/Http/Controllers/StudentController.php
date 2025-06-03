@@ -20,6 +20,7 @@ use App\Models\Attendance;
 use App\Models\Classes; 
 use App\Models\Section;
 use App\Models\Religion;
+use Inertia\Inertia;
 use App\Models\Teacher;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Gender;
@@ -114,22 +115,66 @@ class StudentController extends Controller
         ]);
     }
     
-
     public function melihatDataAbsensiSiswa(Request $request)
     {
-        // Misalnya kita mendapatkan tanggal hari ini
-        $currentDate = now()->format('Y-m-d'); // Format sesuai dengan yang Anda butuhkan
-        
-        // Ambil data absensi berdasarkan tanggal
+        $user = auth()->user();
+
+        if (!$user) {
+            \Log::info('User null di melihatDataAbsensiSiswa, redirect ke login.');
+            return redirect()->route('login');
+        }
+
+        $role = $user->roles->first()?->name;
+        if ($role !== 'student') {
+            return Inertia::render('ErrorPage', [
+                'message' => 'Hanya siswa yang dapat melihat data absensi.',
+            ]);
+        }
+
+        // Ambil dari query param secara eksplisit agar sinkron dengan URL
+        $studentId = $request->query('student_id');
+        $studentName = $request->query('student_name');
+
+        if (!$studentId) {
+            \Log::warning('Student ID tidak tersedia di melihatDataAbsensiSiswa');
+            return redirect()->route('login');
+        }
+
+        // Jika student_name kosong, ambil dari DB dan redirect ulang dengan nama lengkap
+        if (!$studentName) {
+            $student = Student::find($studentId);
+            if (!$student) {
+                return Inertia::render('ErrorPage', [
+                    'message' => 'Data siswa tidak ditemukan.',
+                ]);
+            }
+            return Inertia::location("/melihatDataAbsensiSiswa?student_id={$studentId}&student_name=" . urlencode($student->name));
+        }
+
+        // Ambil data absensi siswa hari ini
+        $currentDate = now()->format('Y-m-d');
         $attendanceRecords = Attendance::whereDate('tanggal_kehadiran', $currentDate)
-            ->with('student') // Pastikan relasi dengan model Student ada
-            ;
-    
-        return inertia('Students/melihatDataAbsensiSiswa', [
+            ->where('student_id', $studentId)
+            ->with('student')
+            ->get();
+
+        // Ambil data student lengkap untuk frontend (optional tapi berguna)
+        $student = Student::find($studentId);
+
+        \Log::info('Kirim ke frontend dari melihatDataAbsensiSiswa', [
+            'student_name' => $studentName,
+            'student_id' => $studentId,
+        ]);
+
+        return Inertia::render('Students/melihatDataAbsensiSiswa', [
             'attendanceRecords' => $attendanceRecords,
             'currentDate' => $currentDate,
+            'student_id' => request()->query('student_id'),
+            'student_name' => request()->query('student_name'),
+            'student' => $student,
         ]);
-}
+    }
+
 
     public function indexApi(Request $request)
     {

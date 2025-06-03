@@ -28,6 +28,7 @@ const form = useForm({
 });
 
 const attendanceData = computed(() => props.attendanceData || {});
+console.log('isi attendance Data: ', attendanceData.value);
 const month = computed(() => props.month);
 const year = computed(() => props.year);
 
@@ -40,9 +41,30 @@ function formatDate(dateStr) {
     year: 'numeric',
   });
 }
-const studentName = computed(() => props.student?.name || ''); // nama siswa
-const studentClass = computed(() => props.student?.class?.nama_kelas || ''); // nama kelas
-const subjectName = computed(() => props.subject?.nama_mapel || '');
+
+// Ambil langsung dari props
+const page = usePage();
+
+// Pastikan akses properti yang benar dari `page.props.value`
+//const student_id = computed(() => page.props.student_id ?? null);
+//const student_name = computed(() => page.props.student_name ?? '');
+const student = computed(() => page.props.student ?? null);
+
+// Data turunan dari objek student (jika tersedia)
+//const studentName = computed(() => student.value?.name ?? student_name.value); // fallback ke student_name jika student.name tidak ada
+
+// Ambil student_id dan student_name dari query string URL
+const query = new URLSearchParams(window.location.search);
+const studentId = ref(query.get('student_id'));
+const studentName = ref(query.get('student_name'));
+
+// Jika kamu ingin computed juga bisa:
+const student_id = computed(() => studentId.value ?? null);
+const student_name = computed(() => studentName.value ?? '');
+
+// Debug
+console.log('✅ student_id dari query:', student_id.value);
+console.log('✅ student_name dari query:', student_name.value);
 
 const formattedMonth = computed(() => {
   const date = new Date(2000, Number(props.month) - 1);
@@ -245,7 +267,7 @@ const itemCount = computed(() => {
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Dashboard" />
+      <Head title="Melihat Data Absensi Siswa" />
       <div>
         <div class="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto">
           <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">
@@ -435,7 +457,9 @@ const itemCount = computed(() => {
           </li>
           <li>
             <a
-              href="melihatDataAbsensiSiswa"
+              :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
+                student_name
+              )}`"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

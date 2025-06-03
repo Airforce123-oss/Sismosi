@@ -90,60 +90,51 @@ class MataPelajaranController extends Controller
             'auth' => ['user' => $user],
         ]);
     }
-
-
+    
     public function laporanJadwalMataPelajaran(Request $request)
     {
-        $itemsPerPage = $request->input('itemsPerPage', 5);
-        $currentPage  = $request->input('currentPage', 1);
-        $filter       = $request->only(['kelas']);
-        $kelasId      = $request->input('kelas_id');
+        $filter  = $request->only(['kelas']);
+        $kelasId = $request->input('kelas_id');
+
         \Log::info('🔎 Kelas ID:', ['kelas_id' => $kelasId]);
-        //dd(Mapel::with('guru')->find(11));
 
-        $teachers = Teacher::all(['id', 'name']);
+        // Ambil semua guru yang mungkin jadi wali_kelas
+        $teachers = Teacher::all(['id', 'name', 'class_id']);
+
         $classes  = $this->getClasses($request);
-    
+
+        // Ambil data mapel sesuai filter
         [$mapelQuery, $allMapel] = $this->getFilteredMapel($filter, $kelasId);
-    
-        $master_mapel = $mapelQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
-            ->appends($request->only(array_merge(['search'], array_keys($filter), ['itemsPerPage', 'currentPage'])));
-    
-        $jadwal   = $this->generateJadwalMingguan($allMapel);
 
-        foreach ($jadwal as $jadwalItem) {
-            // $jadwalItem adalah array ['jam_ke' => ..., 'jam' => ..., 'jadwal' => [...]]
-            \Log::info("Jadwal jam ke-{$jadwalItem['jam_ke']}, jam: {$jadwalItem['jam']}");
-        
-            // 'jadwal' adalah array hari => data jadwal (mapel, guru, kelas, dll)
-            foreach ($jadwalItem['jadwal'] as $hari => $detailJadwal) {
-                if ($detailJadwal) {
-                    \Log::info("Hari: $hari, Mapel: {$detailJadwal['mapel']}, Guru: {$detailJadwal['guru']}, Kelas: {$detailJadwal['kelas']}");
-                } else {
-                    \Log::info("Hari: $hari, tidak ada jadwal");
-                }
-            }
-        }
-        
+        \Log::info('🧪 mapelQuery class:', ['type' => get_class($mapelQuery)]);
+        $master_mapel = $allMapel; 
 
+        // Generate jadwal mingguan dari semua mapel
+        $jadwal = $this->generateJadwalMingguan($allMapel);
+
+        // Ambil jadwal per kelas lengkap dengan relasi wali_kelas
         $schedule = $kelasId ? $this->getScheduleByKelas($kelasId) : [];
-    
+
+        // Tidak perlu indexing wali_kelas dari guru, karena sudah diambil lewat relasi kelas
+
         return inertia('MataPelajaran/laporanJadwalMataPelajaran', [
             'master_mapel' => MapelResource::collection($master_mapel),
             'jadwal'       => $jadwal,
-            'kelas_id' => (int) $kelasId,
+            'kelas_id'     => (int) $kelasId,
             'schedule'     => $schedule,
             'filter'       => $filter,
             'classes_for_student' => [
                 'data' => $classes->items(),
                 'meta' => $this->buildPaginationMeta($classes),
             ],
-        'wali_kelas' => [
+            'wali_kelas' => [
                 'data' => $teachers,
             ],
             'teachers' => $teachers,
         ]);
     }
+
+
     public function settingJadwalMataPelajaran(Request $request)
     {
         $itemsPerPage = $request->input('itemsPerPage', 5);
@@ -197,14 +188,6 @@ class MataPelajaranController extends Controller
         ]);
     }
     
-    private function getTeachers(Request $request)
-    {
-        return Teacher::with('class')
-            ->orderBy('id')
-            ->paginate(20)
-            ->appends($request->only('search'));
-    }
-    
     private function getClasses(Request $request)
     {
         return Classes::with('waliKelas')
@@ -214,23 +197,31 @@ class MataPelajaranController extends Controller
     
     private function getFilteredMapel(array $filter, $kelasId)
     {
-        $query = Mapel::query();
-    
+        // 1. Pastikan query adalah instance dari Eloquent Builder
+        $query = Mapel::query(); // = new Builder(new Mapel)
+
+        // 2. Tambahkan filter (jika ada)
         foreach ($filter as $key => $value) {
-            if ($value) $query->where($key, $value);
+            if (!empty($value)) {
+                $query->where($key, $value);
+            }
         }
-    
-        if ($kelasId) {
-            $query->where('master_mapel.kelas_id', $kelasId);
+
+        // 3. Tambahkan filter kelas_id (jika ada)
+        if (!empty($kelasId)) {
+            $query->where('kelas_id', $kelasId); // sesuaikan nama kolom jika bukan 'kelas_id'
         }
-    
-        return [$query, (clone $query)->get()];
+
+        // 4. Clone dan ambil data mapel
+        $mapelData = (clone $query)->get(); // pastikan tidak ada conflict pada get()
+
+        // 5. Return query dan data
+        return [$query, $mapelData];
     }
-    
     private function generateJadwalMingguan($mapels)
     {
         $days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-    
+
         // Menentukan rentang jam secara manual
         $jamRange = [
             1 => '07:00 - 07:45',
@@ -243,31 +234,41 @@ class MataPelajaranController extends Controller
             8 => '14:00 - 14:45',
             9 => '15:00 - 15:45',
         ];
-    
-        return collect(range(1, 9))->map(function ($i) use ($days, $mapels, $jamRange) {
+
+        // Ambil data wali kelas dan index berdasarkan class_id
+        $waliKelasByClassId = Teacher::whereNotNull('class_id')->get()->keyBy('class_id');
+
+        \Log::info('📘 Daftar wali kelas by class_id:', $waliKelasByClassId->map->only(['id', 'name', 'class_id'])->toArray());
+
+        return collect(range(1, 9))->map(function ($i) use ($days, $mapels, $jamRange, $waliKelasByClassId) {
             return [
                 'jam_ke' => $i,
                 'jam'    => $jamRange[$i] ?? '',
-                'jadwal' => collect($days)->mapWithKeys(function ($day) use ($mapels, $i) {
+                'jadwal' => collect($days)->mapWithKeys(function ($day) use ($mapels, $i, $waliKelasByClassId) {
                     $found = $mapels->first(fn($item) => strtolower($item->hari) === $day && $item->jam_ke == $i);
+
+                    $kelasId = $found?->kelas_id;
+
+                    $waliKelas = $kelasId ? $waliKelasByClassId[$kelasId]->name ?? '-' : '-';
+
                     return [$day => $found ? [
-                        'mapel'    => $found->mapel,
-                        'mapel_id' => $found->id,
-                        'kelas'    => $found->kelas->name ?? '-',
-                        'guru'     => $found->teachers->pluck('name')->join(', ') ?? '-',
-                        'hari'     => $found->hari,
-                        'jam_ke'   => $found->jam_ke,
-                        'tahun'    => $found->tahun_ajaran ?? null,
+                        'mapel'      => $found->mapel,
+                        'mapel_id'   => $found->id,
+                        'kelas'      => $found->kelas->name ?? '-',
+                        'guru'       => $found->teachers->pluck('name')->join(', ') ?? '-',
+                        'hari'       => $found->hari,
+                        'jam_ke'     => $found->jam_ke,
+                        'tahun'      => $found->tahun_ajaran ?? null,
+                        'wali_kelas' => $waliKelas,
                     ] : null];
                 }),
             ];
         });
     }
-    
     private function getScheduleByKelas($kelasId)
     {
         $days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-    
+
         return JadwalMataPelajaran::with(['mapel' => fn($q) => $q->with('teachers'), 'kelas.waliKelas', 'guru'])
             ->where('kelas_id', $kelasId)
             ->get()
@@ -280,11 +281,22 @@ class MataPelajaranController extends Controller
                 ];
                 foreach ($days as $day) {
                     $jadwalHari = $group->filter(fn($item) => strtolower($item->hari) === $day);
-                
+
                     if ($jadwalHari->isNotEmpty()) {
                         $firstItem = $jadwalHari->first();
                         $mapel = $firstItem->mapel;
-                
+
+                        // Logging untuk debugging wali_kelas dan data terkait
+                        \Log::info('📋 Jadwal Hari:', [
+                            'jam_ke'         => $jam_ke,
+                            'hari'           => $day,
+                            'mapel'          => $mapel->mapel ?? null,
+                            'kelas'          => $firstItem->kelas->name ?? null,
+                            'kelas_id'       => $firstItem->kelas_id,
+                            'wali_kelas_id'  => $firstItem->kelas->wali_kelas_id ?? null,
+                            'wali_kelas_nama'=> optional($firstItem->kelas->waliKelas)->name,
+                        ]);
+
                         $entry['jadwal'][$day] = [
                             'mapel'       => $mapel->mapel ?? null,
                             'mapel_id'    => $firstItem->mapel_id,
@@ -299,11 +311,10 @@ class MataPelajaranController extends Controller
                         $entry['jadwal'][$day] = null;
                     }
                 }
-                
+
                 return $entry;
             })->values();
     }
-    
     
     private function buildPaginationMeta($paginator)
     {
@@ -316,126 +327,205 @@ class MataPelajaranController extends Controller
         ];
     }
 
-    private function buildPaginationLinks($paginator)
-{
-    return array_merge(
-        [[
-            'url'    => $paginator->url(1),
-            'label'  => 'First',
-            'active' => $paginator->currentPage() == 1,
-        ]],
-        collect(range(1, $paginator->lastPage()))->map(fn($page) => [
-            'url'    => $paginator->url($page),
-            'label'  => $page,
-            'active' => $paginator->currentPage() == $page,
-        ])->toArray(),
-        [[
-            'url'    => $paginator->previousPageUrl(),
-            'label'  => 'Previous',
-            'active' => $paginator->previousPageUrl() !== null,
-        ], [
-            'url'    => $paginator->nextPageUrl(),
-            'label'  => 'Next',
-            'active' => $paginator->nextPageUrl() !== null,
-        ], [
-            'url'    => $paginator->url($paginator->lastPage()),
-            'label'  => 'Last',
-            'active' => $paginator->currentPage() == $paginator->lastPage(),
-        ]]
-    );
-}
-public function createJadwalMataPelajaran(Request $request)
-{
-    $itemsPerPage  = $request->input('itemsPerPage', 20);
-    $currentPage   = $request->input('currentPage', 1);
-    $kelas         = $request->input('kelas');
-    $kelasId      = $request->input('kelas_id');
-    \Log::info('🔎 Kelas ID:', ['kelas_id' => $kelasId]);
-
-    // Ambil data guru
-    $teacherQuery = Teacher::query()->with('class');
-    $teacherQuery->orderBy('id');
-
-    $mapelQuery = Mapel::with(['kelas.waliKelas', 'teachers']);
-
-    if ($kelas) {
-        $mapelQuery->where('kelas', $kelas);
+        private function buildPaginationLinks($paginator)
+    {
+        return array_merge(
+            [[
+                'url'    => $paginator->url(1),
+                'label'  => 'First',
+                'active' => $paginator->currentPage() == 1,
+            ]],
+            collect(range(1, $paginator->lastPage()))->map(fn($page) => [
+                'url'    => $paginator->url($page),
+                'label'  => $page,
+                'active' => $paginator->currentPage() == $page,
+            ])->toArray(),
+            [[
+                'url'    => $paginator->previousPageUrl(),
+                'label'  => 'Previous',
+                'active' => $paginator->previousPageUrl() !== null,
+            ], [
+                'url'    => $paginator->nextPageUrl(),
+                'label'  => 'Next',
+                'active' => $paginator->nextPageUrl() !== null,
+            ], [
+                'url'    => $paginator->url($paginator->lastPage()),
+                'label'  => 'Last',
+                'active' => $paginator->currentPage() == $paginator->lastPage(),
+            ]]
+        );
     }
-    
 
-    $classesQuery = Classes::with('waliKelas');
-    $teachers = Teacher::all(['id', 'name']);
+    public function apiJadwal(Request $request)
+    {
+        // Tambahkan relasi mapel, kelas, dan guru
+        $query = JadwalMataPelajaran::with([
+            'mapel',         // relasi ke tabel mapel
+            'kelas',         // relasi ke tabel kelas
+            'guru',          // relasi ke tabel guru
+            'kelas.waliKelas'
+        ]);
 
-    $classes_for_student = $classesQuery->paginate(20)->appends($request->only('search'));
-
-    $master_mapel = $mapelQuery->get();
-
-
-    // Susun jadwal
-    $days = ['senin','selasa','rabu','kamis','jumat','sabtu'];
-    $jadwal = [];
-
-    for ($i = 1; $i <= 10; $i++) {
-        $jamInfo = $this->getJamRangeInline($i);
-
-        $row = [
-            'jam_ke' => $jamInfo['jam_ke'],
-            'jam'    => $jamInfo['jam'],
-            'jadwal' => [],
-        ];
-
-        // Ganti `first()` dengan `filter()` untuk mendapatkan semua mapel yang cocok dengan hari dan jam
-        foreach ($days as $day) {
-            $foundMapels = $master_mapel->filter(function($item) use($day, $i) {
-                return strtolower($item->hari) === $day && $item->jam_ke == $i;
-            });
-
-            if ($foundMapels->isNotEmpty()) {
-                // Menyusun data jadwal untuk semua mapel yang ditemukan pada hari dan jam tertentu
-                foreach ($foundMapels as $found) {
-                    $kelas = $found->kelas;
-                    $row['jadwal'][$day][] = [
-                        'mapel' => $found->nama_mapel,
-                        'mapel_id' => $found->id,
-                        'kelas' => $kelas?->name ?? '-',
-                        'guru' => $found->guru?->name ?? '-',
-                        'guru_id' => $found->teachers->pluck('id')->join(', ') ?: '-',
-                        'wali_kelas' => $kelas?->waliKelas?->name ?? '-',
-                        'tahun' => $kelas?->tahun_ajaran ?? '-',
-                    ];
-                }
-            } else {
-                $row['jadwal'][$day] = null;
-            }
+        if ($request->filled('kelas_id')) {
+            $query->where('kelas_id', $request->kelas_id);
         }
 
+        if ($request->boolean('no_paginate')) {
+            $data = $query->get()->map(function ($item) {
+                return [
+                    'id'         => $item->id,
+                    'hari'       => $item->hari,
+                    'jam_ke'     => $item->jam_ke,
+                    'jam'        => $item->jam,
+                    'mapel_id'   => $item->mapel_id,
+                    'mapel_nama' => $item->mapel->mapel ?? '-', // ambil nama mapel
+                    'guru_id'    => $item->guru_id,
+                    'guru_nama'  => $item->guru?->name ?? '-', // ambil nama guru
+                    'kelas_id'   => $item->kelas_id,
+                    'kelas_nama' => $item->kelas?->name ?? '-', // ambil nama kelas
+                    'wali_kelas' => optional(optional($item->kelas)->waliKelas)->name,
+                    'tahun'      => $item->tahun,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                ];
+            });
+            return response()->json([
+                'data' => $data,
+            ]);
+        }
 
-        $jadwal[] = $row;
+        $paginator = $query->paginate(5);
+
+        $data = collect($paginator->items())->map(function ($item) {
+            return [
+                'id'         => $item->id,
+                'hari'       => $item->hari,
+                'jam_ke'     => $item->jam_ke,
+                'jam'        => $item->jam,
+                'mapel_id'   => $item->mapel_id,
+                'mapel_nama' => $item->mapel->mapel ?? '-',
+                'guru_id'    => $item->guru_id,
+                'guru_nama'  => $item->guru?->name ?? '-',
+                'kelas_id'   => $item->kelas_id,
+                'kelas_nama' => $item->kelas?->name ?? '-',
+                'wali_kelas' => optional(optional($item->kelas)->waliKelas)->name,
+                'tahun'      => $item->tahun,
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'from'         => $paginator->firstItem(),
+                'to'           => $paginator->lastItem(),
+            ],
+            'links' => [
+                'first' => $paginator->url(1),
+                'last'  => $paginator->url($paginator->lastPage()),
+                'prev'  => $paginator->previousPageUrl(),
+                'next'  => $paginator->nextPageUrl(),
+            ],
+        ]);
     }
 
-    $classes_for_student_with_wali_kelas = collect($classes_for_student->items())->map(function($class) {
-        return [
-            'id' => $class->id,
-            'name' => $class->name,
-            'wali_kelas' => $class->waliKelas?->name ?? 'Tidak Diketahui',
-            'tahun_ajaran' => $class->tahun_ajaran ?? 'Tidak Diketahui',
-        ];
-    });
+    public function createJadwalMataPelajaran(Request $request)
+    {
+        $itemsPerPage  = $request->input('itemsPerPage', 20);
+        $currentPage   = $request->input('currentPage', 1);
+        $kelas         = $request->input('kelas');
+        $kelasId      = $request->input('kelas_id');
+        \Log::info('🔎 Kelas ID:', ['kelas_id' => $kelasId]);
 
-    $filterData = compact( 'kelas');
+        // Ambil data guru
+        $teacherQuery = Teacher::query()->with('class');
+        $teacherQuery->orderBy('id');
 
-    /// \Log::info("🔍 Jadwal Data: ", $jadwal);
+        $mapelQuery = Mapel::with(['kelas.waliKelas', 'teachers']);
 
-    return inertia('MataPelajaran/createJadwalMataPelajaran', [
-        'master_mapel' => MapelResource::collection($master_mapel),
-        'jadwal'       => $jadwal,
-        'teachers'     => $teachers,
-        'filter'       => $filterData,
-        'classes_for_student' => [
-            'data' => $classes_for_student_with_wali_kelas,
-        ],
-    ]);
-}
+        if ($kelas) {
+            $mapelQuery->where('kelas', $kelas);
+        }
+        
+
+        $classesQuery = Classes::with('waliKelas');
+        $teachers = Teacher::all(['id', 'name']);
+
+        $classes_for_student = $classesQuery->paginate(20)->appends($request->only('search'));
+
+        $master_mapel = $mapelQuery->get();
+
+
+        // Susun jadwal
+        $days = ['senin','selasa','rabu','kamis','jumat','sabtu'];
+        $jadwal = [];
+
+        for ($i = 1; $i <= 10; $i++) {
+            $jamInfo = $this->getJamRangeInline($i);
+
+            $row = [
+                'jam_ke' => $jamInfo['jam_ke'],
+                'jam'    => $jamInfo['jam'],
+                'jadwal' => [],
+            ];
+
+            // Ganti `first()` dengan `filter()` untuk mendapatkan semua mapel yang cocok dengan hari dan jam
+            foreach ($days as $day) {
+                $foundMapels = $master_mapel->filter(function($item) use($day, $i) {
+                    return strtolower($item->hari) === $day && $item->jam_ke == $i;
+                });
+
+                if ($foundMapels->isNotEmpty()) {
+                    // Menyusun data jadwal untuk semua mapel yang ditemukan pada hari dan jam tertentu
+                    foreach ($foundMapels as $found) {
+                        $kelas = $found->kelas;
+                        $row['jadwal'][$day][] = [
+                            'mapel' => $found->nama_mapel,
+                            'mapel_id' => $found->id,
+                            'kelas' => $kelas?->name ?? '-',
+                            'guru' => $found->guru?->name ?? '-',
+                            'guru_id' => $found->teachers->pluck('id')->join(', ') ?: '-',
+                            'wali_kelas' => $kelas?->waliKelas?->name ?? '-',
+                            'tahun' => $kelas?->tahun_ajaran ?? '-',
+                        ];
+                    }
+                } else {
+                    $row['jadwal'][$day] = null;
+                }
+            }
+
+
+            $jadwal[] = $row;
+        }
+
+        $classes_for_student_with_wali_kelas = collect($classes_for_student->items())->map(function($class) {
+            return [
+                'id' => $class->id,
+                'name' => $class->name,
+                'wali_kelas' => $class->waliKelas?->name ?? 'Tidak Diketahui',
+                'tahun_ajaran' => $class->tahun_ajaran ?? 'Tidak Diketahui',
+            ];
+        });
+
+        $filterData = compact( 'kelas');
+
+        /// \Log::info("🔍 Jadwal Data: ", $jadwal);
+
+        return inertia('MataPelajaran/createJadwalMataPelajaran', [
+            'master_mapel' => MapelResource::collection($master_mapel),
+            'jadwal'       => $jadwal,
+            'teachers'     => $teachers,
+            'filter'       => $filterData,
+            'classes_for_student' => [
+                'data' => $classes_for_student_with_wali_kelas,
+            ],
+        ]);
+    }
 
     private function getJamRangeInline($jamKe)
     {

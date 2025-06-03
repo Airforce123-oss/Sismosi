@@ -9,31 +9,24 @@ class Tugas extends Model
 {
     use HasFactory;
 
-    // Nama tabel dalam database
     protected $table = 'tugas';
-
-    // Primary key tabel
     protected $primaryKey = 'id';
-
-    // Primary key auto increment
     public $incrementing = true;
-
-    // Tipe data primary key
     protected $keyType = 'int';
+    public $timestamps = true;
 
-    // Kolom-kolom yang dapat diisi secara massal
     protected $fillable = [
-        'mapel_id',    // Foreign key ke tabel master_mapel
+        'mapel_id',
         'student_id',
-        'teacher_id',  // Foreign key ke tabel teachers
-        'description', // Deskripsi tugas
+        'teacher_id',
         'class_id',
+        'description',
     ];
 
-    // Relasi ke model Mapel
+    // Relasi ke master_mapel
     public function mapel()
     {
-        return $this->belongsTo(Mapel::class, 'mapel_id', 'id');
+        return $this->belongsTo(Mapel::class, 'mapel_id');
     }
 
     public function student()
@@ -41,16 +34,26 @@ class Tugas extends Model
         return $this->belongsTo(Student::class, 'student_id', 'id');
     }
 
-
-    // Relasi ke model Teacher
-        public function teacher()
+    public function teacher()
     {
-        return $this->belongsTo(Teacher::class, 'teacher_id');
+        return $this->belongsTo(Teacher::class, 'teacher_id', 'id');
     }
 
     public function kelas()
     {
-        return $this->belongsTo(Classes::class, 'class_id');
+        return $this->belongsTo(Classes::class, 'class_id', 'id');
     }
 
+    // OPTIONAL: relasi wali kelas via class_id -> classes -> wali_kelas
+    public function waliKelas()
+    {
+        return $this->hasOneThrough(
+            Teacher::class,
+            Classes::class,
+            'id',             // FK di Classes
+            'id',             // FK di Teacher
+            'class_id',       // FK lokal di Tugas
+            'wali_kelas_id'   // FK di Classes pointing ke Teacher
+        );
+    }
 }

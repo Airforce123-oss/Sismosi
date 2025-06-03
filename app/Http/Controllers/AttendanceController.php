@@ -240,8 +240,6 @@ public function absensiSiswaJanuari($classId, $year, $mapel, $month)
 
     ];
 
-    Log::info('📤 Data absensi dikirim ke Vue:', $data);
-
     return request()->wantsJson()
         ? response()->json($data)
         : Inertia::render('Students/absensiSiswaJanuari', $data);
@@ -382,7 +380,6 @@ public function absensiDesember($kelas, $year, $mapel)
             ]
         ], 200);
     }
-    /*
         public function store(Request $request)
     {
         try {
@@ -434,7 +431,67 @@ public function absensiDesember($kelas, $year, $mapel)
             ], 500);
         }
     }
-    
-    */
-}
+    public function storeAttendance(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'siswa_id' => 'required|exists:students,id',
+                'tanggal_kehadiran' => 'required|date',
+                'status' => 'required|in:Hadir,Tidak Hadir,Izin,Sakit,Terlambat',
+            ]);
+
+            $attendance = Attendance::where('siswa_id', $validated['siswa_id'])
+                ->whereDate('tanggal_kehadiran', $validated['tanggal_kehadiran'])
+                ->first();
+
+            if (!$attendance) {
+                // Kalau record absensi belum ada, bisa buat baru
+                $attendance = Attendance::create([
+                    'siswa_id' => $validated['siswa_id'],
+                    'tanggal_kehadiran' => $validated['tanggal_kehadiran'],
+                    'status' => $validated['status'],
+                ]);
+            } else {
+                // Kalau sudah ada, update statusnya
+                $attendance->status = $validated['status'];
+                $attendance->save();
+            }
+
+            return response()->json([
+                'message' => 'Absensi berhasil diperbarui.',
+                'attendance' => $attendance
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal memperbarui absensi.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function batchUpdate(Request $request)
+    {
+        $data = $request->input('data', []);
+
+        foreach ($data as $entry) {
+            \Log::info('Attendance entry:', (array) $entry);  // Pastikan log berupa array
+
+            Attendance::updateOrCreate(
+                [
+                    'student_id' => $entry['siswa_id'],             
+                    'tanggal_kehadiran' => $entry['tanggal_kehadiran'], 
+                ],
+                [
+                    'status_kehadiran' => $entry['status'],         
+                    'mapel' => $entry['mapel'],
+      
+                ]
+            );
+        }
+
+        return response()->json(['message' => 'Semua absensi berhasil disimpan.']);
+    }
+
+                
+    }
 

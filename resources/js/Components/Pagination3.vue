@@ -98,7 +98,7 @@ const validLinks = computed(() => {
 const total = computed(() => props.data?.meta?.total ?? 0);
 
 console.log('props.data:', props.data);
-console.log('isi validLinks: ', validLinks);
+console.log('isi validLinks: ', validLinks.value);
 console.log('props.data.meta:', props.data?.meta);
 console.log('Meta Links:', props.data.meta.links);
 </script>

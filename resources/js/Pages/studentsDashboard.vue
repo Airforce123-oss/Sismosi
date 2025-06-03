@@ -219,51 +219,68 @@ onMounted(() => {
 -->
           </p>
         </div>
-        <div class="container mx-auto py-6">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-primary1 text-white p-4 rounded shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+          >
+            <!-- Card 1 -->
+            <div
+              class="bg-primary1 text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+            >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-4xl font-bold text-white">8</h3>
-                  <p class="font-bold">Absensi Kehadiran</p>
+                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                  <p class="font-semibold text-sm md:text-base">
+                    Absensi Kehadiran
+                  </p>
                 </div>
-                <i class="ion ion-person-stalker text-4xl"></i>
+                <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
               </div>
-              <a href="#" class="block mt-4 text-sm text-white hover:underline">
-                Lihat detail
-                <i class="fas fa-arrow-circle-right"></i>
+              <a
+                href="#"
+                class="block mt-4 text-sm hover:underline flex items-center gap-1"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right"></i>
               </a>
             </div>
 
-            <div class="bg-success text-white p-4 rounded shadow-md">
+            <!-- Card 2 -->
+            <div
+              class="bg-success text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+            >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-4xl font-bold text-white">8</h3>
-                  <h3 class="font-bold text-white">Tugas</h3>
+                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                  <p class="font-semibold text-sm md:text-base">Tugas</p>
                 </div>
-                <i class="ion ion-person-stalker text-4xl"></i>
+                <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
               </div>
-              <a href="#" class="block mt-4 text-sm text-white hover:underline">
-                Lihat detail
-                <i class="fas fa-arrow-circle-right"></i>
+              <a
+                href="#"
+                class="block mt-4 text-sm hover:underline flex items-center gap-1"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right"></i>
               </a>
             </div>
 
-            <!-- Profil Card -->
-            <div class="bg-cyan text-white p-4 rounded shadow-md">
+            <!-- Card 3 -->
+            <div
+              class="bg-cyan text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+            >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-4xl font-bold text-white">8</h3>
-                  <p class="font-bold">Data Mata Pelajaran</p>
+                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                  <p class="font-semibold text-sm md:text-base">
+                    Data Mata Pelajaran
+                  </p>
                 </div>
-                <i class="ion ion-log-in text-4xl"></i>
+                <i class="ion ion-log-in text-3xl md:text-4xl"></i>
               </div>
               <a
                 href="/guru/profil"
-                class="block mt-4 text-sm text-white hover:underline"
+                class="block mt-4 text-sm hover:underline flex items-center gap-1"
               >
-                Lihat detail
-                <i class="fas fa-arrow-circle-right"></i>
+                Lihat detail <i class="fas fa-arrow-circle-right"></i>
               </a>
             </div>
           </div>
@@ -285,7 +302,7 @@ onMounted(() => {
         <ul class="space-y-2">
           <li>
             <a
-              href="student-dashboard"
+              href="/student-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -308,7 +325,7 @@ onMounted(() => {
           </li>
           <li>
             <a
-              href="melihatTugas"
+              href="/melihatTugas"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -327,7 +344,9 @@ onMounted(() => {
           </li>
           <li>
             <a
-              href="melihatDataAbsensiSiswa"
+              :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
+                student_name
+              )}`"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

@@ -36,23 +36,18 @@ class Teacher extends Model
     {
         return $this->hasMany(AttendanceTeacher::class, 'teacher_id', 'id');
     }
-    public function mapels()
-    {
-        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id')
-                    ->withPivot('kode_mapel')
-                    ->withTimestamps();
-    }
-    
-
     public function waliKelas()
     {
-        return $this->hasOne(WaliKelas::class, 'teacher_id', 'id');
+        return $this->hasOne(WaliKelas::class, 'user_id', 'user_id');
     }
 
-    public function masterMapel()
-    {
-        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id');
-    }
+public function masterMapel()
+{
+    return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id')
+                ->withPivot('kode_mapel') 
+                ->withTimestamps();      
+}
+
 
 }
 

@@ -79,20 +79,64 @@ class TeacherController extends Controller
             'classes_for_student' => $classes_for_student,
         ]);
     }
+
+        public function getAllTeachers()
+    {
+        return Teacher::with('masterMapel')->get();
+    }
+
     public function membuatTugasSiswa()
     {
-        $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])  // Jangan lupa include relasi kelas
+        $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])
             ->paginate(5)
             ->appends(request()->query());
 
-        $teachers = Teacher::all();
+        $teachers = Teacher::with('masterMapel')->get()->map(function ($teacher) {
+            return [
+                'id' => $teacher->id,
+                'name' => $teacher->name,
+                'nip' => $teacher->nip,
+                'class_id' => $teacher->class_id,
+                'masterMapel' => $teacher->masterMapel->map(function ($mapel) {
+                    return [
+                        'id' => $mapel->id,
+                        'nama_mapel' => $mapel->mapel,
+                    ];
+                }),
+            ];
+        });
+
         $students = Student::all();
-        $mapels = Mapel::all();
+
+        $mapels = \DB::table('teacher_mapel')
+            ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
+            ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
+            ->select(
+                'teacher_mapel.id',
+                'teacher_mapel.teacher_id',
+                'teacher_mapel.mapel_id',
+                'teacher_mapel.kode_mapel',
+                'master_mapel.mapel as mapel_name',
+                'teachers.name as teacher_name'
+            )
+            ->get();
+
         $classes_for_student = Classes::all();
 
         return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', [
             'tugas' => [
-                'data' => $tugas->items(),
+                'data' => collect($tugas->items())->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'mapel' => $t->mapel,
+                        'student' => $t->student,
+                        'teacher' => $t->teacher,
+                        'kelas' => $t->kelas,
+                        'description' => $t->description, // ✅ ditambahkan di sini
+                        'created_at' => $t->created_at,
+                        'updated_at' => $t->updated_at,
+                    ];
+                }),
                 'meta' => [
                     'current_page' => $tugas->currentPage(),
                     'from' => $tugas->firstItem(),
@@ -115,35 +159,45 @@ class TeacherController extends Controller
         ]);
     }
 
-
     public function createTugasSiswa(Request $request)
     {
         $validated = $request->validate([
             'mapel_id' => 'required|exists:master_mapel,id',
-            'description' => 'nullable|string',
+            'description' => 'required|string|min:1', // ✅ tidak boleh null/kosong
             'student_id' => 'required|exists:students,id',
-            'teacher_id' => 'required|exists:wali_kelas,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'class_id' => 'required|exists:classes,id',
         ]);
 
+        // Validasi tambahan: pastikan guru mengajar mapel yang dipilih
+        $exists = \DB::table('teacher_mapel')
+            ->where('teacher_id', $validated['teacher_id'])
+            ->where('mapel_id', $validated['mapel_id'])
+            ->exists();
+
+        if (!$exists) {
+            return response()->json([
+                'message' => 'Guru yang dipilih tidak mengajar mata pelajaran tersebut.'
+            ], 422);
+        }
+
         $tugas = new Tugas();
         $tugas->mapel_id = $validated['mapel_id'];
-        $tugas->description = $validated['description'] ?? null;
+        $tugas->description = $validated['description']; // ✅ dipastikan tidak null
         $tugas->student_id = $validated['student_id'];
         $tugas->teacher_id = $validated['teacher_id'];
         $tugas->class_id = $validated['class_id'];
-
         $tugas->save();
 
-        // Ambil ulang data kelas (jika perlu)
         $classes_for_student = Classes::all();
 
         return response()->json([
             'message' => 'Tugas berhasil ditambahkan.',
-            'data' => $tugas->load(['mapel', 'student', 'teacher']),
+            'data' => $tugas->load(['mapel', 'student', 'teacher', 'kelas']),
             'classes_for_student' => $classes_for_student,
         ], 201);
     }
+
 
     public function index(Request $request)
     {
