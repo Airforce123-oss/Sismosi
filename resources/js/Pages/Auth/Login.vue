@@ -257,6 +257,7 @@ watch(
 
 <template>
   <!-- --->
+  <Head title="Login" />
   <div class="bg-[#12bdee] flex items-center justify-center min-h-screen">
     <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
       <div class="w-1/2 p-8 flex flex-col items-center justify-center">

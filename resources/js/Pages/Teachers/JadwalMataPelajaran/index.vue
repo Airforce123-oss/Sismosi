@@ -1,8 +1,7 @@
 <script setup>
 import { initFlowbite } from 'flowbite';
-import Pagination from '../../Components/Pagination.vue';
-import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
+import SidebarTeacher from '@/Components/SidebarTeacher.vue';
 import { onMounted, ref, watch, computed } from 'vue';
 import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
@@ -26,8 +25,8 @@ const props = defineProps({
   },
   teachers: Array,
   kelas_id: {
-    type: Number,
-    required: true,
+    type: [Number, null],
+    default: null,
   },
 });
 
@@ -37,6 +36,9 @@ const fetchTeachers = () => {
   try {
     // Menggunakan data yang diterima langsung dari props
     const teachersData = props.teachers; // Asumsi bahwa data guru diteruskan sebagai props
+
+    // Log data guru yang diterima dari props
+    console.log('fetchTeachers - teachersData from props:', teachersData);
 
     // Memastikan data guru valid
     if (teachersData && Array.isArray(teachersData)) {
@@ -57,6 +59,12 @@ const fetchTeachers = () => {
           teachers.value[index] = newTeacher; // Jika ada data lama, update
         }
       });
+
+      // Log hasil akhir teachers.value
+      console.log(
+        'fetchTeachers - teachers.value after update:',
+        teachers.value
+      );
     } else {
       console.error('Invalid or empty data for teachers:', teachersData);
     }
@@ -67,7 +75,7 @@ const fetchTeachers = () => {
 
 console.log('Classes for Student:', props.classes_for_student);
 console.log('Teachers:', props.teachers);
-console.log('Classes Data:', props.classes_for_student.data);
+//console.log('Classes Data:', props.classes_for_student.data);
 
 const form = useForm({
   name: props.auth?.user?.name || '',
@@ -157,94 +165,6 @@ const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
 
 const schedule = ref([]);
 
-const loadSchedule = async (id = null) => {
-  try {
-    let response;
-
-    if (id === null || id === undefined) {
-      // Ambil semua jadwal dari semua kelas
-      response = await axios.get('/api/api-schedule', {
-        params: { no_paginate: true },
-      });
-      console.log('📦 Semua jadwal dari semua kelas:', response.data);
-    } else {
-      const kelasId = parseInt(id, 10);
-      console.log('Selected Kelas (before parsing):', id);
-
-      if (isNaN(kelasId) || kelasId <= 0) {
-        console.error(`❗ Kelas ID tidak valid: "${id}"`);
-        schedule.value = [];
-        return;
-      }
-
-      console.log('Parsed ID:', kelasId);
-
-      response = await axios.get(route('jadwal.get'), {
-        params: { kelas_id: kelasId },
-      });
-      console.log('📦 Jadwal untuk kelas ID:', kelasId, response.data);
-    }
-
-    const rawData = Array.isArray(response.data?.data)
-      ? response.data.data
-      : Array.isArray(response.data)
-      ? response.data
-      : [];
-
-    // Gabungkan data berdasarkan jam_ke
-    const groupedByJam = {};
-
-    rawData.forEach((entry) => {
-      const { jam_ke, jam, hari } = entry;
-
-      if (!groupedByJam[jam_ke]) {
-        groupedByJam[jam_ke] = {
-          jam_ke: jam_ke,
-          jam:
-            jam ||
-            `${String(jam_ke).padStart(2, '0')}:00 - ${String(jam_ke).padStart(
-              2,
-              '0'
-            )}:45`,
-          jadwal: {}, // ini akan diisi per hari
-        };
-      }
-
-      // Masukkan data jadwal ke dalam hari yang sesuai
-      groupedByJam[jam_ke].jadwal[hari] = {
-        mapel: entry.mapel_nama || entry.mapel?.nama || '-',
-        mapel_id: entry.mapel_id,
-        kelas: entry.kelas_nama || entry.kelas?.nama || '-',
-        kelas_id: entry.kelas_id,
-        guru: entry.guru_nama || entry.guru?.nama || '-',
-        guru_id: entry.guru_id,
-        wali_kelas: entry.wali_kelas || '-',
-        tahun: entry.tahun || '-',
-      };
-    });
-
-    // Pastikan setiap jam_ke memiliki key jadwal untuk semua hari (meskipun null)
-    for (const jamSlot of Object.values(groupedByJam)) {
-      days.forEach((day) => {
-        if (!jamSlot.jadwal[day]) {
-          jamSlot.jadwal[day] = null;
-        }
-      });
-    }
-
-    // Ubah hasil ke bentuk array dan urutkan berdasarkan jam_ke
-    const transformed = Object.values(groupedByJam).sort(
-      (a, b) => a.jam_ke - b.jam_ke
-    );
-
-    schedule.value = transformed;
-    console.log('✅ Schedule transformed & loaded:', schedule.value);
-  } catch (error) {
-    console.error('❌ Gagal mengambil jadwal:', error.response?.data || error);
-    schedule.value = [];
-  }
-};
-
 const getTeacherNameById = (id) => {
   if (!props.teachers || props.teachers.length === 0) return '-';
   const teacher = props.teachers.find((t) => t.id === id);
@@ -268,44 +188,6 @@ const formatGuru = (guru) => {
 
   return guru.name ?? '-';
 };
-
-const flatSchedule = computed(() => {
-  console.log('Mengeksekusi flatSchedule, data schedule:', schedule.value);
-
-  const scheduleArray = Object.values(schedule.value).flat();
-  let counter = 1; // mulai dari 1
-
-  return scheduleArray.flatMap((slot) => {
-    return days
-      .filter((day) => slot.jadwal[day])
-      .map((day) => {
-        const data = slot.jadwal[day];
-
-        const entry = {
-          id: counter++, // generate nomor urut, lalu tambah counter
-          jam_ke: slot.jam_ke,
-          jam: slot.jam,
-          day,
-          mapel: data?.mapel ?? '-',
-          mapel_id: data?.mapel_id ?? null,
-          kelas: data?.kelas ?? '-',
-          guru: data?.guru || null,
-          guru_id: data?.guru_id ?? null,
-          tahun: data?.tahun ?? '-',
-          wali_kelas: data?.wali_kelas ?? 'Tidak ada wali',
-        };
-
-        return entry;
-      });
-  });
-});
-
-const mergedSchedule = computed(() => {
-  if (!schedule.value) return [];
-
-  // Gabungkan semua jadwal dari tiap kelas
-  return Object.values(schedule.value).flat();
-});
 
 console.log('DEBUG — days:', days);
 const entries = ref([]);
@@ -355,21 +237,9 @@ const openEditModal = (jamKe, hari) => {
 
 onMounted(() => {
   fetchTeachers();
-  loadSchedule(null); // null berarti load semua jadwal
   initFlowbite();
 });
 
-watch(selectedKelas, (newVal) => {
-  console.log('Selected Kelas changed to:', newVal);
-  const id = parseInt(newVal, 10);
-  if (isNaN(id)) {
-    console.warn('❗ kelas_id tidak valid. Jadwal tidak dimuat.');
-    schedule.value = [];
-    return;
-  }
-
-  loadSchedule(id); // Pastikan loadSchedule menerima ID numerik
-});
 watch(schedule, (newVal) => {
   if (Array.isArray(newVal) && newVal.length > 0) {
     console.log('🎯 Jadwal masuk lewat watch:', newVal);
@@ -502,8 +372,8 @@ watch(schedule, (newVal) => {
     <!-- start1 -->
 
     <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div class="p-6 space-y-6">
+      <Head title="Laporan Jadwal Mata Pelajaran" />
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
           <!--LAPORAN JADWAL-->
           <div class="-mt-12">
             <h2
@@ -512,7 +382,6 @@ watch(schedule, (newVal) => {
               Laporan Jadwal Mata Pelajaran
             </h2>
           </div>
-        </div>
       </div>
       <div v-for="(item, index) in schedule.value" :key="index">
         <p>Jam Ke: {{ item.jam_ke }}</p>
@@ -526,125 +395,141 @@ watch(schedule, (newVal) => {
         </div>
       </div>
 
-      <!-- Perbaikan tampilan jadwal per jam_ke -->
-      <div
-        v-for="(slot, index) in schedule"
-        :key="index"
-        class="w-full max-w-6xl mx-auto mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-lg min-h-[200px]"
-      >
-        <h3 class="font-bold text-lg mb-4 text-blue-700 text-center">
-          Jam ke-{{ slot.jam_ke }}
-          <span class="text-gray-500">({{ slot.jam }})</span>
-        </h3>
-
-        <div class="overflow-x-auto">
-          <table
-            class="w-auto text-sm border border-gray-200 rounded-lg overflow-hidden shadow-sm"
-          >
-            <thead
-              class="bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 uppercase text-xs tracking-wider"
-            >
-              <tr>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Hari
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Mata Pelajaran
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Kelas
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Guru
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Wali Kelas
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Tahun
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="day in days"
-                :key="day"
-                class="even:bg-blue-50 odd:bg-white hover:bg-blue-100 transition-colors"
-              >
-                <td
-                  class="p-3 border-b border-gray-100 capitalize font-semibold text-blue-800 whitespace-nowrap"
-                >
-                  {{ day }}
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-blue-200 text-black font-medium whitespace-nowrap"
-                  >
-                    {{
-                      getMapelName(
-                        slot.jadwal[day]?.mapel_id,
-                        slot.jadwal[day]?.mapel || '-'
-                      )
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-green-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{
-                      slot.jadwal[day]?.kelas_id
-                        ? getKelasName(slot.jadwal[day].kelas_id)
-                        : '-'
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-yellow-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{
-                      slot.jadwal[day]?.guru_id
-                        ? getGuruName(slot.jadwal[day].guru_id)
-                        : '-'
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-purple-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{ slot.jadwal[day]?.wali_kelas || '-' }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-gray-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{ slot.jadwal[day]?.tahun || '-' }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div>
+        <!-- Tampilkan pesan jika seluruh jadwal kosong -->
+        <div
+          v-if="!props.schedule || props.schedule.length === 0"
+          class="text-gray-500"
+        >
+          <span class="flex justify-center text-lg font-bold mt-20">
+            <img
+              src="/images/kecewasih.png"
+              class="mr-3 h-60 max-h-full w-auto"
+              alt="Tidak ada jadwal"
+            />
+          </span>
+          <span class="block text-lg font-bold text-center mt-4">
+            Jadwal guru belum tersedia.<br />
+          </span>
         </div>
 
-        <div v-if="Object.values(slot.jadwal).every((j) => !j)">
-          <span class="text-gray-400 italic block text-center mt-4">
-            Belum ada data jadwal untuk jam ke-{{ slot.jam_ke }}
-          </span>
+        <!-- Tampilkan jadwal jika ada -->
+        <div
+          v-else
+          v-for="(slot, index) in props.schedule"
+          :key="index"
+          class="w-full max-w-6xl mx-auto mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-lg min-h-[200px]"
+        >
+          <h3 class="font-bold text-lg mb-4 text-blue-700 text-center">
+            Jam ke-{{ slot.jam_ke }}
+            <span class="text-gray-500">({{ slot.jam }})</span>
+          </h3>
+
+          <div class="overflow-x-auto">
+            <table
+              class="min-w-[900px] w-full text-sm border border-gray-200 rounded-lg overflow-hidden shadow-sm"
+            >
+              <thead
+                class="bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 uppercase text-xs tracking-wider"
+              >
+                <tr>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Hari
+                  </th>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Mata Pelajaran
+                  </th>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Kelas
+                  </th>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Guru
+                  </th>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Wali Kelas
+                  </th>
+                  <th
+                    class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
+                  >
+                    Tahun
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="day in days"
+                  :key="day"
+                  class="even:bg-blue-50 odd:bg-white hover:bg-blue-100 transition-colors"
+                >
+                  <td
+                    class="p-3 border-b border-gray-100 capitalize font-semibold text-blue-800 whitespace-nowrap"
+                  >
+                    {{ day }}
+                  </td>
+                  <td class="p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-blue-200 text-black font-medium whitespace-nowrap"
+                    >
+                      {{ slot.jadwal[day]?.mapel_nama || '-' }}
+                    </span>
+                  </td>
+                  <td class="p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-green-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{
+                        slot.jadwal[day]?.kelas_id
+                          ? getKelasName(slot.jadwal[day].kelas_id)
+                          : '-'
+                      }}
+                    </span>
+                  </td>
+                  <td class="p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-yellow-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{
+                        slot.jadwal[day]?.guru_id
+                          ? getGuruName(slot.jadwal[day].guru_id)
+                          : '-'
+                      }}
+                    </span>
+                  </td>
+                  <td class="p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-purple-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{ slot.jadwal[day]?.wali_kelas || '-' }}
+                    </span>
+                  </td>
+                  <td class="p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-gray-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{ slot.jadwal[day]?.tahun || '-' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pesan jika jadwal pada jam_ke ini kosong -->
+          <div v-if="Object.values(slot.jadwal).every((j) => !j)">
+            <span class="text-gray-400 italic block text-center mt-4">
+              Belum ada data jadwal untuk jam ke-{{ slot.jam_ke }}
+            </span>
+          </div>
         </div>
       </div>
     </main>
@@ -652,6 +537,6 @@ watch(schedule, (newVal) => {
     <!-- end1-->
 
     <!-- Sidebar -->
-    <SidebarAdmin />
+    <SidebarTeacher />
   </div>
 </template>

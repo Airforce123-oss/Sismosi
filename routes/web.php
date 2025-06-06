@@ -269,6 +269,9 @@ Route::get('/master-jabatan/{master_jabatan}/edit', [MasterJabatanController::cl
 
 Route::post('/tugas-siswa', [TeacherController::class, 'createTugasSiswa'])->name('tugas-siswa.create');
 
+Route::get('/jadwal-mata-pelajaran/by-teacher', [TeacherController::class, 'getJadwalByTeacher'])->name('jadwal.byTeacher');
+
+Route::get('/setting-laporan-nilai-siswa', [TeacherController::class, 'settingLaporanNilaiSiswa'])->name('settingLaporanNilaiSiswa');
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';

@@ -338,175 +338,162 @@ watch(
     <main class="p-4 md:ml-64 h-auto pt-20">
       <Head title="Teachers" />
       <div class="text-2xl col-sm-12 mb-10"></div>
-      <div class="flex-1 p-6">
-        <div class="mx-auto max-w-7xl sm:items-center">
-          <div class="px-4 py-4 sm:px-6 lg:px-8 -ml-10">
-            <div class="sm:flex sm:items-center">
-              <div class="sm:flex-auto">
-                <h1 class="text-3xl font-semibold text-gray-900">Guru</h1>
-                <p class="mt-2 text-sm text-gray-700">Daftar Semua Guru</p>
-              </div>
-
-              <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                <!-- Link untuk tambah guru -->
-                <Link
-                  :href="route('teachers.create')"
-                  class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <i class="fa fa-plus mr-2"></i> Tambah Guru
-                </Link>
-              </div>
+      <div class="mx-auto max-w-7xl sm:items-center">
+        <div class="px-4 py-4 sm:px-6 lg:px-8 -ml-10">
+          <div class="sm:flex sm:items-center">
+            <div class="sm:flex-auto">
+              <h1 class="text-3xl font-semibold text-gray-900">Guru</h1>
+              <p class="mt-2 text-sm text-gray-700">Daftar Semua Guru</p>
             </div>
 
-            <div class="flex flex-col justify-between sm:flex-row mt-6">
-              <div class="relative text-sm text-gray-800 col-span-3">
-                <div
-                  class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
-                >
-                  <MagnifyingGlass />
-                </div>
-
-                <input
-                  type="text"
-                  v-model="searchTerm"
-                  placeholder="Cari Data Guru.."
-                  id="search"
-                  class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+              <!-- Link untuk tambah guru -->
+              <Link
+                :href="route('teachers.create')"
+                class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <i class="fa fa-plus mr-2"></i> Tambah Guru
+              </Link>
             </div>
+          </div>
 
-            <!-- Hanya render jika classes sudah valid -->
-            <div v-if="classes?.data?.length > 0">
-              <Index
-                :classes="classes"
-                errors="{}"
-                auth="{ user: { role: 'teacher' } }"
-                wali_kelas="{ data: [], links: {}, meta: {} }"
+          <div class="flex flex-col justify-between sm:flex-row mt-6">
+            <div class="relative text-sm text-gray-800 col-span-3">
+              <div
+                class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
+              >
+                <MagnifyingGlass />
+              </div>
+
+              <input
+                type="text"
+                v-model="searchTerm"
+                placeholder="Cari Data Guru.."
+                id="search"
+                class="block rounded-lg border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
               />
             </div>
+          </div>
 
-            <div class="mt-8 flex flex-col mr-20">
-              <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <!-- Hanya render jika classes sudah valid -->
+          <div v-if="classes?.data?.length > 0">
+            <Index
+              :classes="classes"
+              errors="{}"
+              auth="{ user: { role: 'teacher' } }"
+              wali_kelas="{ data: [], links: {}, meta: {} }"
+            />
+          </div>
+
+          <div class="mt-8 flex flex-col mr-20">
+            <div class="w-full overflow-x-auto">
+              <div
+                class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+              >
                 <div
-                  class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                  class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
                 >
-                  <div
-                    class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg relative"
-                  >
-                    <table class="min-w-full bg-white">
-                      <thead class="bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                          >
-                            ID
-                          </th>
-                          <th
-                            scope="col"
-                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                          >
-                            Nama
-                          </th>
-                          <th
-                            scope="col"
-                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                          >
-                            NIP
-                          </th>
-                          <th
-                            scope="col"
-                            class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                          >
-                            Mapel
-                          </th>
-                          <th
-                            scope="col"
-                            class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                          >
-                            Jabatan
-                          </th>
-                          <th
-                            scope="col"
-                            class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6"
-                          >
-                            Action
-                          </th>
-                          <th
-                            scope="col"
-                            class="relative py-3.5 pl-3 pr-4 sm:pr-6"
-                          />
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-gray-200 bg-white">
-                        <tr
-                          v-for="(teacher, index) in waliKelas.data"
-                          :key="teacher.id"
+                  <table class="min-w-max bg-white text-sm">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th
+                          class="py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
                         >
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                          ID
+                        </th>
+                        <th
+                          class="py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
+                        >
+                          Nama
+                        </th>
+                        <th
+                          class="py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
+                        >
+                          NIP
+                        </th>
+                        <th
+                          class="py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
+                        >
+                          Mapel
+                        </th>
+                        <th
+                          class="px-3 py-3.5 text-left font-semibold text-gray-900"
+                        >
+                          Jabatan
+                        </th>
+                        <th
+                          class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right font-semibold text-gray-900 sm:pr-6"
+                        >
+                          Action
+                        </th>
+                        <th class="relative py-3.5 pl-3 pr-4 sm:pr-6"></th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                      <tr
+                        v-for="(teacher, index) in waliKelas.data"
+                        :key="teacher.id"
+                      >
+                        <td
+                          class="whitespace-nowrap py-4 pl-4 pr-3 font-medium text-gray-900 sm:pl-6"
+                        >
+                          <span v-if="pageNumber && perPage">
+                            {{
+                              (Number(pageNumber) - 1) * Number(perPage) +
+                              Number(index) +
+                              1
+                            }}
+                          </span>
+                          <span v-else>Loading...</span>
+                        </td>
+                        <td
+                          class="whitespace-nowrap py-4 pl-4 pr-3 font-medium text-gray-900 sm:pl-6"
+                        >
+                          {{ teacher.name }}
+                        </td>
+                        <td
+                          class="whitespace-nowrap py-4 pl-4 pr-3 text-gray-900 sm:pl-6"
+                        >
+                          {{ teacher.nip ?? '-' }}
+                        </td>
+                        <td
+                          class="whitespace-nowrap py-4 pl-4 pr-3 font-medium text-gray-900 sm:pl-6"
+                        >
+                          <span>{{ getTeacherMapel(teacher) }}</span>
+                        </td>
+                        <td
+                          class="whitespace-nowrap py-4 pl-4 pr-3 font-medium text-gray-900 sm:pl-6"
+                        >
+                          {{ teacher.class?.name ?? '-' }}
+                        </td>
+                        <td
+                          class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right font-medium sm:pr-6"
+                        >
+                          <Link
+                            :href="route('teachers.edit', teacher.id)"
+                            class="text-indigo-600 hover:text-indigo-900"
                           >
-                            <span v-if="pageNumber && perPage">
-                              {{
-                                (Number(pageNumber) - 1) * Number(perPage) +
-                                Number(index) +
-                                1
-                              }}
-                            </span>
-
-                            <span v-else>Loading...</span>
-                          </td>
-                          <td
-                            lass="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                            Edit
+                          </Link>
+                          <button
+                            @click="deleteTeacher(teacher.id)"
+                            class="ml-2 text-indigo-600 hover:text-indigo-900"
                           >
-                            {{ teacher.name }}
-                          </td>
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6"
-                          >
-                            {{ teacher.nip ?? '-' }}
-                          </td>
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                          >
-                            <span>{{ getTeacherMapel(teacher) }}</span>
-                          </td>
-                          <td
-                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
-                          >
-                            {{ teacher.class?.name ?? '-' }}
-                          </td>
-                          <td
-                            class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                          >
-                            <Link
-                              :href="route('teachers.edit', teacher.id)"
-                              class="text-indigo-600 hover:text-indigo-900"
-                            >
-                              Edit
-                            </Link>
-                            <button
-                              @click="deleteTeacher(teacher.id)"
-                              class="ml-2 text-indigo-600 hover:text-indigo-900"
-                            >
-                              Hapus
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <Pagination
-                    v-if="wali_kelas && wali_kelas.meta"
-                    :data="{
-                      meta: wali_kelas.meta,
-                      items: wali_kelas.data,
-                    }"
-                    :updatedPageNumber="updatedPageNumber"
-                  />
-                  <!-- <pre>{{ wali_kelas.meta.links }}</pre>-->
+                            Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
+                <Pagination
+                  v-if="wali_kelas && wali_kelas.meta"
+                  :data="{
+                    meta: wali_kelas.meta,
+                    items: wali_kelas.data,
+                  }"
+                  :updatedPageNumber="updatedPageNumber"
+                />
               </div>
             </div>
           </div>

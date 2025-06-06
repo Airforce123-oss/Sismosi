@@ -97,6 +97,8 @@ class StudentController extends Controller
     public function getLoggedInStudent(Request $request)
     {
         $user = Auth::user();
+
+
     
         if (!$user || $user->role_name !== 'student') {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -119,6 +121,13 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
+        \Log::info('User yang login:', [
+        'id' => $user?->id,
+        'name' => $user?->name,
+        'email' => $user?->email,
+        'role' => $user?->roles->pluck('name')->toArray(),
+        ]);
+
         if (!$user) {
             \Log::info('User null di melihatDataAbsensiSiswa, redirect ke login.');
             return redirect()->route('login');
@@ -131,25 +140,17 @@ class StudentController extends Controller
             ]);
         }
 
-        // Ambil dari query param secara eksplisit agar sinkron dengan URL
-        $studentId = $request->query('student_id');
-        $studentName = $request->query('student_name');
+        // Ambil student yang berelasi dengan user yang login
+        $student = Student::where('user_id', $user->id)->first();
 
-        if (!$studentId) {
-            \Log::warning('Student ID tidak tersedia di melihatDataAbsensiSiswa');
-            return redirect()->route('login');
+        if (!$student) {
+            return Inertia::render('ErrorPage', [
+                'message' => 'Data siswa tidak ditemukan.',
+            ]);
         }
 
-        // Jika student_name kosong, ambil dari DB dan redirect ulang dengan nama lengkap
-        if (!$studentName) {
-            $student = Student::find($studentId);
-            if (!$student) {
-                return Inertia::render('ErrorPage', [
-                    'message' => 'Data siswa tidak ditemukan.',
-                ]);
-            }
-            return Inertia::location("/melihatDataAbsensiSiswa?student_id={$studentId}&student_name=" . urlencode($student->name));
-        }
+        $studentId = $student->id;
+        $studentName = $student->name;
 
         // Ambil data absensi siswa hari ini
         $currentDate = now()->format('Y-m-d');
@@ -157,9 +158,6 @@ class StudentController extends Controller
             ->where('student_id', $studentId)
             ->with('student')
             ->get();
-
-        // Ambil data student lengkap untuk frontend (optional tapi berguna)
-        $student = Student::find($studentId);
 
         \Log::info('Kirim ke frontend dari melihatDataAbsensiSiswa', [
             'student_name' => $studentName,
@@ -169,12 +167,11 @@ class StudentController extends Controller
         return Inertia::render('Students/melihatDataAbsensiSiswa', [
             'attendanceRecords' => $attendanceRecords,
             'currentDate' => $currentDate,
-            'student_id' => request()->query('student_id'),
-            'student_name' => request()->query('student_name'),
+            'student_id' => $studentId,
+            'student_name' => $studentName,
             'student' => $student,
         ]);
     }
-
 
     public function indexApi(Request $request)
     {

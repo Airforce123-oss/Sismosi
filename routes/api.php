@@ -8,6 +8,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceTeacherController;
 use App\Http\Controllers\BukuPenghubung1Controller; 
 use App\Models\Mapel;
+use App\Http\Controllers\ParentController;
 use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\StudentController;
@@ -142,3 +143,6 @@ Route::get('/teachers/all', [TeacherController::class, 'getAllTeachers']);
 Route::post('/attendances/batch-update', [AttendanceController::class, 'batchUpdate']);
 
 Route::get('/api-schedule', [MataPelajaranController::class, 'apiJadwal']);
+
+
+Route::post('/komentar-siswa', [ParentController::class, 'storeKomentarSiswa']);

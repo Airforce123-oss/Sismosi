@@ -209,19 +209,30 @@ public function absensiSiswaJanuari($classId, $year, $mapel, $month)
 
 
     // Ambil semua siswa di kelas yang diminta dan sertakan mapel
-    $student = Student::with('mapel')
-        ->where('class_id', $classId)  // Pastikan hanya siswa dengan class_id yang sesuai yang diambil
-        ->get();
+    $students = Student::with(['mapel', 'attendances' => function($q) use ($year, $month, $decodedMapelList) {
+        if ($year) $q->whereYear('tanggal_kehadiran', $year);
+        if ($month) $q->whereMonth('tanggal_kehadiran', $month);
+        if (!empty($decodedMapelList)) $q->whereIn('mapel', $decodedMapelList);
+    }])
+    ->where('class_id', $classId)
+    ->get();
 
-    // Tambahkan field subject dari relasi
-    $student = $student->map(function ($student) {
+    $students = $students->map(function ($student) {
         return [
             'id' => $student->id,
             'name' => $student->name,
-            'subject' => $student->mapel->mapel ?? '-', // fallback jika null
+            'subject' => $student->mapel->mapel ?? '-',
+            'attendances' => $student->attendances->map(function($a) {
+                return [
+                    'id' => $a->id,
+                    'tanggal' => $a->tanggal_kehadiran,
+                    'status' => $a->status_kehadiran,
+                    'mapel' => $a->mapel,
+                ];
+            })->values(),
         ];
     });
-
+    
     // Ambil data mapel yang dipilih
     $selectedMapel = Mapel::whereIn('mapel', $decodedMapelList)->get();
 
@@ -234,7 +245,7 @@ public function absensiSiswaJanuari($classId, $year, $mapel, $month)
         'year' => $year,
         'mapel' => $decodedMapelList,
         'month' => $month,
-        'students' => $student,
+        'students' => $students,
         'selectedMapel' => $selectedMapel->toArray(),
         'teacherClass' => $teacherClassData,
 
@@ -244,7 +255,6 @@ public function absensiSiswaJanuari($classId, $year, $mapel, $month)
         ? response()->json($data)
         : Inertia::render('Students/absensiSiswaJanuari', $data);
 }
-
 
 private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
 {

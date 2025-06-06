@@ -59,8 +59,11 @@ const studentId = ref(query.get('student_id'));
 const studentName = ref(query.get('student_name'));
 
 // Jika kamu ingin computed juga bisa:
-const student_id = computed(() => studentId.value ?? null);
-const student_name = computed(() => studentName.value ?? '');
+//const student_id = computed(() => studentId.value ?? null);
+const student_id = computed(() => studentId.value ?? student.value?.id ?? '');
+
+//const student_name = computed(() => studentName.value ?? '');
+const student_name = computed(() => studentName.value ?? student.value?.name ?? '');
 
 // Debug
 console.log('✅ student_id dari query:', student_id.value);
@@ -415,7 +418,7 @@ const itemCount = computed(() => {
         <ul class="space-y-2">
           <li>
             <a
-              href="student-dashboard"
+              href="/student-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg
@@ -478,7 +481,7 @@ const itemCount = computed(() => {
           </li>
           <li>
             <a
-              href="melihatJadwalPelajaran"
+              href="/melihatJadwalPelajaran"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

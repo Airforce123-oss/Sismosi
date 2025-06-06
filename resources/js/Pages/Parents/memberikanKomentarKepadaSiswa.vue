@@ -1,89 +1,85 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch, computed } from 'vue';
 import { initFlowbite } from 'flowbite';
+import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import axios from 'axios';
 const userName = ref('');
 const { props } = usePage();
+const showAddModal = ref(false);
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
 
+const students = ref(props.students || []);
+
+const kelasFilter = ref('');
+console.log('Students:', students.value);
+const siswaFilter = ref('');
+const kelasList = ref(props.kelasList || []);
+
+const filteredStudentsByKelas = computed(() => {
+  if (!form.selected_kelas) return [];
+  return students.value.filter(
+    (s) => s.class && s.class.name === form.selected_kelas
+  );
+});
+
+const filteredStudents = computed(() => {
+  let result = students.value;
+  if (kelasFilter.value) {
+    result = result.filter(
+      (s) => kelasList.value[s.class_id - 1] === kelasFilter.value
+    );
+  }
+  if (siswaFilter.value) {
+    result = result.filter((s) =>
+      s.name.toLowerCase().includes(siswaFilter.value.toLowerCase())
+    );
+  }
+  return result;
+});
+const submitKomentar = async () => {
+  if (!form.student_id || !form.komentar) {
+    Swal.fire('Peringatan', 'Student dan komentar harus diisi!', 'warning');
+    return;
+  }
+  try {
+    await axios.post('/api/komentar-siswa', {
+      student_id: form.student_id,
+      komentar: form.komentar,
+    });
+    await Swal.fire({
+      icon: 'success',
+      title: 'Berhasil!',
+      text: 'Komentar berhasil disimpan!',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    form.komentar = '';
+    form.student_id = '';
+    showAddModal.value = false;
+  } catch (e) {
+    Swal.fire('Gagal', 'Gagal menyimpan komentar', 'error');
+    console.error(e.response?.data || e.message);
+  }
+};
+
 onMounted(() => {
   initFlowbite();
-
-  // calendar trial
-  const daysContainer = document.getElementById('days');
-  const monthYearDisplay = document.getElementById('monthYear');
-  /*
-    const prevButton = document.getElementById("prev");
-    const nextButton = document.getElementById("next");
-    */
-
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  let currentDate = new Date();
-
-  function renderCalendar() {
-    daysContainer.innerHTML = '';
-    monthYearDisplay.textContent = `${
-      months[currentDate.getMonth()]
-    } ${currentDate.getFullYear()}`;
-
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    ).getDay();
-    const daysInMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).getDate();
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      daysContainer.appendChild(document.createElement('div'));
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayElement = document.createElement('div');
-      dayElement.textContent = day;
-      dayElement.classList.add(
-        'flex',
-        'items-center',
-        'justify-center',
-        'w-12',
-        'h-12'
-      );
-
-      if (
-        day === currentDate.getDate() &&
-        currentDate.getMonth() === new Date().getMonth() &&
-        currentDate.getFullYear() === new Date().getFullYear()
-      ) {
-        dayElement.classList.add('bg-blue-500', 'text-white', 'rounded-full');
-      }
-
-      daysContainer.appendChild(dayElement);
-    }
-  }
 });
+
+watch(
+  kelasList,
+  (val) => {
+    console.log('kelasList:', val);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -228,13 +224,288 @@ onMounted(() => {
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Dashboard" />
-
+      <Head title="Komentar Siswa" />
+      <div
+        class="mb-6 bg-blue-50 px-4 py-3 rounded-lg shadow-sm w-full max-w-5xl mx-auto"
+      >
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+          <label
+            class="font-semibold text-blue-700 flex items-center gap-1 min-w-max md:col-span-1"
+          >
+            <svg
+              class="w-5 h-5 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            Filter Kelas:
+          </label>
+          <div class="min-w-0 md:col-span-1">
+            <select
+              v-model="kelasFilter"
+              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+            >
+              <option value="">Semua Kelas</option>
+              <option v-for="kelas in kelasList" :key="kelas" :value="kelas">
+                {{ kelas }}
+              </option>
+            </select>
+          </div>
+          <div class="min-w-0 md:col-span-2">
+            <input
+              v-model="siswaFilter"
+              type="text"
+              placeholder="Cari nama siswa..."
+              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+            />
+          </div>
+          <div class="min-w-0 md:col-span-1 flex">
+            <button
+              v-if="kelasFilter || siswaFilter"
+              @click="
+                kelasFilter = '';
+                siswaFilter = '';
+              "
+              class="w-full px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs transition min-w-max"
+              title="Reset filter"
+            >
+              Reset
+            </button>
+          </div>
+          <div class="min-w-0 md:col-span-1 flex">
+            <button
+              @click="showAddModal = true"
+              class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-5 py-2 rounded shadow transition-all duration-200"
+            >
+              <svg
+                class="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 4v16m8-8H4" />
+              </svg>
+              Tambah Komentar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        class="max-w-6xl mx-auto mt-10 bg-white rounded-xl shadow p-6 space-y-6"
+      >
+        <h2
+          class="text-2xl font-bold mb-2 text-blue-700 text-center tracking-wide"
+        >
+          Input Komentar untuk Siswa
+        </h2>
+        <hr class="mb-4 border-blue-200" />
+        <div class="overflow-x-auto rounded-lg shadow">
+          <table
+            class="w-full border border-gray-200 rounded-lg overflow-hidden text-sm"
+          >
+            <thead class="bg-blue-100 text-blue-900 uppercase text-xs">
+              <tr>
+                <th class="p-3 border-b border-gray-200 text-left">
+                  Nama Siswa
+                </th>
+                <th class="p-3 border-b border-gray-200 text-left">Kelas</th>
+                <th class="p-3 border-b border-gray-200 text-left">Komentar</th>
+                <th class="p-3 border-b border-gray-200 text-left">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="student in filteredStudents"
+                :key="student.id"
+                class="even:bg-blue-50 odd:bg-white hover:bg-blue-200/40 transition-colors duration-150 group"
+              >
+                <td
+                  class="p-3 border-b border-gray-100 font-medium group-hover:text-blue-800"
+                >
+                  {{ student.name }}
+                </td>
+                <td class="p-3 border-b border-gray-100">
+                  <span
+                    class="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-xs font-semibold"
+                  >
+                    {{ kelasList[student.class_id - 1] || '-' }}
+                  </span>
+                </td>
+                <td class="p-3 border-b border-gray-100">
+                  <span
+                    v-if="
+                      student.komentar_siswas && student.komentar_siswas.length
+                    "
+                  >
+                    <span
+                      v-for="komentar in student.komentar_siswas"
+                      :key="komentar.id"
+                      class="block px-2 py-1 rounded bg-blue-50 text-gray-700 mb-1"
+                    >
+                      {{ komentar.komentar }}
+                    </span>
+                  </span>
+                  <span v-else class="text-gray-400">Belum ada komentar</span>
+                </td>
+                <td class="p-3 border-b border-gray-100 flex gap-2">
+                  <button
+                    @click="editKomentar(student)"
+                    class="flex items-center gap-1 bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded shadow transition"
+                    title="Edit"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"
+                      />
+                    </svg>
+                    Edit
+                  </button>
+                  <button
+                    @click="hapusKomentar(student)"
+                    class="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow transition"
+                    title="Hapus"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Hapus
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Modal -->
+        <transition name="fade">
+          <div
+            v-if="showAddModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <div
+              class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fadeIn relative"
+            >
+              <!-- Modal Title -->
+              <div class="flex items-center gap-2 mb-4">
+                <svg
+                  class="w-7 h-7 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M17 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2"
+                  ></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <h3 class="text-xl text-center font-bold text-blue-700 flex-1">
+                  Tambah Komentar Siswa
+                </h3>
+                <button
+                  @click="showAddModal = false"
+                  class="text-gray-400 hover:text-red-500 transition"
+                  title="Tutup"
+                >
+                  <svg
+                    class="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <hr class="mb-4 border-blue-100" />
+              <form @submit.prevent="submitKomentar">
+                <!-- Dropdown Kelas -->
+                <div class="mb-3">
+                  <label class="block mb-1 font-medium">Kelas</label>
+                  <select
+                    v-model="form.selected_kelas"
+                    class="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="" disabled>Pilih kelas</option>
+                    <option
+                      v-for="kelas in kelasList"
+                      :key="kelas"
+                      :value="kelas"
+                    >
+                      {{ kelas }}
+                    </option>
+                  </select>
+                </div>
+                <!-- Dropdown Siswa -->
+                <div class="mb-3">
+                  <label class="block mb-1 font-medium">Siswa</label>
+                  <select
+                    v-model="form.student_id"
+                    class="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-400"
+                    :disabled="!form.selected_kelas"
+                  >
+                    <option value="" disabled>Pilih siswa</option>
+                    <option
+                      v-for="student in students.filter(
+                        (s) => kelasList[s.class_id - 1] === form.selected_kelas
+                      )"
+                      :key="student.id"
+                      :value="student.id"
+                    >
+                      {{ student.name }}
+                    </option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="block mb-1 font-medium">Komentar</label>
+                  <input
+                    v-model="form.komentar"
+                    type="text"
+                    class="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-400"
+                    placeholder="Tulis komentar..."
+                  />
+                </div>
+                <div class="flex gap-2 justify-end mt-4">
+                  <button
+                    type="button"
+                    @click="showAddModal = false"
+                    class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </transition>
+      </div>
     </main>
 
     <!-- Sidebar -->
     <aside
-      class="fixed top-0 left-0 z-40 w-60 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
+      class="fixed top-0 left-0 z-40 w-60 h-screen pt-4 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-900"
       aria-label="Sidenav"
       id="drawer-navigation"
       style=""
@@ -243,7 +514,7 @@ onMounted(() => {
         <ul class="space-y-2">
           <li>
             <a
-              href="dashboard"
+              href="/parent-dashboard"
               class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
             >
               <svg

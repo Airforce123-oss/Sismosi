@@ -62,5 +62,15 @@ class Student extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+        public function komentarSiswas()
+    {
+        return $this->hasMany(\App\Models\KomentarSiswa::class, 'student_id');
+    }
+
+        public function getKelasAttribute()
+    {
+        return \App\Models\Classes::find($this->class_id);
+    }
+
 
 }

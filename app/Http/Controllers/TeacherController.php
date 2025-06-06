@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ClassesResource;
 use App\Http\Resources\TeacherResource;
 use App\Http\Resources\StudentResource;
-use App\Http\Resources\BukuPenghubungResource; // Import BukuPenghubungResource
+use App\Http\Resources\BukuPenghubungResource; //Import BukuPenghubungResource
 use App\Http\Requests\StoreStudentRequest;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreTeacherRequest;
@@ -583,8 +583,121 @@ public function storeAttendance(Request $request)
         return response()->json(['mapel' => $mapel]);
     }
 
-                
-        
-    
+    public function getJadwalByTeacher(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return redirect()->back()->with('error', 'User belum login');
+        }
+        $teacherId = $user->id;
 
+        $jadwalFlat = \App\Models\JadwalMataPelajaran::with([
+                'mapel',
+                'kelas',
+                'guru',
+                'kelas.waliKelas'
+            ])
+            ->where('guru_id', $teacherId)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id'         => $item->id,
+                    'hari'       => $item->hari,
+                    'jam_ke'     => $item->jam_ke,
+                    'jam'        => $item->jam,
+                    'mapel_id'   => $item->mapel_id,
+                    'mapel_nama' => $item->mapel->mapel ?? '-',
+                    'guru_id'    => $item->guru_id,
+                    'guru_nama'  => $item->guru?->name ?? '-',
+                    'kelas_id'   => $item->kelas_id,
+                    'kelas_nama' => $item->kelas?->name ?? '-',
+                    'wali_kelas' => optional(optional($item->kelas)->waliKelas)->name,
+                    'tahun'      => $item->tahun,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                ];
+            });
+
+        // Grouping per jam_ke
+        $grouped = [];
+        foreach ($jadwalFlat as $item) {
+            $jamKe = $item['jam_ke'];
+            if (!isset($grouped[$jamKe])) {
+                $grouped[$jamKe] = [
+                    'jam_ke' => $jamKe,
+                    'jam' => $item['jam'],
+                    'jadwal' => [],
+                ];
+            }
+            $grouped[$jamKe]['jadwal'][$item['hari']] = $item;
+        }
+
+        // Pastikan semua hari ada (meski null)
+        $days = ['senin','selasa','rabu','kamis','jumat','sabtu','minggu'];
+        foreach ($grouped as &$slot) {
+            foreach ($days as $day) {
+                if (!isset($slot['jadwal'][$day])) {
+                    $slot['jadwal'][$day] = null;
+                }
+            }
+        }
+
+        $schedule = array_values($grouped);
+
+        return inertia('Teachers/JadwalMataPelajaran/index', [
+            'schedule' => $schedule,
+            'teacher_id' => $teacherId,
+            'master_mapel' => Mapel::all(),
+            'classes_for_student' => ['data' => Classes::all()],
+            'kelas_id' => null,
+            'teachers' => Teacher::all(),
+        ]);
+    }
+
+    public function settingLaporanNilaiSiswa(Request $request)
+    {
+        $studentsQuery = Student::query();
+
+        if ($request->filled('nama')) {
+            $studentsQuery->where('name', 'like', '%' . $request->input('nama') . '%');
+        }
+        if ($request->filled('nomor_induk')) {
+            $studentsQuery->where('nomor_induk', 'like', '%' . $request->input('nomor_induk') . '%');
+        }
+        if ($request->filled('tahun_pelajaran')) {
+            $studentsQuery->where('tahun_pelajaran', $request->input('tahun_pelajaran'));
+        }
+        if ($request->filled('kelas')) {
+            $studentsQuery->where('class_id', $request->input('kelas'));
+        }
+
+        $allMapel = Mapel::all(['id', 'mapel']);
+
+        $students = $studentsQuery->with('class', 'noInduk')->paginate(20);
+
+        $kelasList = Classes::all(['id', 'name']);
+        $tahunList = Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran'); 
+        $studentIds = collect($students->items())->pluck('id');
+        // Ambil enrollments berdasarkan student_id yang sudah diambil dari pagination
+        $enrollments = \App\Models\Enrollment::with(['mapel', 'student'])
+        ->whereIn('student_id', $studentIds)
+        ->get();
+        
+        $attendances = \App\Models\Attendance::whereIn('student_id', collect($students->items())->pluck('id'))->get();
+
+        return inertia('Teachers/settingLaporanNilaiSiswa', [
+            'students' => $students, // <-- data asli dari database
+            'kelasList' => $kelasList,
+            'tahunList' => $tahunList,
+            'allMapel' => $allMapel,
+            'enrollments' => $enrollments,
+            'attendances' => $attendances,
+            'filters' => [
+                'nama' => $request->input('nama'),
+                'nomor_induk' => $request->input('nomor_induk'),
+                'tahun_pelajaran' => $request->input('tahun_pelajaran'),
+                'kelas' => $request->input('kelas'),
+            ],
+        ]);
+    }
 }
