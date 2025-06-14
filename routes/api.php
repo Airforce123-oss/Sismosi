@@ -61,10 +61,6 @@ Route::get('/enrollments', [EnrollmentController::class, 'getPaginatedEnrollment
 Route::get('/marks', [EnrollmentController::class, 'getMarks']);
 Route::post('/enrollment/update', [EnrollmentController::class, 'updateEnrollment']);
 
-
-Route::get('/enrollments/{enrollment}', [EnrollmentController::class, 'show']); 
-//Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']);
-
 // Menambahkan rute untuk menyimpan enrollment
 Route::post('/enrollments', [EnrollmentController::class, 'store']);
 
@@ -115,11 +111,12 @@ Route::post('/attendance/update', [AttendanceTeacherController::class, 'updateAt
 
 Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAttendance']);
 Route::get('/api/mapel', [MataPelajaranController::class, 'getMapel']);
-Route::get('/api/classes', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
 Route::get('/absensi-siswa', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
 Route::get('/get-mapel-by-teacher-id', [TeacherController::class, 'getMapelByTeacherId']);
 Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);  
-Route::get('/api/classes', [ClassController::class, 'index']);
+Route::get('/classes', [ClassController::class, 'index']);
+Route::get('/classes/json', [EnrollmentController::class, 'getOnlyClasses']);
+
 Route::get('/teacher-attendance-report', [AttendanceTeacherController::class, 'getAttendanceReport']);
 
 Route::middleware('auth:sanctum')->get('/logged-in-student', [StudentController::class, 'getLoggedInStudent']);
@@ -146,3 +143,14 @@ Route::get('/api-schedule', [MataPelajaranController::class, 'apiJadwal']);
 
 
 Route::post('/komentar-siswa', [ParentController::class, 'storeKomentarSiswa']);
+
+Route::get('/enrollments/students', [EnrollmentController::class, 'getStudentsByClass']);
+
+Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']); 
+
+Route::get('/students/by-nis/{nomor_induk}', [StudentController::class, 'getByNomorInduk']);
+
+Route::post('/student-login', [AuthController::class, 'studentLogin']);
+
+
+

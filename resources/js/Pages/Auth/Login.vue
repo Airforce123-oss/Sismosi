@@ -2,6 +2,7 @@
 import { ref, watch, computed, onMounted } from 'vue';
 import vSelect from 'vue-select';
 import 'vue-select/dist/vue-select.css';
+import Swal from 'sweetalert2';
 import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
@@ -10,6 +11,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import axios from 'axios';
+
+const showNisHelp = ref(false);
 
 // Pastikan CSRF token ada di meta tag
 const csrfMetaTag = document.querySelector('meta[name="csrf-token"]');
@@ -43,14 +46,11 @@ const props = defineProps({
 //console.log('Daftar students dari props:', props.students);
 
 const form = useForm({
-  email: '',
+  credential: '',
   password: '',
   remember: false,
-  student: null,
   role: '',
 });
-
-console.log('Role terpilih:', form.role);
 
 const userName = ref('');
 const errorMessage = ref(''); // Untuk menyimpan pesan error jika login gagal
@@ -66,111 +66,94 @@ const fetchSessionData = async () => {
   }
 };
 
-const students = ref([]);
-
 const studentName = ref('');
 // Watch untuk memantau perubahan student_id
 watch(
   () => form.student,
   (newValue, oldValue) => {
-    console.log('Student ID berubah:', { oldValue, newValue });
+    //console.log('Student ID berubah:', { oldValue, newValue });
   }
 );
 
-const fetchLoggedInStudent = async () => {
-  console.log('📥 fetchLoggedInStudent dipanggil');
-
-  try {
-    const token = localStorage.getItem('token');
-    console.log('Token:', token);
-
-    if (!token) {
-      console.error('❗ Token is missing');
-      return;
-    }
-
-    const response = await axios.get('/api/logged-in-student', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    console.log('✅ Axios berhasil');
-    const loggedInStudent = response.data;
-    console.log('✅ Response dari server:', loggedInStudent);
-
-    studentId.value = loggedInStudent.id;
-    studentName.value =
-      students.value.find((s) => s.id === form.student_id)?.name || '';
-  } catch (error) {
-    console.error('❌ Error fetching logged-in student:', error);
-  }
-};
-
-const fetchAllStudents = async () => {
-  try {
-    console.log('memulai fetchAllStudents, isi awal: ', students.value);
-    // Ambil CSRF cookie dulu supaya Laravel Sanctum meng-set session cookie
-    await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
-
-    // Request data siswa dengan cookie session otomatis terkirim
-    const response = await axios.get('/api/fetch-all-students', {
-      withCredentials: true, // Kirim cookie session
-    });
-    console.log('✅ Response dari server:', response.data); // <- Ini penting
-    students.value = response.data.students;
-    console.log('✅ Data siswa berhasil diambil:', students.value);
-  } catch (error) {
-    console.error(
-      '❌ Gagal mengambil data siswa:',
-      error.response?.data || error.message
-    );
-    // Jangan langsung redirect di sini agar tidak loop
-    throw error; // biarkan error dilempar ke caller
-  }
-};
-
 // Fungsi submit login
 const submit = async () => {
+  console.log('🔵 [submit()] Fungsi login dipanggil');
   errorMessage.value = '';
   successMessage.value = '';
 
   try {
-    // Ambil CSRF cookie & session
+    console.log('🟡 [submit()] Meminta CSRF cookie...');
     await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+    console.log('✅ [submit()] CSRF cookie diterima.');
 
-    // Ambil data siswa yang dipilih (berisi ID dan nama)
     let student_id = null;
     let student_name = '';
 
-    if (form.role === 'student' && form.student) {
-      // Ambil dari selected object
-      student_id = form.student.id;
-      student_name = form.student.name;
+    if (form.role === 'student') {
+      console.log(
+        `🟡 [submit()] Role terpilih: 'student', mencari NIS: ${form.credential}`
+      );
+      try {
+        const response = await axios.get(
+          `/api/students/by-nis/${form.credential}`
+        );
+        console.log('✅ [submit()] Respon dari API siswa:', response.data);
+
+        const student = response.data;
+        student_id = student.id;
+        student_name = student.name;
+
+        console.log(
+          `🟢 [submit()] Data siswa ditemukan: ID = ${student_id}, Nama = ${student_name}`
+        );
+      } catch (e) {
+        console.error(
+          '❌ [submit()] Siswa tidak ditemukan berdasarkan NIS:',
+          form.credential,
+          e
+        );
+        Swal.fire({
+          icon: 'error',
+          title: 'NIS Tidak Ditemukan',
+          text: 'Siswa dengan NIS tersebut tidak ditemukan. Periksa kembali.',
+        });
+        return;
+      }
+    } else {
+      console.log(
+        `🟡 [submit()] Role terpilih: '${form.role}', login menggunakan email.`
+      );
     }
 
-    // Kirim login ke endpoint Laravel
-    await axios.post(
-      '/login',
-      {
-        email: form.email,
-        password: form.password,
-        role: form.role,
-        student_id,
-        student_name,
-      },
-      {
-        withCredentials: true,
-      }
+    const payload = {
+      credential: form.credential,
+      password: form.password,
+      role: form.role,
+    };
+
+    if (form.role === 'student') {
+      payload.student_id = student_id;
+      payload.student_name = student_name;
+    }
+
+    console.log(
+      '📦 [submit()] Payload login yang dikirim ke backend:',
+      payload
     );
 
+    const loginResponse = await axios.post('/login', payload, {
+      withCredentials: true,
+    });
+
+    console.log(
+      '✅ [submit()] Login berhasil. Respon dari server:',
+      loginResponse.data
+    );
     successMessage.value = 'Login berhasil!';
 
-    // Setelah login, fetch ulang data siswa (opsional)
-    await fetchAllStudents();
-
-    // Redirect sesuai role
+    // 🔄 Redirect berdasarkan role
     if (form.role === 'student') {
+      console.log(`➡️ [submit()] Redirect ke /student-dashboard/${student_id}`);
       router.visit(
         `/student-dashboard/${student_id}?student_name=${encodeURIComponent(
           student_name
@@ -182,20 +165,30 @@ const submit = async () => {
       router.visit('/admin-dashboard');
     } else if (form.role === 'parent') {
       router.visit('/parent-dashboard');
+    } else {
+      console.warn('⚠️ [submit()] Role tidak dikenali:', form.role);
     }
   } catch (error) {
     console.error(
-      '❌ Error during login:',
+      '❌ [submit()] Error saat login:',
       error.response?.data || error.message
     );
-    errorMessage.value =
+    const message =
       error.response?.data?.message || 'Login gagal. Silakan coba lagi.';
+
+    // ✅ SweetAlert2 tampilkan error login
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Gagal',
+      text: message,
+    });
+
+    errorMessage.value = message;
   }
 };
 
 onMounted(async () => {
   try {
-    await fetchAllStudents();
   } catch (error) {
     if (
       error.response?.status === 401 &&
@@ -217,136 +210,165 @@ watch(
     }
   }
 );
-
-watch(
-  () => form.student,
-  (newStudent) => {
-    if (!newStudent) {
-      form.student_id = null;
-      console.log('❌ Siswa tidak ditemukan karena nilai baru null/undefined');
-      return;
-    }
-
-    const matched = students.value.find((s) => s.id === newStudent.id);
-
-    if (matched) {
-      form.student_id = matched.id;
-      console.log('👤 Siswa dipilih (dari watch):', {
-        student_id: matched.id,
-        student_name: matched.name,
-      });
-    } else {
-      form.student_id = null;
-      console.log('❌ Siswa tidak ditemukan untuk ID:', newStudent.id);
-    }
-  }
-);
-
-watch(
-  () => form.student,
-  (selected) => {
-    if (form.role === 'student' && selected) {
-      const url = `/student-dashboard/${
-        selected.id
-      }?student_name=${encodeURIComponent(selected.name)}`;
-      console.log('📌 URL yang akan digunakan untuk redirect:', url);
-    }
-  }
-);
 </script>
 
 <template>
   <!-- --->
   <Head title="Login" />
-  <div class="bg-[#12bdee] flex items-center justify-center min-h-screen">
-    <div class="bg-white shadow-md rounded-lg flex max-w-4xl w-full">
-      <div class="w-1/2 p-8 flex flex-col items-center justify-center">
-        <img
-          src="/images/barunawati.webp"
-          class="w-2/3 h-auto object-contain mb-4"
-          alt="Gambar Barunawati"
-        />
-        <h2 class="text-2xl font-bold text-center">SMA BARUNAWATI SURABAYA</h2>
-      </div>
-      <div class="w-1/2 p-8">
-        <h2 class="text-2xl font-bold text-center">SELAMAT DATANG</h2>
-        <p class="text-center text-gray-500 mb-6">
-          <a href="register" class="text-blue-500">Sign Up</a>
-        </p>
-        <form @submit.prevent="submit">
-          <div class="mb-4">
-            <label for="email" class="block text-gray-700">Email</label>
-            <TextInput
-              id="email"
-              type="email"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              v-model="form.email"
-              required
-              autocomplete="username"
-              placeholder="Masukkan Email"
-            />
-          </div>
+  <div
+    class="min-h-screen bg-gradient-to-tr from-[#12bdee] via-[#6be4f4] to-[#c6f6ff] flex items-center justify-center px-4"
+  >
+    <div class="px-4 sm:px-6 py-8 sm:py-12">
+      <div
+        class="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row w-full max-w-[95%] sm:max-w-[500px] md:max-w-4xl mx-auto overflow-hidden"
+      >
+        <!-- Left Section (Image + School Info) -->
+        <div
+          class="md:w-1/2 bg-[#f5f9fc] p-5 flex flex-col justify-center items-center"
+        >
+          <img
+            src="/images/barunawati.webp"
+            class="w-2/3 h-auto object-contain mb-6 drop-shadow-md"
+            alt="Logo Barunawati"
+          />
+          <h2 class="text-3xl font-bold text-center text-[#064663]">
+            SMA BARUNAWATI SURABAYA
+          </h2>
+        </div>
 
-          <div class="mb-4">
-            <label for="role" class="block text-gray-700">Pilih Role</label>
-            <select
-              v-model="form.role"
-              class="w-full border border-gray-300 p-2 rounded"
-            >
-              <option value="" disabled>Pilih Role</option>
-              <option value="student">Siswa</option>
-              <option value="teacher">Guru</option>
-              <option value="admin">Admin</option>
-              <option value="parent">Orang Tua</option>
-            </select>
-          </div>
+        <!-- Right Section (Form) -->
+        <div class="md:w-1/2 w-full p-10 bg-white">
+          <h2 class="text-2xl font-bold text-center text-[#064663] mb-6">
+            Selamat Datang 👋
+          </h2>
 
-          <div class="mb-4" v-if="form.role === 'student'">
-            <label for="student_id" class="block text-gray-700 mb-1"
-              >Pilih Siswa</label
-            >
+          <form @submit.prevent="submit" class="space-y-5">
+            <!-- Role -->
+            <div>
+              <label for="role" class="block text-gray-700 mb-1 font-semibold"
+                >Pilih Role</label
+              >
+              <select
+                id="role"
+                v-model="form.role"
+                class="w-full border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-[#12bdee] focus:outline-none"
+                required
+              >
+                <option value="" disabled>Pilih Role</option>
+                <option value="student">Siswa</option>
+                <option value="teacher">Guru</option>
+                <option value="admin">Admin</option>
+                <option value="parent">Orang Tua</option>
+              </select>
+            </div>
+            <!-- NIS atau Email -->
+            <div class="mb-6 space-y-2">
+              <!-- Label Input -->
+              <label
+                for="credential"
+                class="block text-sm font-semibold text-gray-700"
+              >
+                {{
+                  form.role === 'student' ? 'Nomor Induk Siswa (NIS)' : 'Email'
+                }}
+              </label>
 
-            <v-select
-              v-if="students.length"
-              v-model="form.student"
-              :options="students"
-              label="name"
-              placeholder="Cari siswa..."
-              class="w-full"
-              searchable
-              clearable
-              @focus="fetchAllStudents"
-            />
+              <!-- Input Field -->
+              <TextInput
+                id="credential"
+                :type="form.role === 'student' ? 'text' : 'email'"
+                v-model="form.credential"
+                :placeholder="
+                  form.role === 'student'
+                    ? 'Contoh: 22004567'
+                    : 'contoh@email.com'
+                "
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#12bdee] focus:outline-none transition duration-150"
+                required
+                autocomplete="username"
+              />
 
-            <div v-else class="text-sm text-gray-500">
-              Tidak ada data siswa tersedia.
+              <!-- Tombol Bantuan NIS (Hanya untuk siswa) -->
+              <div v-if="form.role === 'student'" class="flex justify-end">
+                <button
+                  @click="showNisHelp = true"
+                  type="button"
+                  class="mt-2 text-sm text-blue-600 hover:underline"
+                >
+                  Tidak tahu NIS? Klik di sini.
+                </button>
+              </div>
+
+              <!-- Modal Bantuan NIS -->
+              <div
+                v-if="showNisHelp"
+                class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center"
+              >
+                <div
+                  class="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6 relative"
+                >
+                  <!-- Close Button -->
+                  <button
+                    @click="showNisHelp = false"
+                    class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+                  >
+                    &times;
+                  </button>
+
+                  <h2 class="text-xl font-bold mb-4 text-center">
+                    Cara Mengetahui NIS
+                  </h2>
+
+                  <ul class="list-disc list-inside text-gray-700 space-y-2">
+                    <li>Lihat di kartu pelajar atau rapor.</li>
+                    <li>
+                      Tanyakan langsung ke wali kelas atau Tata Usaha (TU).
+                    </li>
+                    <li>
+                      Jika kamu belum menerima NIS, segera hubungi pihak
+                      sekolah.
+                    </li>
+                  </ul>
+
+                  <button
+                    @click="showNisHelp = false"
+                    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg"
+                  >
+                    Oke, Mengerti
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <small class="text-gray-500">Ketik nama siswa untuk mencari.</small>
-          </div>
+            <!-- Password -->
+            <div>
+              <label
+                for="password"
+                class="block text-gray-700 mb-1 font-semibold"
+                >Password</label
+              >
+              <TextInput
+                id="password"
+                type="password"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#12bdee] focus:outline-none"
+                v-model="form.password"
+                required
+                autocomplete="current-password"
+                placeholder="Masukkan Password"
+              />
+            </div>
 
-          <div class="mb-4">
-            <label for="password" class="block text-gray-700">Password</label>
-            <TextInput
-              id="password"
-              type="password"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              v-model="form.password"
-              required
-              autocomplete="current-password"
-              placeholder="Masukkan Password"
-            />
-          </div>
-          <PrimaryButton
-            type="submit"
-            class="w-full px-3 py-2 rounded-lg bg-[#12bdee] items-center justify-center"
-            style="text-align: center; text-transform: none"
-            :class="{ 'opacity-25': form.processing }"
-            :disabled="form.processing"
-          >
-            Login
-          </PrimaryButton>
-        </form>
+            <!-- Submit Button -->
+            <PrimaryButton
+              type="submit"
+              class="w-full bg-[#12bdee] hover:bg-[#0fa8d1] text-white font-semibold py-2 rounded-lg transition duration-200 ease-in-out shadow-md flex items-center justify-center"
+              :class="{ 'opacity-50': form.processing }"
+              :disabled="form.processing"
+            >
+              Login
+            </PrimaryButton>
+          </form>
+        </div>
       </div>
     </div>
   </div>

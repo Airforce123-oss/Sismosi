@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             AttendanceSeeder::class,
             ClassesSeeder::class,
             TeacherSeeder::class,
+            PerbaikiRelasiUserIdSeeder::class,
+            AssignStudentRolesSeeder::class,
         ]);
         $user = User::find(2); // Cari pengguna dengan ID 2
         if ($user) {

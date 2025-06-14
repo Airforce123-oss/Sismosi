@@ -3,97 +3,70 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue';
 import { initFlowbite } from 'flowbite';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import SidebarParent from '@/Components/SidebarParent.vue';
-import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
-import axios from 'axios';
-const userName = ref('');
+import { Link, useForm, usePage, Head, router } from '@inertiajs/vue3';
+import Pagination8 from '@/Components/Pagination8.vue';
 const { props } = usePage();
+const page = usePage();
+const expandedTanggalId = ref(null);
+const students = computed(() => page.props.students || null);
+
+const processedStudents = computed(() => {
+  if (!students.value || !students.value.data) return [];
+
+  return students.value.data.map((student) => {
+    console.log('Nama:', student.name, 'Attendances:', student.attendances);
+    return {
+      ...student,
+      attendancesExceptFirst: (student.attendances || []).slice(1),
+    };
+  });
+});
+
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
 
-const processedStudents = computed(() => {
-  return (props.students || []).map((student) => ({
-    ...student,
-    attendancesExceptFirst: (student.attendances || []).slice(1),
-  }));
-});
-
 onMounted(() => {
+  console.log('page.props.students:', page.props.students);
   initFlowbite();
-
-  // calendar trial
-  const daysContainer = document.getElementById('days');
-  const monthYearDisplay = document.getElementById('monthYear');
-  /*
-    const prevButton = document.getElementById("prev");
-    const nextButton = document.getElementById("next");
-    */
-
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  let currentDate = new Date();
-
-  function renderCalendar() {
-    daysContainer.innerHTML = '';
-    monthYearDisplay.textContent = `${
-      months[currentDate.getMonth()]
-    } ${currentDate.getFullYear()}`;
-
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    ).getDay();
-    const daysInMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).getDate();
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      daysContainer.appendChild(document.createElement('div'));
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayElement = document.createElement('div');
-      dayElement.textContent = day;
-      dayElement.classList.add(
-        'flex',
-        'items-center',
-        'justify-center',
-        'w-12',
-        'h-12'
-      );
-
-      if (
-        day === currentDate.getDate() &&
-        currentDate.getMonth() === new Date().getMonth() &&
-        currentDate.getFullYear() === new Date().getFullYear()
-      ) {
-        dayElement.classList.add('bg-blue-500', 'text-white', 'rounded-full');
-      }
-
-      daysContainer.appendChild(dayElement);
-    }
-  }
 });
-const getAttendancesExceptFirst = (student) => {
-  return student.attendances.slice(1);
+
+const goToPage = (page) => {
+  router.get(
+    route('melihat-presensi'),
+    {
+      class_id: props.classId,
+      year: props.year,
+      month: props.month,
+      mapel: props.mapel,
+      page: page,
+    },
+    {
+      preserveScroll: true,
+      preserveState: true,
+    }
+  );
 };
+
+console.log(props.students);
+
+watch(
+  () => props.students,
+  (newVal) => {
+    console.log('props.students changed:', newVal);
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.students,
+  (val) => {
+    console.log('props.students changed:', val);
+  },
+  { immediate: true, deep: true }
+);
 </script>
 
 <style scoped>
@@ -242,11 +215,12 @@ const getAttendancesExceptFirst = (student) => {
       <form
         method="GET"
         action="/melihat-presensi"
-        class="mb-6 bg-blue-50 px-4 py-3 rounded-lg shadow-sm w-full max-w-5xl mx-auto"
+        class="w-full max-w-6xl mx-auto bg-blue-50 rounded-xl shadow-md px-4 sm:px-6 lg:px-8 py-4 sm:py-5 mb-6"
       >
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
-          <label
-            class="font-semibold text-blue-700 flex items-center gap-1 min-w-max md:col-span-1"
+        <div class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+          <!-- Judul Filter -->
+          <div
+            class="col-span-full flex items-center gap-2 text-blue-700 font-semibold text-lg"
           >
             <svg
               class="w-5 h-5 text-blue-500"
@@ -257,13 +231,19 @@ const getAttendancesExceptFirst = (student) => {
             >
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            Filter:
-          </label>
-          <div class="min-w-0 md:col-span-1">
+            Filter Data Presensi
+          </div>
+
+          <!-- Field: Kelas -->
+          <div class="flex flex-col">
+            <label for="class_id" class="mb-1 text-sm font-medium text-blue-700"
+              >Kelas</label
+            >
             <select
+              id="class_id"
               name="class_id"
               required
-              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+              class="w-full border border-blue-300 rounded-md px-3 py-2 text-sm text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white shadow-sm transition"
             >
               <option value="">Pilih Kelas</option>
               <option
@@ -276,11 +256,17 @@ const getAttendancesExceptFirst = (student) => {
               </option>
             </select>
           </div>
-          <div class="min-w-0 md:col-span-1">
+
+          <!-- Field: Tahun -->
+          <div class="flex flex-col">
+            <label for="year" class="mb-1 text-sm font-medium text-blue-700"
+              >Tahun</label
+            >
             <select
+              id="year"
               name="year"
               required
-              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+              class="w-full border border-blue-300 rounded-md px-3 py-2 text-sm text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white shadow-sm transition"
             >
               <option value="">Pilih Tahun</option>
               <option
@@ -293,11 +279,17 @@ const getAttendancesExceptFirst = (student) => {
               </option>
             </select>
           </div>
-          <div class="min-w-0 md:col-span-1">
+
+          <!-- Field: Bulan -->
+          <div class="flex flex-col">
+            <label for="month" class="mb-1 text-sm font-medium text-blue-700"
+              >Bulan</label
+            >
             <select
+              id="month"
               name="month"
               required
-              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+              class="w-full border border-blue-300 rounded-md px-3 py-2 text-sm text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white shadow-sm transition"
             >
               <option value="">Pilih Bulan</option>
               <option
@@ -315,7 +307,7 @@ const getAttendancesExceptFirst = (student) => {
                   'November',
                   'Desember',
                 ]"
-                :key="idx + 1"
+                :key="idx"
                 :value="idx + 1"
                 :selected="idx + 1 == props.month"
               >
@@ -323,11 +315,17 @@ const getAttendancesExceptFirst = (student) => {
               </option>
             </select>
           </div>
-          <div class="min-w-0 md:col-span-1">
+
+          <!-- Field: Mapel -->
+          <div class="flex flex-col">
+            <label for="mapel" class="mb-1 text-sm font-medium text-blue-700"
+              >Mata Pelajaran</label
+            >
             <select
+              id="mapel"
               name="mapel"
               required
-              class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition text-blue-700 bg-white shadow-sm"
+              class="w-full border border-blue-300 rounded-md px-3 py-2 text-sm text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white shadow-sm transition"
             >
               <option value="">Pilih Mapel</option>
               <option
@@ -340,10 +338,12 @@ const getAttendancesExceptFirst = (student) => {
               </option>
             </select>
           </div>
-          <div class="min-w-0 md:col-span-1 flex">
+
+          <!-- Tombol Submit -->
+          <div class="flex items-end">
             <button
               type="submit"
-              class="w-full h-10 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow min-w-max"
+              class="w-full h-10 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-semibold shadow"
             >
               Tampilkan
             </button>
@@ -489,40 +489,41 @@ const getAttendancesExceptFirst = (student) => {
 
       <!-- Tabel Absensi -->
       <div
-        v-if="props.students && props.students.length"
-        class="max-w-6xl mx-auto mt-10 bg-white rounded-xl shadow p-6 space-y-6"
+        v-if="processedStudents.length"
+        class="max-w-8xl mx-auto mt-10 bg-white rounded-xl shadow p-6 space-y-6"
       >
-        <h2
-          class="text-2xl font-bold mb-2 text-blue-700 text-center tracking-wide"
-        >
+        <h2 class="text-2xl font-bold text-blue-700 text-center tracking-wide">
           Daftar Presensi Siswa
         </h2>
 
-        <hr class="mb-4 border-blue-200" />
-        <div class="overflow-x-auto rounded-lg shadow">
-          <div class="max-h-[500px] overflow-y-auto">
+        <hr class="border-t border-blue-200" />
+
+        <div class="rounded-lg shadow-md overflow-hidden">
+          <div class="overflow-x-auto">
             <table class="min-w-full border border-gray-200 rounded-lg text-sm">
               <thead
-                class="bg-blue-100 text-blue-900 uppercase text-xs sticky top-0 z-20"
+                class="bg-blue-100 text-blue-900 uppercase text-xs sticky top-0 z-30"
               >
                 <tr>
                   <th
-                    class="p-3 border-b border-gray-200 text-left sticky left-0 bg-blue-100 z-30"
+                    class="p-3 border-b border-gray-200 text-center sticky left-0 bg-blue-100 z-30"
                   >
                     No
                   </th>
                   <th
-                    class="p-3 border-b border-gray-200 text-left sticky left-12 bg-blue-100 z-30"
+                    class="p-3 border-b border-gray-200 text-center sticky left-12 bg-blue-100 z-30"
                   >
                     Nama Siswa
                   </th>
-                  <th class="p-3 border-b border-gray-200 text-left">
+                  <th class="p-3 border-b border-gray-200 text-center">
                     Mata Pelajaran
                   </th>
-                  <th class="p-3 border-b border-gray-200 text-left">
+                  <th class="p-3 border-b border-gray-200 text-center">
                     Tanggal
                   </th>
-                  <th class="p-3 border-b border-gray-200 text-left">Status</th>
+                  <th class="p-3 border-b border-gray-200 text-center">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -530,175 +531,192 @@ const getAttendancesExceptFirst = (student) => {
                   v-for="(student, sIdx) in processedStudents"
                   :key="student.id"
                 >
-                  <tr
-                    v-if="student.attendances.length"
-                    class="even:bg-blue-50 odd:bg-white hover:bg-blue-200/40 transition-colors duration-150 group"
+                  <!-- Jika ada absensi -->
+                  <template
+                    v-if="student.attendances && student.attendances.length > 0"
                   >
-                    <td
-                      class="p-3 border-b border-gray-100 font-semibold align-top sticky left-0 bg-white z-20"
-                      :rowspan="student.attendances.length"
+                    <tr
+                      v-for="(attendance, aIdx) in expandedTanggalId ===
+                      student.id
+                        ? student.attendances
+                        : student.attendances.slice(0, 5)"
+                      :key="attendance.tanggal + '-' + student.id"
+                      class="even:bg-blue-50 odd:bg-white hover:bg-blue-200/40 transition-colors duration-150"
                     >
-                      {{ sIdx + 1 }}
-                    </td>
-                    <td
-                      class="p-3 border-b border-gray-100 font-medium group-hover:text-blue-800 align-top sticky left-12 bg-white z-20"
-                      :rowspan="student.attendances.length"
-                    >
-                      <div class="flex flex-col items-center">
-                        <span
-                          class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white font-bold text-base shadow mb-1"
+                      <!-- No dan Nama Siswa hanya di baris pertama -->
+                      <template v-if="aIdx === 0">
+                        <td
+                          class="p-3 border-b border-gray-100 font-semibold align-top sticky left-0 bg-white z-20"
+                          :rowspan="
+                            expandedTanggalId === student.id
+                              ? student.attendances.length
+                              : Math.min(5, student.attendances.length)
+                          "
                         >
+                          {{ sIdx + 1 }}
+                        </td>
+                        <td
+                          class="p-3 border-b border-gray-100 font-medium align-top sticky left-12 bg-white z-20"
+                          :rowspan="
+                            expandedTanggalId === student.id
+                              ? student.attendances.length
+                              : Math.min(5, student.attendances.length)
+                          "
+                        >
+                          <div class="flex flex-col items-center">
+                            <span
+                              class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white font-bold text-base shadow mb-1"
+                            >
+                              {{
+                                student.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .substring(0, 2)
+                                  .toUpperCase()
+                              }}
+                            </span>
+                            <div class="text-xs text-gray-400">
+                              Total: {{ student.attendances.length }} absensi
+                            </div>
+                          </div>
+                          <div class="mt-1 text-base text-gray-800 text-center">
+                            {{ student.name }}
+                          </div>
+                        </td>
+                        <td
+                          class="p-3 border-b border-gray-100 align-top text-center"
+                          :rowspan="
+                            expandedTanggalId === student.id
+                              ? student.attendances.length
+                              : Math.min(5, student.attendances.length)
+                          "
+                        >
+                          <span
+                            class="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-xs font-semibold"
+                          >
+                            {{ attendance.mapel }}
+                          </span>
+                        </td>
+                      </template>
+
+                      <!-- Tanggal -->
+                      <td class="p-3 border-b border-gray-100">
+                        <span
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 font-sans text-sm font-semibold shadow-sm"
+                          :title="
+                            new Date(attendance.tanggal).toLocaleDateString(
+                              'id-ID',
+                              {
+                                weekday: 'long',
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                              }
+                            )
+                          "
+                        >
+                          <svg
+                            class="w-4 h-4 text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                          >
+                            <rect
+                              x="3"
+                              y="4"
+                              width="18"
+                              height="18"
+                              rx="2"
+                              stroke="currentColor"
+                              fill="none"
+                            />
+                            <path
+                              d="M16 2v4M8 2v4M3 10h18"
+                              stroke="currentColor"
+                            />
+                          </svg>
                           {{
-                            student.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')
-                              .substring(0, 2)
-                              .toUpperCase()
+                            new Date(attendance.tanggal).toLocaleDateString(
+                              'id-ID',
+                              {
+                                weekday: 'short',
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              }
+                            )
                           }}
                         </span>
-                        <div class="text-xs text-gray-400">
-                          Total: {{ student.attendances.length }} absensi
-                        </div>
-                      </div>
-                      <div class="mt-1 text-base text-gray-800 text-center">
-                        {{ student.name }}
-                      </div>
-                    </td>
-                    <td
-                      class="p-3 border-b border-gray-100 align-top"
-                      :rowspan="student.attendances.length"
-                    >
-                      <span
-                        class="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-xs font-semibold"
-                      >
-                        {{ student.subject }}
-                      </span>
-                    </td>
-                    <td class="p-3 border-b border-gray-100">
-                      <span
-                        class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-black font-mono text-sm shadow-sm"
-                      >
-                        <svg
-                          class="w-4 h-4 text-blue-400"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          viewBox="0 0 24 24"
+                      </td>
+
+                      <!-- Status -->
+                      <td class="p-3 border-b border-gray-100">
+                        <span
+                          :title="attendance.status"
+                          :class="{
+                            'bg-blue-100 text-blue-800': [
+                              'Hadir',
+                              'P',
+                            ].includes(attendance.status),
+                            'bg-red-100 text-red-800': [
+                              'Absen',
+                              'A',
+                              'Alpa',
+                            ].includes(attendance.status),
+                            'bg-yellow-100 text-yellow-800': [
+                              'Sakit',
+                              'S',
+                            ].includes(attendance.status),
+                            'bg-purple-100 text-purple-800': [
+                              'Izin',
+                              'I',
+                            ].includes(attendance.status),
+                            'bg-gray-200 text-gray-700': ![
+                              'Hadir',
+                              'P',
+                              'Absen',
+                              'A',
+                              'Alpa',
+                              'Sakit',
+                              'S',
+                              'Izin',
+                              'I',
+                            ].includes(attendance.status),
+                          }"
+                          class="px-3 py-1 rounded-full font-semibold text-xs cursor-help"
                         >
-                          <rect
-                            x="3"
-                            y="4"
-                            width="18"
-                            height="18"
-                            rx="2"
-                            stroke="currentColor"
-                            fill="none"
-                          />
-                          <path
-                            d="M16 2v4M8 2v4M3 10h18"
-                            stroke="currentColor"
-                          />
-                        </svg>
-                        {{
-                          new Date(
-                            student.attendances[0].tanggal
-                          ).toLocaleDateString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        }}
-                      </span>
-                    </td>
-                    <td class="p-3 border-b border-gray-100">
-                      <span
-                        :title="student.attendances[0].status"
-                        :class="{
-                          'bg-green-100 text-green-800':
-                            student.attendances[0].status === 'Hadir',
-                          'bg-yellow-100 text-yellow-800':
-                            student.attendances[0].status === 'Izin',
-                          'bg-red-100 text-red-800':
-                            student.attendances[0].status === 'Alpa',
-                          'bg-gray-200 text-gray-700': ![
-                            'Hadir',
-                            'Izin',
-                            'Alpa',
-                          ].includes(student.attendances[0].status),
-                        }"
-                        class="px-3 py-1 rounded-full font-semibold text-xs cursor-help"
-                      >
-                        {{ student.attendances[0].status }}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr
-                    v-for="attendance in getAttendancesExceptFirst(student)"
-                    :key="attendance.tanggal"
-                    class="even:bg-blue-50 odd:bg-white hover:bg-blue-200/40 transition-colors duration-150"
-                  >
-                    <td class="p-3 border-b border-gray-100">
-                      <span
-                        class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-black font-mono text-sm shadow-sm"
-                      >
-                        <svg
-                          class="w-4 h-4 text-blue-400"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          viewBox="0 0 24 24"
+                          {{ attendance.status }}
+                        </span>
+                      </td>
+                    </tr>
+
+                    <!-- Tombol Expand/Sembunyikan -->
+                    <tr v-if="student.attendances.length > 10">
+                      <td colspan="5" class="text-center py-2">
+                        <button
+                          class="text-xs text-blue-600 hover:underline focus:outline-none"
+                          @click="
+                            expandedTanggalId =
+                              expandedTanggalId === student.id
+                                ? null
+                                : student.id
+                          "
                         >
-                          <rect
-                            x="3"
-                            y="4"
-                            width="18"
-                            height="18"
-                            rx="2"
-                            stroke="currentColor"
-                            fill="none"
-                          />
-                          <path
-                            d="M16 2v4M8 2v4M3 10h18"
-                            stroke="currentColor"
-                          />
-                        </svg>
-                        {{
-                          new Date(attendance.tanggal).toLocaleDateString(
-                            'id-ID',
-                            {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            }
-                          )
-                        }}
-                      </span>
-                    </td>
-                    <td class="p-3 border-b border-gray-100">
-                      <span
-                        :title="attendance.status"
-                        :class="{
-                          'bg-green-100 text-green-800':
-                            attendance.status === 'Hadir',
-                          'bg-yellow-100 text-yellow-800':
-                            attendance.status === 'Izin',
-                          'bg-red-100 text-red-800':
-                            attendance.status === 'Alpa',
-                          'bg-gray-200 text-gray-700': ![
-                            'Hadir',
-                            'Izin',
-                            'Alpa',
-                          ].includes(attendance.status),
-                        }"
-                        class="px-3 py-1 rounded-full font-semibold text-xs cursor-help"
-                      >
-                        {{ attendance.status }}
-                      </span>
-                    </td>
-                  </tr>
+                          {{
+                            expandedTanggalId === student.id
+                              ? 'Sembunyikan'
+                              : 'Lihat semua'
+                          }}
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+
+                  <!-- Jika tidak ada absensi -->
                   <tr
-                    v-if="student.attendances.length === 0"
+                    v-else
                     class="even:bg-blue-50 odd:bg-white hover:bg-blue-200/40 transition-colors duration-150"
                   >
                     <td
@@ -707,10 +725,10 @@ const getAttendancesExceptFirst = (student) => {
                       {{ sIdx + 1 }}
                     </td>
                     <td
-                      class="p-3 border-b border-gray-100 font-medium group-hover:text-blue-800 sticky left-12 bg-white z-20"
+                      class="p-3 border-b border-gray-100 font-medium sticky left-12 bg-white z-20"
                     >
                       <span
-                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-400 text-white font-bold text-base shadow mr-2"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-400 text-white font-bold text-base shadow mb-1"
                       >
                         {{
                           student.name
@@ -721,18 +739,18 @@ const getAttendancesExceptFirst = (student) => {
                             .toUpperCase()
                         }}
                       </span>
-                      {{ student.name }}
+                      <div class="text-center mt-1">{{ student.name }}</div>
                     </td>
-                    <td class="p-3 border-b border-gray-100">
+                    <td class="p-3 border-b border-gray-100 text-center">
                       <span
                         class="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-800 text-xs font-semibold"
                       >
-                        {{ student.subject }}
+                        {{ student.subject || '—' }}
                       </span>
                     </td>
                     <td
-                      class="p-3 border-b border-gray-100 text-gray-400 italic"
                       colspan="2"
+                      class="p-3 border-b border-gray-100 text-gray-400 italic text-center"
                     >
                       Tidak ada data absensi
                     </td>
@@ -740,12 +758,20 @@ const getAttendancesExceptFirst = (student) => {
                 </template>
               </tbody>
             </table>
+            <div v-if="students && students.data && students.data.length > 0">
+              <Pagination8 :data="students" :updatedPageNumber="goToPage" />
+            </div>
+            <div v-else class="flex justify-center items-center py-6">
+              <p class="text-gray-500 text-center animate-pulse">
+                Loading data...
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div v-else>
-        <span class="flex justify-center text-lg font-bold mt-20">
+        <span class="flex justify-center text-lg font-bold mt-15">
           <img
             src="/images/kecewa_jadwal1.png"
             class="mr-3 h-60 max-h-full w-auto"

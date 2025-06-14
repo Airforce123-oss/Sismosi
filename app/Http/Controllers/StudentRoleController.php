@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
   
 use Illuminate\Http\Request;  
 use App\Models\Student;  
+use App\Models\Classes;
 use App\Models\JadwalMataPelajaran;
 use App\Models\Teacher;
 use App\Models\Attendance;
 use Inertia\Inertia;  
+use App\Models\Tugas;
 use Carbon\Carbon;
 
   
@@ -77,15 +79,83 @@ class StudentRoleController extends Controller
   
         return redirect()->route('student_roles.index')->with('success', 'Student role deleted successfully.');  
     }  
-  
     public function melihatTugas()  
     {  
-        return Inertia::render('Students/melihatTugasSiswa'); // Pastikan nama file sesuai  
+        $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])
+        ->paginate(5)
+         ->appends(request()->query());
+
+        $teachers = Teacher::with('masterMapel')->get()->map(function ($teacher) {
+            return [
+                'id' => $teacher->id,
+                'name' => $teacher->name,
+                'nip' => $teacher->nip,
+                'class_id' => $teacher->class_id,
+                'masterMapel' => $teacher->masterMapel->map(function ($mapel) {
+                    return [
+                        'id' => $mapel->id,
+                        'nama_mapel' => $mapel->mapel,
+                    ];
+                }),
+            ];
+        });
+
+        $students = Student::all();
+
+        $mapels = \DB::table('teacher_mapel')
+            ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
+            ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
+            ->select(
+                'teacher_mapel.id',
+                'teacher_mapel.teacher_id',
+                'teacher_mapel.mapel_id',
+                'teacher_mapel.kode_mapel',
+                'master_mapel.mapel as mapel_name',
+                'teachers.name as teacher_name'
+            )
+            ->get();
+
+           $classes_for_student = Classes::all();
+
+
+            return Inertia::render('Students/melihatTugasSiswa', [
+            'tugas' => [
+                'data' => collect($tugas->items())->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'mapel' => $t->mapel,
+                        'student' => $t->student,
+                        'teacher' => $t->teacher,
+                        'kelas' => $t->kelas,
+                        'description' => $t->description, // ✅ ditambahkan di sini
+                        'created_at' => $t->created_at,
+                        'updated_at' => $t->updated_at,
+                    ];
+                }),
+                'meta' => [
+                    'current_page' => $tugas->currentPage(),
+                    'from' => $tugas->firstItem(),
+                    'to' => $tugas->lastItem(),
+                    'last_page' => $tugas->lastPage(),
+                    'per_page' => $tugas->perPage(),
+                    'total' => $tugas->total(),
+                ],
+                'links' => [
+                    'first' => $tugas->url(1),
+                    'last' => $tugas->url($tugas->lastPage()),
+                    'prev' => $tugas->previousPageUrl(),
+                    'next' => $tugas->nextPageUrl(),
+                ],
+            ],
+            'teachers' => $teachers,
+            'students' => $students,
+            'mapels' => $mapels,
+            'classes_for_student' => $classes_for_student,
+        ]);
     }  
     public function melihatDataAbsensiSiswa(Request $request)
     {
         $student = auth()->user()->student->load(['class', 'mapel']); // load relasi class & mapel
-        
         // Ambil bulan & tahun dari request (atau default ke sekarang)
         $month = $request->input('month', Carbon::now()->format('m'));
         $year = $request->input('year', Carbon::now()->format('Y'));
@@ -149,7 +219,7 @@ class StudentRoleController extends Controller
             return $slot;
         });
     
-        $kelasList = \App\Models\Classes::pluck('name', 'id')->toArray();
+        $kelasList = Classes::pluck('name', 'id')->toArray();
         //dd($schedule);x
         return Inertia::render('Students/melihatJadwalPelajaran', [
             'schedule'    => $schedule,

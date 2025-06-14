@@ -415,6 +415,9 @@ watch(students, (newVal) => {
                 <td class="border border-black px-2 py-1">
                   {{ row.final_mark || '-' }}
                 </td>
+                <td class="border border-black px-2 py-1">
+                  {{ row.final_mark || '-' }}
+                </td>
               </tr>
               <tr v-if="mapelWithNilai.length === 0">
                 <td
@@ -425,12 +428,12 @@ watch(students, (newVal) => {
                 </td>
               </tr>
               <tr>
-                <td class="border border-black px-2 py-1 text-left" colspan="5">
+                <td class="border border-black px-2 py-1 text-left" colspan="6">
                   <b>B. MUATAN LOKAL</b>
                 </td>
               </tr>
               <tr>
-                <td class="border border-black px-2 py-1" colspan="5">
+                <td class="border border-black px-2 py-1" colspan="6">
                   &nbsp; -
                 </td>
               </tr>

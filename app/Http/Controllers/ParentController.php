@@ -4,7 +4,13 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use App\Traits\AbsensiSiswaTrait;
 use App\Models\KomentarSiswa;
+use App\Models\Student;
+use App\Models\Classes;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Tugas;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ParentController extends Controller
 {
@@ -13,21 +19,87 @@ class ParentController extends Controller
     {
         return Inertia::render('Parents/parentsDashboard');
     }
-
     public function memeriksaTugasSubmit()
     {
-        return Inertia::render('Parents/memeriksaTugasSubmit');
+        $parent = Auth::user();
 
+
+        $student = Student::with('class')->where('parent_id', $parent->id)->first();
+
+        if (!$student) {
+            abort(403, 'Siswa tidak ditemukan.');
+        }
+
+        $kelasList = Classes::all();
+
+        $selectedClassId = request()->query('class_id', null);
+
+        $selectedClassName = null;
+        if ($selectedClassId) {
+        $kelasTerpilih = $kelasList->firstWhere('id', $selectedClassId);
+        $selectedClassName = $kelasTerpilih?->name;
+       }
+
+        $query = Tugas::with(['mapel', 'teacher', 'kelas']);
+
+        if ($selectedClassId) {
+        $query->where('class_id', $selectedClassId);
+       }
+
+
+        // Proses tugas seperti biasa
+        $tugas = $query->paginate(5)->appends(request()->query());
+
+
+        return Inertia::render('Parents/memeriksaTugasSubmit', [
+            'tugas' => [
+                'data' => collect($tugas->items())->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'mapel' => $t->mapel,
+                        'teacher' => $t->teacher,
+                        'kelas' => $t->kelas,
+                        'description' => $t->description,
+                        'created_at' => $t->created_at,
+                        'updated_at' => $t->updated_at,
+                    ];
+                }),
+                'meta' => [
+                    'current_page' => $tugas->currentPage(),
+                    'from' => $tugas->firstItem(),
+                    'to' => $tugas->lastItem(),
+                    'last_page' => $tugas->lastPage(),
+                    'per_page' => $tugas->perPage(),
+                    'total' => $tugas->total(),
+                ],
+                'links' => [
+                    'first' => $tugas->url(1),
+                    'last' => $tugas->url($tugas->lastPage()),
+                    'prev' => $tugas->previousPageUrl(),
+                    'next' => $tugas->nextPageUrl(),
+                ],
+            ],
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'kelas_id' => $student->class_id,
+                'class' => $student->class,
+            ],
+            'kelasList' => $kelasList,
+            'selectedClassId' => $selectedClassId,
+            'selectedClassName' => $selectedClassName,
+        ]);
     }
+
     public function memberikanKomentarKepadaSiswa()
     {
         // Ambil siswa yang terkait dengan parent yang sedang login
         $parentId = auth()->id();
-        $students = \App\Models\Student::with('komentarSiswas')
+        $students = Student::with('komentarSiswas')
             ->where('parent_id', $parentId)
             ->get();
 
-        $kelasList = \App\Models\Classes::pluck('name')->unique()->values();
+        $kelasList = Classes::pluck('name')->unique()->values();
 
         return Inertia::render ('Parents/memberikanKomentarKepadaSiswa',  [
             'students' => $students,
@@ -35,20 +107,20 @@ class ParentController extends Controller
         ]);
     }
 
-        public function storeKomentarSiswa(Request $request)
+     public function storeKomentarSiswa(Request $request)
     {
-        $request->validate([
-            'student_id' => 'required|exists:students,id',
-            'komentar' => 'required|string|max:255',
-        ]);
+            $request->validate([
+                'student_id' => 'required|exists:students,id',
+                'komentar' => 'required|string|max:255',
+            ]);
 
-        KomentarSiswa::create([
-            'student_id' => $request->student_id,
-            'komentar' => $request->komentar,
-            'parent_id' => auth()->id(), // jika ingin simpan parent yang memberi komentar
-        ]);
+            KomentarSiswa::create([
+                'student_id' => $request->student_id,
+                'komentar' => $request->komentar,
+                'parent_id' => auth()->id(), // jika ingin simpan parent yang memberi komentar
+            ]);
 
-        return response()->json(['message' => 'Komentar berhasil disimpan']);
+            return response()->json(['message' => 'Komentar berhasil disimpan']);
     }
     public function melihatPresensiSiswa(Request $request)
     {
@@ -58,17 +130,25 @@ class ParentController extends Controller
         $mapel = $request->input('mapel');
 
         // Ambil data filter dari database
-        $kelasList = \App\Models\Classes::all(['id', 'name']);
-        $tahunList = \App\Models\Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran');
+        $kelasList = Classes::all(['id', 'name']);
+        $tahunList = Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran');
         $mapelList = \App\Models\Mapel::all(['id', 'mapel']);
 
-        // Jika parameter filter belum diisi, kirim data filter saja
+        // Jika parameter filter belum lengkap, buat paginasi kosong
         if (!$classId || !$year || !$month || !$mapel) {
+            $emptyPaginator = new LengthAwarePaginator(
+                new Collection(), // data kosong
+                0,               // total data
+                10,              // per halaman (sesuai paginate default kamu)
+                1,               // halaman sekarang
+                ['path' => url()->current()] // base url
+            );
+
             return Inertia::render('Parents/melihatPresensiSiswa', [
                 'kelasList' => $kelasList,
                 'tahunList' => $tahunList,
                 'mapelList' => $mapelList,
-                'students' => [],
+                'students' => $emptyPaginator, // objek paginasi kosong
                 'classId' => $classId,
                 'year' => $year,
                 'month' => $month,
@@ -76,60 +156,58 @@ class ParentController extends Controller
             ]);
         }
 
-        // Ambil data siswa beserta absensi dan mapel
+        // Decode mapel yang dipisah koma
         $decodedMapel = urldecode($mapel);
         $decodedMapelList = explode(',', $decodedMapel);
 
-        $students = \App\Models\Student::with([
+        /** @var LengthAwarePaginator $students */
+        $students = Student::with([
             'mapel',
-            'attendances' => function($q) use ($year, $month, $decodedMapelList) {
-                if ($year) $q->whereYear('tanggal_kehadiran', $year);
-                if ($month) $q->whereMonth('tanggal_kehadiran', $month);
-                if (!empty($decodedMapelList)) {
-                    // Case-insensitive filter
-                    $lowerMapel = collect($decodedMapelList)->map(fn($m) => strtolower($m))->toArray();
-                    $q->whereRaw('LOWER(mapel) IN ("'.implode('","', $lowerMapel).'")');
-                }
-            }
-        ])
-        ->where('class_id', $classId)
-        ->get();
+            'attendances' => fn($q) => 
+                $q
+                    ->when($year, fn($q) => $q->whereYear('tanggal_kehadiran', $year))
+                    ->when($month, fn($q) => $q->whereMonth('tanggal_kehadiran', $month))
+                    ->when(!empty($decodedMapelList), fn($q) => 
+                        $q->whereRaw(
+                            'LOWER(mapel) IN ("' . implode('","', collect($decodedMapelList)->map(fn($m) => strtolower($m))->toArray()) . '")'
+                        )
+                    )
+        ])->where('class_id', $classId)->paginate(10);
 
-        // Map ke bentuk array yang siap dikonsumsi FE
-        $studentsWithAttendance = $students->map(function ($student) {
-            return [
+        // Ubah koleksi data di paginator supaya formatnya sesuai frontend
+        $students->setCollection(
+            $students->getCollection()->transform(fn($student) => [
                 'id' => $student->id,
                 'name' => $student->name,
                 'subject' => $student->mapel->mapel ?? '-',
-                'attendances' => $student->attendances->map(function($a) {
-                    return [
-                        'id' => $a->id,
-                        'tanggal' => $a->tanggal_kehadiran,
-                        'status' => $a->status_kehadiran,
-                        'mapel' => $a->mapel,
-                    ];
-                })->values(),
-            ];
-        });
+                'attendances' => $student->attendances->map(fn($a) => [
+                    'id' => $a->id,
+                    'tanggal' => $a->tanggal_kehadiran,
+                    'status' => $a->status_kehadiran,
+                    'mapel' => $a->mapel,
+                ])->values(),
+            ])
+        );
 
         return Inertia::render('Parents/melihatPresensiSiswa', [
             'kelasList' => $kelasList,
             'tahunList' => $tahunList,
             'mapelList' => $mapelList,
-            'students' => $studentsWithAttendance,
+            'students' => $students, // objek paginasi asli dengan data sudah transformasi
             'classId' => $classId,
             'year' => $year,
             'month' => $month,
             'mapel' => $mapel,
         ]);
     }
+
     public function melihatNilaiSiswa(Request $request)
     {
         // Ambil parent yang sedang login
         $parentId = auth()->id();
 
         // Ambil semua siswa yang terkait parent ini
-        $studentsQuery = \App\Models\Student::where('parent_id', $parentId);
+        $studentsQuery = Student::where('parent_id', $parentId);
 
         if ($request->filled('nama')) {
             $studentsQuery->where('name', 'like', '%' . $request->input('nama') . '%');
@@ -146,8 +224,8 @@ class ParentController extends Controller
 
         $students = $studentsQuery->with('class', 'noInduk')->paginate(20);
 
-        $kelasList = \App\Models\Classes::all(['id', 'name']);
-        $tahunList = \App\Models\Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran');
+        $kelasList = Classes::all(['id', 'name']);
+        $tahunList = Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran');
         $studentIds = collect($students->items())->pluck('id');
         $enrollments = \App\Models\Enrollment::with(['mapel', 'student'])
             ->whereIn('student_id', $studentIds)
@@ -168,6 +246,30 @@ class ParentController extends Controller
                 'tahun_pelajaran' => $request->input('tahun_pelajaran'),
                 'kelas' => $request->input('kelas'),
             ],
+        ]);
+    }
+
+    public function filterStudents(Request $request)
+    {
+        $user = auth()->user();
+
+        $filters = $request->only(['nama', 'kelas']);
+
+        $query = Student::where('parent_id', $user->id);
+
+        if (!empty($filters['nama'])) {
+            $query->where('name', 'like', '%' . $filters['nama'] . '%');
+        }
+
+        if (!empty($filters['kelas'])) {
+            $query->where('kelas_id', $filters['kelas']);
+        }
+
+        $students = $query->get();
+
+        return response()->json([
+            'students' => $students,
+            'filters' => $filters,
         ]);
     }
 

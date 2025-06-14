@@ -10,6 +10,7 @@ import axios from 'axios';
 // Amb
 const { props } = usePage();
 const students = ref(props.students || []);
+const filteredCourses = ref([]);
 const teachers = ref(props.teachers || []);
 const mapels = ref(props.mapels || []);
 const courses = ref(props.courses || []);
@@ -52,8 +53,8 @@ for (let i = 0; i < props.teachers.length; i++) {
   }
 }
 
-console.log('🔍 Props.tugas:', props.tugas);
-console.log('🔍 Props.classes_for_student:', props.classes_for_student);
+const found = toRaw(teachers.value).find((t) => t.id === 2);
+console.log('Guru dengan ID 2:', found);
 
 // Form Data for User Authentication
 const form = useForm({
@@ -61,6 +62,8 @@ const form = useForm({
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
+
+console.log('Form data:', form);
 
 const enrollments = ref([]);
 
@@ -72,7 +75,7 @@ const isEditModalOpen = ref(false);
 const taskForm = ref({
   mapel_id: '',
   description: '',
-  teacher_id: '',
+  teacher_id: props.auth.user?.id || null,
   student_id: '',
   class_id: '',
 });
@@ -81,7 +84,7 @@ const editForm = ref({
   id: null,
   mapel_id: '',
   description: '',
-  teacher_id: '',
+  teacher_id: props.auth.user?.id || null,
   student_id: '',
   class_id: '',
 });
@@ -103,56 +106,45 @@ const selectedId = ref(null);
 const selectedMapelTeachers = ref([]);
 
 watch(
-  () => taskForm.mapel_id,
-  (newValue, oldValue) => {
-    console.log('Mapel ID berubah:', oldValue, '->', newValue);
-  }
-);
+  [() => props.auth.user.id, () => teachers.value],
+  ([userId, teachersList]) => {
+    const numericUserId = Number(userId);
+    if (!numericUserId || !teachersList.length) return;
 
-watch(
-  () => taskForm.student_id,
-  (newValue, oldValue) => {
-    console.log('Student ID berubah:', oldValue, '->', newValue);
-  }
-);
+    console.log('User ID login:', numericUserId);
+    console.log('Daftar teachers:', toRaw(teachersList));
 
-watch(
-  () => taskForm.value.mapel_id,
-  (newMapelId) => {
-    taskForm.value.teacher_id = '';
-    selectedMapelTeachers.value = [];
-
-    const selectedIdNum = newMapelId ? Number(newMapelId) : null;
-    selectedId.value = selectedIdNum;
-
-    if (!selectedIdNum) return;
-
-    console.log('Mapel dipilih:', selectedIdNum);
-    console.log('Jumlah guru saat ini:', teachers.value.length);
-    console.log(
-      'teacher ids di teachers.value:',
-      teachers.value.map((t) => t.id)
+    const currentTeacher = toRaw(teachersList).find(
+      (t) => Number(t.id) === numericUserId
     );
 
-    const filteredTeachers = toRaw(teachers.value).filter((teacher) => {
-      const mapels = Array.isArray(teacher.masterMapel)
-        ? teacher.masterMapel
-        : [];
+    if (!currentTeacher) {
+      console.warn(`Guru dengan ID ${numericUserId} tidak ditemukan`);
+      return;
+    }
 
-      const isMengajar = mapels.some((m) => Number(m.id) === selectedIdNum);
+    // Ganti sesuai field dari server
+    const mapels = Array.isArray(currentTeacher.masterMapel)
+      ? currentTeacher.masterMapel
+      : [];
 
-      if (isMengajar) {
-        const mapelNames = mapels
-          .filter((m) => Number(m.id) === selectedIdNum)
-          .map((m) => m.nama_mapel || '[Tanpa Nama]');
-        console.log(`Guru ${teacher.name} mengajar mapel ini:`, mapelNames);
-      }
+    console.log('Mapel milik currentTeacher:', mapels);
 
-      return isMengajar;
-    });
+    if (!mapels.length) {
+      console.warn(`Guru ${currentTeacher.name} tidak punya mapel`);
+    }
 
-    selectedMapelTeachers.value = filteredTeachers;
-  }
+    filteredCourses.value = mapels.map((mapel) => ({
+      id: mapel.id,
+      nama_mapel: mapel.nama_mapel || '[Tanpa Nama]',
+    }));
+
+    console.log(
+      `Mapel untuk guru ${currentTeacher.name}:`,
+      toRaw(filteredCourses.value)
+    );
+  },
+  { immediate: true }
 );
 
 const saveEnrollmentsToLocalStorage = () => {
@@ -201,9 +193,13 @@ const saveTask = async () => {
     // Set default mapel_id dari courses yang berisi pivot + mapel + guru
     if (
       (!taskForm.value.mapel_id || taskForm.value.mapel_id === null) &&
-      courses.value?.length > 0
+      filteredCourses.value?.length > 0
     ) {
-      taskForm.value.mapel_id = toRaw(courses.value)[0]?.mapel_id || null;
+      console.log(
+        'filteredCourses.value sebelum set mapel_id:',
+        toRaw(filteredCourses.value)
+      );
+      taskForm.value.mapel_id = toRaw(filteredCourses.value)[0]?.id || null;
       console.log('Mapel ID setelah diatur:', taskForm.value.mapel_id);
     }
 
@@ -655,7 +651,7 @@ const submitEdit = async () => {
 }
 
 .btn-cancel {
-  background-color: #f44336;
+background-color: #f44336;
   color: white;
   padding: 10px 20px;
   border-radius: 5px;
@@ -832,23 +828,53 @@ const submitEdit = async () => {
             </h3>
             <!-- Form -->
             <form @submit.prevent="handleTask">
+              <!-- Input Guru -->
+              <!-- Nama Guru (Auto-selected & Disabled) -->
+              <div class="mb-4">
+                <label
+                  for="teacher_id"
+                  class="block text-sm font-medium text-gray-700"
+                >
+                  Nama Guru
+                </label>
+                <select
+                  v-model="taskForm.teacher_id"
+                  id="teacher_id"
+                  class="w-full px-4 py-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                  disabled
+                >
+                  <option
+                    v-if="props.auth && props.auth.user"
+                    :value="props.auth.user.id"
+                  >
+                    {{ props.auth.user.name }}
+                  </option>
+                  <option v-else disabled>Guru tidak tersedia</option>
+                </select>
+              </div>
+
+              <!-- Nama Mata Pelajaran -->
               <div class="mb-4">
                 <label
                   for="course_id"
                   class="block text-sm font-medium text-gray-700"
-                  >Nama Mata Pelajaran</label
                 >
+                  Nama Mata Pelajaran
+                </label>
                 <select
                   v-model="taskForm.mapel_id"
+                  id="course_id"
                   class="w-full px-4 py-2 border rounded-md"
                 >
-                  <option value="" disabled>Pilih Mata Pelajaran</option>
+                  <option value="" disabled selected>
+                    Pilih Mata Pelajaran
+                  </option>
                   <option
-                    v-for="course in courses"
+                    v-for="course in filteredCourses"
                     :key="course.id"
                     :value="course.id"
                   >
-                    {{ course.mapel }}
+                    {{ course.nama_mapel }}
                   </option>
                 </select>
               </div>
@@ -866,55 +892,6 @@ const submitEdit = async () => {
                   class="mt-1 block w-full border-gray-300 rounded-md"
                   placeholder="Masukkan deskripsi"
                 ></textarea>
-              </div>
-
-              <!-- Input Guru -->
-              <div class="mb-4">
-                <label
-                  for="teacher_id"
-                  class="block text-sm font-medium text-gray-700"
-                >
-                  Nama Guru
-                </label>
-                <select
-                  v-model="taskForm.teacher_id"
-                  id="teacher_id"
-                  class="w-full px-4 py-2 border rounded-md"
-                >
-                  <option value="" disabled>Pilih Guru</option>
-                  <option
-                    v-for="teacher in selectedMapelTeachers"
-                    :key="teacher.id"
-                    :value="teacher.id"
-                  >
-                    {{ teacher.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Input Siswa -->
-              <div class="mb-4">
-                <label
-                  for="student_id"
-                  class="block text-sm font-medium text-gray-700"
-                >
-                  Nama Siswa
-                </label>
-                <select
-                  v-model="taskForm.student_id"
-                  id="student_id"
-                  class="w-full px-4 py-2 border rounded-md"
-                  required
-                >
-                  <option value="" disabled>Pilih Siswa</option>
-                  <option
-                    v-for="student in props.students"
-                    :key="student.id"
-                    :value="student.id"
-                  >
-                    {{ student.name }}
-                  </option>
-                </select>
               </div>
 
               <!-- Input Kelas -->
@@ -1073,11 +1050,6 @@ const submitEdit = async () => {
               <th
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
               >
-                Siswa
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
                 Guru
               </th>
               <th
@@ -1104,9 +1076,6 @@ const submitEdit = async () => {
               </td>
               <td class="px-4 py-3 whitespace-pre-wrap">
                 {{ task.description }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                {{ task.student?.name ?? '—' }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.teacher?.name ?? '—' }}
@@ -1163,7 +1132,6 @@ const submitEdit = async () => {
           </tbody>
         </table>
       </div>
-      <pre>{{ JSON.stringify(selectedMapelTeachers.value, null, 2) }}</pre>
 
       <Pagination :data="props.tugas" :updatedPageNumber="updatedPageNumber" />
     </main>

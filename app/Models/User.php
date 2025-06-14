@@ -4,6 +4,7 @@ namespace App\Models;
 use Laratrust\Models\Role;
 use Laratrust\Models\LaratrustUserTrait;
 use Spatie\Permission\Traits\HasRoles as TraitsHasRoles; 
+use Spatie\Permission\Traits\HasRoles;
 use Laratrust\Models\Permission;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -16,7 +17,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;// Gunakan LaratrustUserTrait saja
 
-    use TraitsHasRoles;
+    use TraitsHasRoles, HasRoles;
 
     //use LaratrustUserTrait;
 

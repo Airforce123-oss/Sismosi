@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use App\Models\Student;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -13,96 +15,129 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
     // Metode untuk menangani login
-// Metode untuk menangani login
-public function login(Request $request)
-{
-    // Validasi input
-    $credentials = $request->only('email', 'password');
-    
-    // Cek kredensial dan autentikasi
-    if (Auth::attempt($credentials)) {
-        $user = Auth::user();
-    
-        // Ambil student_id dari request
-        $studentId = $request->student_id;
-    
-        // Cek role_name pada user
-        $roleName = $user->role_name; // Mengambil role_name dari user
-    
-        // Debugging: Log role user
-        Log::info('Authenticated User:', [
-            'user_id' => $user->id,
-            'role_name' => $roleName,
+   // Metode untuk menangani login
+
+    public function username()
+    {
+        return 'no_induk_id';
+    }
+    public function login(Request $request)
+    {
+        \Log::info('Login request received', $request->all());
+
+        $request->validate([
+            'credential' => 'required|string',
+            'password' => 'required|string',
+            'role' => 'required|in:student,teacher,admin,parent',
         ]);
-    
-        // Jika user adalah student
-        if ($roleName === 'student') {
-            // Ambil student terkait user ini, atau dari request jika memang perlu pilih student_id
-            $studentId = $request->input('student_id');
 
-            // Kalau gak ada student_id di request, ambil yang pertama yang terkait user
-            if (!$studentId) {
-                $student = Student::where('user_id', $user->id)->first();
-                if ($student) {
-                    $studentId = $student->id;
-                } else {
-                    return Inertia::render('ErrorPage', ['message' => 'Student tidak ditemukan']);
-                }
+        $role = $request->role;
+        $credential = $request->credential;
+        $password = $request->password;
+
+        $user = null;
+
+        if ($role === 'student') {
+            // Login siswa berdasarkan username (NIS disimpan di username)
+            $user = User::where('username', $credential)->first();
+
+            if (!$user) {
+                return response()->json(['message' => 'Akun pengguna siswa tidak ditemukan'], 404);
             }
 
-            // Redirect ke route student-dashboard dengan student_id dan student_name di query
-            $student = Student::find($studentId);
+            // Pastikan user punya relasi ke model Student
+            $student = Student::where('user_id', $user->id)->first();
 
-            if (!$student || $student->user_id !== $user->id) {
-                return Inertia::render('ErrorPage', ['message' => 'Student tidak ditemukan atau tidak berhak']);
+            if (!$student) {
+                return response()->json(['message' => 'Data siswa tidak ditemukan'], 404);
+            }
+        } else {
+            // Role lain menggunakan email
+            if (!filter_var($credential, FILTER_VALIDATE_EMAIL)) {
+                return response()->json(['message' => 'Email tidak valid untuk role ' . $role], 422);
             }
 
-            return redirect()->route('student.dashboard', [
-                'student_id' => $student->id,
-                'student_name' => $student->name,
-            ]);
-        }
+            $user = User::where('email', $credential)->first();
 
-        // Jika user adalah teacher
-        if ($roleName === 'teacher') {
-            // Pastikan teacher terdaftar di tabel teachers (jika perlu)
-            $teacher = \App\Models\Teacher::where('user_id', $user->id)->first();
-            if ($teacher) {
-                // Jika terdaftar sebagai teacher
-                return redirect()->route('teacher.dashboard');
-            } else {
-                // Jika user tidak terdaftar sebagai teacher
-                return redirect()->route('login')->withErrors([
-                    'email' => 'Email tidak terdaftar sebagai guru.',
-                ]);
+            if (!$user) {
+                return response()->json(['message' => 'Pengguna tidak ditemukan'], 404);
             }
         }
-
-        // Jika user adalah admin
-        if ($roleName === 'admin') {
-            return redirect()->route('admin.dashboard');
+        // Verifikasi password
+        if (!Hash::check($password, $user->password)) {
+            return response()->json(['message' => 'Password salah'], 401);
         }
 
-        // Jika user adalah parent
-        if ($roleName === 'parent') {
-            // Di sini Anda bisa mengarahkan ke dashboard parent, misalnya:
-            return Inertia::render('Parents/ParentDashboard', [
-                'parent_id' => $user->id, // Anda bisa mengirimkan data lainnya yang dibutuhkan
-            ]);
+        // Verifikasi role
+        if (!$user->hasRole($role)) {
+            return response()->json(['message' => 'Akses ditolak untuk role ' . $role], 403);
         }
 
-        // Jika role tidak dikenali
-        return redirect()->route('login')->withErrors([
-            'email' => 'Role tidak ditemukan untuk pengguna ini.',
+        // Login dan simpan ke session
+        Auth::login($user);
+
+        return response()->json([
+            'message' => 'Login berhasil.',
+            'user' => $user->only(['id', 'name', 'email']),
+            'role' => $role,
         ]);
     }
-    
-    // Jika login gagal
-    throw ValidationException::withMessages([
-        'email' => ['The provided credentials are incorrect.'],
-    ]);
-}
 
+    public function studentLogin(Request $request)
+    {
+        try {
+            // Validasi input
+            $validated = $request->validate([
+                'credential' => 'required',
+                'password' => 'required',
+            ]);
+
+            // Coba cari user berdasarkan username/NIS
+            $user = User::where('username', $validated['credential'])->first();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User dengan NIS tersebut tidak ditemukan.',
+                    'details' => [
+                        'input' => $validated['credential']
+                    ]
+                ], 404);
+            }
+
+            if (!Hash::check($validated['password'], $user->password)) {
+                return response()->json([
+                    'message' => 'Password salah.',
+                    'details' => [
+                        'user_id' => $user->id,
+                        'username' => $user->username
+                    ]
+                ], 401);
+            }
+
+            Auth::login($user);
+
+            return response()->json([
+                'message' => 'Login siswa berhasil.',
+                'user' => $user,
+            ]);
+
+        } catch (ValidationException $e) {
+            // Tangkap dan kembalikan kesalahan validasi
+            return response()->json([
+                'message' => 'Validasi gagal.',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+            // Tangkap error umum lainnya
+            Log::error('Login error:', ['error' => $e->getMessage(), 'trace' => $e->getTrace()]);
+
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat login.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     // (Optional) Metode untuk menangani logout
     public function logout(Request $request)
     {

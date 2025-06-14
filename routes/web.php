@@ -140,7 +140,7 @@ Route::middleware('auth')->get('/dashboard', function () {
         ]);
     })->name('student.dashboard');
     
-    Route::get('/parent-dashboard', [ParentController::class, 'parentDashboard'])->name('parentDashboard');        
+      
     Route::get('/memeriksa-tugas', [ParentController::class, 'memeriksaTugasSubmit'])->name('memeriksa-tugas');
     Route::get('/memberikan-komentar', [ParentController::class, 'memberikanKomentarKepadaSiswa'])->name('memberikan-komentar');
     Route::get('/melihat-presensi', [ParentController::class, 'melihatPresensiSiswa'])->name('melihat-presensi');
@@ -272,6 +272,11 @@ Route::post('/tugas-siswa', [TeacherController::class, 'createTugasSiswa'])->nam
 Route::get('/jadwal-mata-pelajaran/by-teacher', [TeacherController::class, 'getJadwalByTeacher'])->name('jadwal.byTeacher');
 
 Route::get('/setting-laporan-nilai-siswa', [TeacherController::class, 'settingLaporanNilaiSiswa'])->name('settingLaporanNilaiSiswa');
+
+Route::get('/api/parent/students/filter', [ParentController::class, 'filterStudents'])
+    ->name('api.parent.students.filter')
+    ->middleware('role:parent');
+
 
 // Include Auth Routes
 require __DIR__ . '/auth.php';

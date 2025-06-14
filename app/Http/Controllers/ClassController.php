@@ -63,7 +63,7 @@ class ClassController extends Controller
         
     }
     
-    
+
     public function indexApi(Request $request)
     {
         $classesQuery = Classes::query();

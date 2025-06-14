@@ -20,6 +20,9 @@ const data = ref([]); // Inisialisasi data sebagai array kosong
 const loading = ref(true); // Status loading
 const userName = ref('');
 
+console.log('📚 Mata pelajaran (props.subject):', props.subject);
+console.log('📘 Nama mapel:', props.subject?.mapel || 'Tidak tersedia');
+
 // Pastikan props.auth dan props.auth.user terdefinisi sebelum mengaksesnya
 const form = useForm({
   name: props.auth?.user?.name || '', // Gunakan optional chaining
@@ -46,12 +49,7 @@ function formatDate(dateStr) {
 const page = usePage();
 
 // Pastikan akses properti yang benar dari `page.props.value`
-//const student_id = computed(() => page.props.student_id ?? null);
-//const student_name = computed(() => page.props.student_name ?? '');
 const student = computed(() => page.props.student ?? null);
-
-// Data turunan dari objek student (jika tersedia)
-//const studentName = computed(() => student.value?.name ?? student_name.value); // fallback ke student_name jika student.name tidak ada
 
 // Ambil student_id dan student_name dari query string URL
 const query = new URLSearchParams(window.location.search);
@@ -59,11 +57,11 @@ const studentId = ref(query.get('student_id'));
 const studentName = ref(query.get('student_name'));
 
 // Jika kamu ingin computed juga bisa:
-//const student_id = computed(() => studentId.value ?? null);
 const student_id = computed(() => studentId.value ?? student.value?.id ?? '');
 
-//const student_name = computed(() => studentName.value ?? '');
-const student_name = computed(() => studentName.value ?? student.value?.name ?? '');
+const student_name = computed(
+  () => studentName.value ?? student.value?.name ?? ''
+);
 
 // Debug
 console.log('✅ student_id dari query:', student_id.value);
@@ -91,12 +89,21 @@ onMounted(() => {
   const day = String(now.getDate()).padStart(2, '0');
   currentDate.value = `${year}-${month}-${day}`;
   fetchSessionData();
-  initFlowbite(); // Inisialisasi Flowbite jika diperlukan
+  initFlowbite();
 });
 
 // Contoh penggunaan data
 const itemCount = computed(() => {
-  return data.value ? data.value.length : 0; // Menghindari error jika data belum ada
+  return data.value ? data.value.length : 0;
+});
+
+const subjectsArray = computed(() => {
+  if (Array.isArray(props.subjects)) {
+    return props.subjects;
+  } else if (props.subjects) {
+    return [props.subjects]; // bungkus satu objek ke dalam array
+  }
+  return [];
 });
 </script>
 
@@ -337,7 +344,16 @@ const itemCount = computed(() => {
                     {{ formatDate(tanggal) }}
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-700">
-                    {{ props.subject.mapel }}
+                    <ul>
+                      <li
+                        v-for="(subject, index) in props.subjects"
+                        :key="index"
+                        class="text-sm text-gray-700"
+                      >
+                        {{ subject.mapel }}
+                      </li>
+                    </ul>
+
                     <!-- Menampilkan mapel -->
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-700">

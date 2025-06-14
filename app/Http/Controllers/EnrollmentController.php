@@ -2,79 +2,122 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use App\Models\Mapel;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\Classes;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Resources\EnrollmentResource;
+
 
 class EnrollmentController extends Controller
 {
     public function membuatEnrollment(Request $request)
     {
-        // Ambil data guru yang login
         $user = auth()->user();
-        
-        // Ambil wali kelas yang diampu oleh guru
         $waliKelas = $user->waliKelas;
 
-        Log::info('Wali Kelas:', ['waliKelas' => $waliKelas]);
-
-        
-        // Pastikan wali kelas ada dan memiliki kelas
         if (!$waliKelas || !$waliKelas->classes) {
             return response()->json([
                 'message' => 'Wali kelas tidak ditemukan atau tidak memiliki kelas yang diampu.'
             ], 404);
         }
-    
-        // Ambil kelas yang diampu oleh wali kelas tersebut
-        $classes = $waliKelas->classes;
 
-        Log::info('Classes:', ['classes' => $classes]);
+        $classId = $request->query('class_id');
 
-        
-        // Pastikan kelas ditemukan dan memiliki siswa
-        if (!$classes->students) {
+        if ($classId) {
+            $kelas = Classes::with('students')->find($classId);
+
+    if (!$kelas) {
+        return response()->json([
+            'message' => 'Kelas tidak ditemukan.'
+        ], 404);
+    }  
+
+        } else {
+            // fallback ke kelas default wali kelas
+            $kelas = $waliKelas->classes;
+
+            if (!$kelas) {
+                return response()->json([
+                    'message' => 'class_id harus disertakan atau wali kelas tidak memiliki kelas.'
+                ], 400);
+            }
+        }
+
+
+        // Ambil semua siswa dari kelas tersebut tanpa pagination
+        $students = $kelas->students()
+            ->with('class') 
+            ->select('students.id', 'students.name', 'students.class_id')
+            ->orderBy('students.id', 'asc')
+            ->get();
+
+        if ($students->isEmpty()) {
             return response()->json([
                 'message' => 'Tidak ada siswa yang terdaftar di kelas ini.'
             ], 404);
         }
-    
-        // Ambil data siswa yang terdaftar di kelas yang diampu oleh guru yang login
-        $students = $classes->students;
-        
-        // Ambil data mata pelajaran (mapel)
-        $courses = $this->uniqueByKey(Mapel::all(), 'id');
-        
-        // Ambil data guru (teachers)
+
+        // Ambil data guru
+        $teacher = Teacher::where('user_id', $user->id)->firstOrFail();
+
+        // Ambil mapel yang diajar oleh guru ini
+        $teacherCourses = $teacher->masterMapel()
+            ->select('master_mapel.id as id', 'master_mapel.mapel as mapel')
+            ->get();
+
+        if ($teacherCourses->isEmpty()) {
+            return response()->json([
+                'message' => 'Guru ini belum memiliki mata pelajaran yang diajar.'
+            ], 404);
+        }
+
+        // Ambil semua guru unik
         $teachers = $this->uniqueByKey(Teacher::all(), 'id');
-        
-        // Ambil data enrollments dengan pagination dari request
-        $page = $request->input('page', 1); // Default ke halaman 1 jika tidak ada
-        $perPage = $request->input('per_page', 10); // Default ke 10 item per halaman jika tidak ada
-        
-        $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])  // Menambahkan relasi teacher
-            ->paginate($perPage, ['*'], 'page', $page);
-    
-        // Kirim data ke Vue.js melalui Inertia
+
+        // Paginate enrollments milik guru login (tetap dipaginasi kalau kamu masih ingin ini)
+        $enrollments = Enrollment::with(['student.class', 'mapel', 'teacher']) // ← tambahkan student.class
+            ->where('teacher_id', $teacher->id)
+            ->paginate(
+                $request->input('per_page', 10),
+                ['*'],
+                'page',
+                $request->input('page', 1)
+            );
+
         return Inertia::render('Teachers/Enrollment/membuatEnrollment', [
-            'students' => $students, // Siswa yang diambil berdasarkan kelas yang diampu oleh guru yang login
-            'courses' => $courses,
-            'teachers' => $teachers,
-            'enrollments' => $enrollments,
-            'pagination' => [
+            'students'    => $students, // Sudah tidak dipaginasi
+            'courses'     => $teacherCourses,
+            'teachers'    => $teachers,
+            'enrollments' => [
+            'data' => EnrollmentResource::collection($enrollments),
+            'meta' => [
                 'current_page' => $enrollments->currentPage(),
-                'total_pages' => $enrollments->lastPage(),
-                'total_items' => $enrollments->total(),
+                'total_pages'  => $enrollments->lastPage(),
+                'total_items'  => $enrollments->total(),
             ],
+            'links' => [
+                'first' => $enrollments->url(1),
+                'last'  => $enrollments->url($enrollments->lastPage()),
+                'prev'  => $enrollments->previousPageUrl(),
+                'next'  => $enrollments->nextPageUrl(),
+            ]
+        ],
         ]);
     }
-    
-    
+
+        private function uniqueByKey($collection, $key)
+    {
+        return $collection->unique($key)->values();
+    }
+
+      
     public function getMarks(Request $request)
     {
         $page = $request->input('page', 1);
@@ -122,84 +165,129 @@ class EnrollmentController extends Controller
             return response()->json(['error' => 'Failed to fetch marks data'], 500);
         }
     }
-
     public function store(Request $request)
     {
-        try {
-            // Validasi data yang dikirim dari frontend
-            $data = $request->validate([
-                'student_id' => 'required|exists:students,id',
-                'mapel_id' => 'required|exists:master_mapel,id',
-                'teacher_id' => 'required|exists:teachers,id',
-                'enrollment_date' => 'required|date',
-                'status' => 'required|in:active,inactive',
-                'description' => 'nullable|string',
-                'no_kd' => 'nullable|string',
-                'cognitive_1' => 'nullable|numeric',
-                'cognitive_2' => 'nullable|numeric',
-                'cognitive_pas' => 'nullable|numeric',
-                'cognitive_average' => 'nullable|numeric',
-                'skill_1' => 'nullable|numeric',
-                'skill_2' => 'nullable|numeric',
-                'skill_pas' => 'nullable|numeric',
-                'skill_average' => 'nullable|numeric',
-                'final_mark' => 'nullable|numeric',
-            ]);
-    
-            // Jika nilai cognitive_average tidak dikirim, hitung dari cognitive_1, cognitive_2, cognitive_pas
-            if (!isset($data['cognitive_average']) && (isset($data['cognitive_1']) || isset($data['cognitive_2']) || isset($data['cognitive_pas']))) {
-                $data['cognitive_average'] = round(
-                    ( ($data['cognitive_1'] ?? 0) + ($data['cognitive_2'] ?? 0) + ($data['cognitive_pas'] ?? 0) ) / 3,
-                    2
-                );
-            }
-    
-            // Jika nilai skill_average tidak dikirim, hitung dari skill_1, skill_2, skill_pas
-            if (!isset($data['skill_average']) && (isset($data['skill_1']) || isset($data['skill_2']) || isset($data['skill_pas']))) {
-                $data['skill_average'] = round(
-                    ( ($data['skill_1'] ?? 0) + ($data['skill_2'] ?? 0) + ($data['skill_pas'] ?? 0) ) / 3,
-                    2
-                );
-            }
-    
-            // Jika final_mark tidak dikirim, hitung rata-rata dari cognitive_average dan skill_average
-            if (!isset($data['final_mark']) && isset($data['cognitive_average']) && isset($data['skill_average'])) {
-                $data['final_mark'] = round(
-                    ( $data['cognitive_average'] + $data['skill_average'] ) / 2,
-                    2
-                );
-            }
-    
-            // Simpan ke database
-            $enrollment = Enrollment::create($data);
-            $enrollment->load(['student', 'mapel', 'teacher']);
+        $user = auth()->user();
 
-            Log::info('Enrollment Data:', $request->all());
-    
+        // Validasi input
+        $validated = $request->validate([
+            'student_local_id' => 'sometimes|exists:students,id',
+            'mapel_id' => 'required|exists:master_mapel,id',
+            'enrollment_date' => 'nullable|date',
+            'status' => 'nullable|in:active,inactive',
+            'class_id' => 'required|exists:classes,id',
+        ]);
+
+        $classId = $validated['class_id'];
+        $kelas = Classes::with('students')->find($classId);
+
+        if (!$kelas) {
             return response()->json([
-                'message' => 'Enrollment created successfully',
-                'data' => $enrollment
-            ], 201);
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            \Log::error('Error creating enrollment: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Internal Server Error'
-            ], 500);
+                'message' => 'Kelas tidak ditemukan.'
+            ], 404);
         }
+
+        $mapelId = $validated['mapel_id'];
+        $enrollmentDate = $validated['enrollment_date'] ?? now()->toDateString();
+        $status = $validated['status'] ?? 'active';
+
+        $teacher = Teacher::where('user_id', $user->id)->first();
+        if (!$teacher) {
+            return response()->json([
+                'message' => 'Guru tidak ditemukan di tabel teachers.'
+            ], 422);
+        }
+
+        // =======================
+        // ✅ MODE 1: Enroll satu siswa
+        // =======================
+        if (!empty($validated['student_local_id'])) {
+            $studentId = $validated['student_local_id'];
+
+            // Pastikan siswa memang bagian dari kelas tersebut
+            $isStudentInClass = $kelas->students()->where('id', $studentId)->exists();
+            if (!$isStudentInClass) {
+                return response()->json([
+                    'message' => 'Siswa tidak ditemukan dalam kelas yang dimaksud.'
+                ], 403);
+            }
+
+            $exists = Enrollment::where('student_id', $studentId)
+                ->where('mapel_id', $mapelId)
+                ->where('enrollment_date', $enrollmentDate)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'message' => 'Siswa sudah pernah di-enroll pada mapel ini.'
+                ], 409);
+            }
+
+            $enrollment = Enrollment::create([
+                'student_id' => $studentId,
+                'mapel_id' => $mapelId,
+                'enrollment_date' => $enrollmentDate,
+                'status' => $status,
+                'teacher_id' => $teacher->id,
+                'class_id' => $kelas->id,
+            ]);
+
+            $enrollment->load(['mapel', 'student', 'teacher']);
+
+            return response()->json([
+                'message' => 'Enrollment berhasil.',
+                'data' => $enrollment,
+            ], 201);
+        }
+
+        // =======================
+        // ✅ MODE 2: Enroll semua siswa dalam kelas
+        // =======================
+        $students = $kelas->students;
+        $createdEnrollments = [];
+
+        foreach ($students as $student) {
+            $exists = Enrollment::where('student_id', $student->id)
+                ->where('mapel_id', $mapelId)
+                ->where('enrollment_date', $enrollmentDate)
+                ->exists();
+
+            if (!$exists) {
+                $created = Enrollment::create([
+                    'student_id' => $student->id,
+                    'mapel_id' => $mapelId,
+                    'enrollment_date' => $enrollmentDate,
+                    'status' => $status,
+                    'teacher_id' => $teacher->id,
+                    'class_id' => $kelas->id,
+                ]);
+
+                $createdEnrollments[] = $created;
+            }
+        }
+
+        foreach ($createdEnrollments as $e) {
+            $e->load(['mapel', 'student', 'teacher']);
+        }
+
+        return response()->json([
+            'message' => 'Enrollment massal berhasil.',
+            'data' => $createdEnrollments,
+        ], 201);
     }
 
     public function updateEnrollment(Request $request)
     {
+        $user = auth()->user();
+        $teacher = $user->waliKelas;
+
+        if (!$teacher || !$teacher->classes) {
+            return response()->json(['message' => 'Guru tidak memiliki kelas'], 403);
+        }
+
         $data = $request->validate([
             'student_id' => 'required|exists:students,id',
             'mapel_id' => 'required|exists:master_mapel,id',
-            'teacher_id' => 'required|exists:teachers,id',
             'enrollment_date' => 'required|date',
             'status' => 'required|in:active,inactive',
             'cognitive_1' => 'nullable|numeric',
@@ -213,70 +301,127 @@ class EnrollmentController extends Controller
             'final_mark' => 'nullable|numeric',
             'no_kd' => 'nullable|string',
         ]);
-        
-    
-        // Misal Anda ingin cari berdasarkan student_id + mapel_id
+
+        // Pastikan siswa tersebut termasuk dalam kelas guru yang login
+        $student = $teacher->classes->students()->where('id', $data['student_id'])->first();
+        if (!$student) {
+            return response()->json(['message' => 'Siswa bukan dari kelas yang diampu'], 403);
+        }
+
         $enrollment = Enrollment::where('student_id', $data['student_id'])
             ->where('mapel_id', $data['mapel_id'])
             ->first();
-    
+
         if (!$enrollment) {
-            return response()->json([
-                'message' => 'Enrollment not found'
-            ], 404);
+            return response()->json(['message' => 'Enrollment tidak ditemukan'], 404);
         }
-    
+
+        // Tambahkan teacher_id secara otomatis
+        $data['teacher_id'] = $teacher->id;
+
         $enrollment->update($data);
-    
+
         return response()->json([
-            'message' => 'Enrollment updated successfully',
+            'message' => 'Enrollment berhasil diperbarui',
             'data' => $enrollment
         ]);
     }
-    
-    
-    public function getEnrollments(Request $request)
-{
-    $page = $request->input('page', 1);
-    $perPage = $request->input('per_page', 5);
+        
+        public function getEnrollments(Request $request)
+    {
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 5);
 
-    // Mengambil data enrollments dengan paginasi
-    $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])
-        ->paginate($perPage, ['*'], 'page', $page);
+        // Mengambil data enrollments dengan paginasi
+        $enrollments = Enrollment::with(['student.class', 'mapel', 'teacher'])
+            ->paginate($perPage, ['*'], 'page', $page);
 
-    return response()->json([
-        'data' => $enrollments->items(),
-        'total' => $enrollments->total(),
-        'pagination' => [
-            'current_page' => $enrollments->currentPage(),
-            'total_pages' => $enrollments->lastPage(),
-            'total_items' => $enrollments->total(),
-        ]
-    ]);
-}
-public function getPaginatedEnrollments(Request $request)
-{
-    $page = $request->input('page', 1);
-    $perPage = $request->input('per_page', 5);
-    
-    $enrollments = Enrollment::with(['student', 'mapel', 'teacher'])
-        ->paginate($perPage, ['*'], 'page', $page);
+        return response()->json([
+            'data' => $enrollments->items(),
+            'total' => $enrollments->total(),
+            'pagination' => [
+                'current_page' => $enrollments->currentPage(),
+                'total_pages' => $enrollments->lastPage(),
+                'total_items' => $enrollments->total(),
+            ]
+        ]);
+    }
+    public function getPaginatedEnrollments(Request $request)
+    {
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 5);
+        $classId = $request->input('class_id'); // ✅ Ambil class_id dari request
 
-        Log::info('Total Enrollments:', ['total' => $enrollments->total()]);
-        Log::info('Total Pages:', ['lastPage' => $enrollments->lastPage()]);
+        $user = Auth::user();
 
-    return response()->json([
-        'data' => $enrollments->items(),
-        'total' => $enrollments->total(),
-        'pagination' => [
-            'current_page' => $enrollments->currentPage(),
-            'total_pages' => $enrollments->lastPage(),
-            'total_items' => $enrollments->total(),
-        ]
-    ]);
-}
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not authenticated.',
+            ], 401);
+        }
 
-// Mengambil data mapel berdasarkan id
+        $teacher = Teacher::where('user_id', $user->id)->first();
+
+        if (!$teacher) {
+            return response()->json([
+                'message' => 'Teacher not found.'
+            ], 404);
+        }
+
+        $query = Enrollment::with(['student', 'mapel', 'teacher'])
+            ->where('teacher_id', $teacher->id);
+
+        // ✅ Tambahkan filter class_id jika tersedia
+        if ($classId) {
+            $query->whereHas('student', function ($q) use ($classId) {
+                $q->where('class_id', $classId);
+            });
+        }
+
+        $enrollments = $query->paginate($perPage, ['*'], 'page', $page);
+
+        Log::info('Total Enrollments for Teacher:', ['total' => $enrollments->total()]);
+        Log::info('Teacher ID:', ['id' => $teacher->id]);
+
+        return response()->json([
+            'data' => $enrollments->items(),
+            'total' => $enrollments->total(),
+            'pagination' => [
+                'current_page' => $enrollments->currentPage(),
+                'total_pages' => $enrollments->lastPage(),
+                'total_items' => $enrollments->total(),
+                'per_page' => $enrollments->perPage(),
+            ],
+            'links' => [
+                'first' => $enrollments->url(1),
+                'last' => $enrollments->url($enrollments->lastPage()),
+                'prev' => $enrollments->previousPageUrl(),
+                'next' => $enrollments->nextPageUrl(),
+            ]
+        ]);
+    }
+
+
+    public function getStudentsByClass(Request $request)
+    {
+        $classId = $request->query('class_id');
+
+        if (!$classId) {
+            return response()->json(['message' => 'Class ID wajib diisi.'], 400);
+        }
+
+        $class = Classes::find($classId);
+
+        if (!$class) {
+            return response()->json(['message' => 'Kelas tidak ditemukan.'], 404);
+        }
+
+        $students = $class->students()->select('id', 'name')->get();
+
+        return response()->json(['data' => $students]);
+    }
+
+        // Mengambil data mapel berdasarkan id
     public function getMapelByTeacherId(Request $request)
     {
         $teacherId = $request->input('id');
@@ -317,11 +462,6 @@ public function getPaginatedEnrollments(Request $request)
     /**
      * Helper function untuk mendapatkan elemen unik berdasarkan key.
      */
-    private function uniqueByKey($collection, $key)
-    {
-        return $collection->unique($key)->values();
-    }
-
     public function update(Request $request, $id)
     {
         // Log untuk mencatat data request yang diterima
@@ -405,8 +545,14 @@ public function getPaginatedEnrollments(Request $request)
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
-    
-    
-    
+
+        public function getOnlyClasses()
+    {
+        $classes = Classes::all();
+
+        return response()->json([
+            'data' => $classes,
+        ]);
+    }
+
 }

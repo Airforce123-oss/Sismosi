@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed, watch, toRaw } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
@@ -12,6 +12,42 @@ import '@assets/plugins/simple-calendar/simple-calendar.css';
 
 const userName = ref('');
 const { props } = usePage();
+const students = ref(props.students || []);
+const filteredCourses = ref([]);
+const teachers = ref(props.teachers || []);
+const mapels = ref(props.mapels || []);
+const courses = ref(props.courses || []);
+const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
+const classesForStudent = ref(props.classes_for_student || []);
+const totalCourses = computed(() => props.tugas?.meta?.total ?? 0);
+
+for (let i = 0; i < props.teachers.length; i++) {
+  const teacher = props.teachers[i];
+  const masterMapel = toRaw(teacher.masterMapel);
+
+  //console.log(`--- Guru ke-${i} ---`);
+  //console.log(`Nama Guru: ${teacher.name}`);
+  //console.log(`NIP: ${teacher.nip}`);
+
+  if (Array.isArray(masterMapel)) {
+    if (masterMapel.length === 0) {
+      //console.log(`⚠️ masterMapel kosong untuk guru ke-${i}`);
+    } else {
+      masterMapel.forEach((mapel, index) => {
+        //console.log(`  Mapel ${index}:`, mapel);
+
+        if (mapel.id && mapel.nama_mapel) {
+          //console.log(`    → ID: ${mapel.id}, Nama: ${mapel.nama_mapel}`);
+        } else {
+          console.log(`    ⚠️ Mapel tidak lengkap:`, mapel);
+        }
+      });
+    }
+  } else {
+    console.log(`❌ masterMapel bukan array di guru ke-${i}:`, masterMapel);
+  }
+}
+
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
@@ -200,34 +236,124 @@ onMounted(() => {
     </nav>
     <!-- Main -->
 
-    <main class="p-7 md:ml-64 h-screen pt-20">
+    <main class="p-7 md:ml-64 h-screen pt-5">
       <Head title="Dashboard" />
-      <div class="text-2xl col-sm-12 mb-10">
-        <div class="page-sub-header"></div>
-      </div>
-      <div class="row">
-        <div class="col-12 col-lg-16 col-xl-6">
-          <!-- 
-                             <div class="row">
-                        <div class="col-12 col-lg-12 col-xl-4 d-flex">
-                            <div class="card flex-fill comman-shadow">
-                                <div class="card-body">
-                                    <div
-                                        id="calendar-doctor"
-                                        class="calendar-container"
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    -->
-        </div>
-      </div>
+      <h2
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+      >
+        Melihat Tugas Siswa
+      </h2>
 
-      <div id="apexcharts-area"></div>
+      <!-- Tabel -->
+      <div
+        class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
+      >
+        <table class="min-w-full table-auto border-collapse">
+          <thead class="bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                ID
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Mata Pelajaran
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Deskripsi
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Guru
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Kelas
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-700 text-sm md:text-base">
+            <tr
+              v-for="task in tugas.data"
+              :key="task.id"
+              class="border-b hover:bg-gray-50 transition duration-150"
+            >
+              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.mapel?.mapel ?? '—' }}
+              </td>
+              <td class="px-4 py-3 whitespace-pre-wrap">
+                {{ task.description }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.teacher?.name ?? '—' }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.kelas?.name ?? '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-center space-x-2">
+                  <button
+                    @click="editTask(task)"
+                    class="inline-flex items-center gap-2 bg-blue-500 text-white h-9 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536M9 11l6-6m2 2L11 15H9v-2l6-6z"
+                      />
+                    </svg>
+                    Edit
+                  </button>
+
+                  <button
+                    @click="deleteTask(task.id)"
+                    class="inline-flex items-center gap-2 bg-red-500 text-white h-9 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z"
+                      />
+                    </svg>
+                    Hapus
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </main>
 
     <!-- Sidebar -->
-    <SidebarStudent />
+    <SidebarStudent :student_id="student_id" :student_name="student_name" />
   </div>
 </template>

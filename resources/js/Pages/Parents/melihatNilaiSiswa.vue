@@ -3,7 +3,7 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue';
 import { initFlowbite } from 'flowbite';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import SidebarParent from '@/Components/SidebarParent.vue';
-import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import { Link, useForm, usePage, Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 const userName = ref('');
 const { props } = usePage();
@@ -49,15 +49,23 @@ const mapelWithNilai = computed(() => {
 
 let filterTimeout = null;
 
+async function fetchFilteredStudents() {
+  try {
+    const response = await axios.get('/api/students/filter', {
+      params: filters.value,
+    });
+
+    students.value = response.data.students;
+  } catch (error) {
+    console.error('Failed to fetch students:', error);
+  }
+}
+
 function applyFilter() {
   clearTimeout(filterTimeout);
   filterTimeout = setTimeout(() => {
-    router.get(route('settingLaporanNilaiSiswa'), filters.value, {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    });
-  }, 400); // 400ms setelah user berhenti mengetik
+    fetchFilteredStudents();
+  }, 400);
 }
 
 const studentEnrollments = computed(() => {
@@ -253,16 +261,16 @@ watch(students, (newVal) => {
     <main class="p-7 md:ml-64 h-screen pt-20">
       <Head title="Melihat Nilai" />
       <form
-        class="w-full max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 hover:animate-none transition-all"
-        @submit.prevent
+        class="w-full max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 transition-all"
+        @submit.prevent="applyFilter"
       >
-        <div class="flex flex-col items-start w-full col-span-2">
+        <!-- Input Nama Siswa -->
+        <div class="flex flex-col items-start w-full col-span-1 sm:col-span-2">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
             Nama Siswa:
           </label>
-          <!-- Input pencarian nama siswa (opsional, tetap bisa digunakan) -->
           <input
             v-model="filters.nama"
             @input="applyFilter"
@@ -281,7 +289,9 @@ watch(students, (newVal) => {
             </option>
           </datalist>
         </div>
-        <div class="flex flex-col items-start w-full col-span-2">
+
+        <!-- Select Kelas -->
+        <div class="flex flex-col items-start w-full col-span-1 sm:col-span-2">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
@@ -290,7 +300,7 @@ watch(students, (newVal) => {
           <select
             v-model="filters.kelas"
             @change="applyFilter"
-            class="w-full border-2 border-pink-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 rounded-xl px-4 py-2 text-base transition-all bg-white placeholder:text-pink-400 mb-2"
+            class="w-full border-2 border-pink-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 rounded-xl px-4 py-2 text-base transition-all bg-white placeholder:text-pink-400"
           >
             <option value="">Pilih kelas</option>
             <option
@@ -301,6 +311,18 @@ watch(students, (newVal) => {
               {{ kelas.name }}
             </option>
           </select>
+        </div>
+
+        <!-- Tombol Submit -->
+        <div
+          class="flex items-end justify-end col-span-1 sm:col-span-2 md:col-start-4"
+        >
+          <button
+            type="submit"
+            class="mt-2 px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md"
+          >
+            Terapkan Filter
+          </button>
         </div>
       </form>
 
@@ -411,6 +433,9 @@ watch(students, (newVal) => {
                 </td>
                 <td class="border border-black px-2 py-1">
                   {{ row.cognitive_average || '-' }}
+                </td>
+                <td class="border border-black px-2 py-1">
+                  {{ row.final_mark || '-' }}
                 </td>
                 <td class="border border-black px-2 py-1">
                   {{ row.final_mark || '-' }}

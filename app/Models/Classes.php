@@ -42,5 +42,4 @@ class Classes extends Model
         return $this->hasMany(Student::class, 'class_id');
     }
 
-
 }

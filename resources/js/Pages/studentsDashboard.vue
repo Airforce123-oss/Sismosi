@@ -293,6 +293,6 @@ onMounted(() => {
     </main>
 
     <!-- Sidebar -->
-    <SidebarStudent />
+    <SidebarStudent :student_id="student_id" :student_name="student_name" />
   </div>
 </template>

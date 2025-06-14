@@ -121,15 +121,7 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
-        \Log::info('User yang login:', [
-        'id' => $user?->id,
-        'name' => $user?->name,
-        'email' => $user?->email,
-        'role' => $user?->roles->pluck('name')->toArray(),
-        ]);
-
         if (!$user) {
-            \Log::info('User null di melihatDataAbsensiSiswa, redirect ke login.');
             return redirect()->route('login');
         }
 
@@ -140,7 +132,6 @@ class StudentController extends Controller
             ]);
         }
 
-        // Ambil student yang berelasi dengan user yang login
         $student = Student::where('user_id', $user->id)->first();
 
         if (!$student) {
@@ -151,18 +142,20 @@ class StudentController extends Controller
 
         $studentId = $student->id;
         $studentName = $student->name;
-
-        // Ambil data absensi siswa hari ini
         $currentDate = now()->format('Y-m-d');
+
+        // ✅ Ambil semua absensi siswa hari ini beserta course-nya
         $attendanceRecords = Attendance::whereDate('tanggal_kehadiran', $currentDate)
             ->where('student_id', $studentId)
-            ->with('student')
+            ->with(['course', 'student'])
             ->get();
 
-        \Log::info('Kirim ke frontend dari melihatDataAbsensiSiswa', [
-            'student_name' => $studentName,
-            'student_id' => $studentId,
-        ]);
+        // ✅ Ambil semua mapel dari attendance
+        $subjects = $attendanceRecords
+            ->pluck('course')
+            ->filter() // hilangkan null
+            ->unique('id') // hanya mapel unik
+            ->values(); // reset index
 
         return Inertia::render('Students/melihatDataAbsensiSiswa', [
             'attendanceRecords' => $attendanceRecords,
@@ -170,6 +163,7 @@ class StudentController extends Controller
             'student_id' => $studentId,
             'student_name' => $studentName,
             'student' => $student,
+            'subjects' => $subjects, // ✅ kirim array of courses
         ]);
     }
 
@@ -354,15 +348,26 @@ class StudentController extends Controller
         return response()->json($student);
     }
     
+    public function getByNomorInduk($nomor_induk)
+    {
+        $student = Student::whereHas('noInduk', function ($query) use ($nomor_induk) {
+            $query->where('no_induk', $nomor_induk); 
+        })->with('noInduk')->first();
 
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
 
-    public function indexApiDetailStudent(Request $request)
-{
-    // Ambil data dari tabel detailstudents, misalnya dengan pagination
-    $students = DetailStudent::paginate(10);  // Sesuaikan pagination sesuai kebutuhan
+        return response()->json($student);
+    }
 
-    return response()->json($students);
-}
+        public function indexApiDetailStudent(Request $request)
+    {
+        // Ambil data dari tabel detailstudents, misalnya dengan pagination
+        $students = DetailStudent::paginate(10);  // Sesuaikan pagination sesuai kebutuhan
+
+        return response()->json($students);
+    }
 
     public function storeStudent(Request $request)
     {

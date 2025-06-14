@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\ClassesResource;
 use App\Http\Resources\TeacherResource;
 use App\Http\Resources\StudentResource;
@@ -158,46 +159,43 @@ class TeacherController extends Controller
             'classes_for_student' => $classes_for_student,
         ]);
     }
-
     public function createTugasSiswa(Request $request)
     {
         $validated = $request->validate([
             'mapel_id' => 'required|exists:master_mapel,id',
-            'description' => 'required|string|min:1', // ✅ tidak boleh null/kosong
-            'student_id' => 'required|exists:students,id',
-            'teacher_id' => 'required|exists:teachers,id',
+            'description' => 'required|string|min:1',
             'class_id' => 'required|exists:classes,id',
+            // Tidak terima teacher_id dari frontend (demi keamanan)
         ]);
 
-        // Validasi tambahan: pastikan guru mengajar mapel yang dipilih
-        $exists = \DB::table('teacher_mapel')
-            ->where('teacher_id', $validated['teacher_id'])
-            ->where('mapel_id', $validated['mapel_id'])
-            ->exists();
+        // ✅ Ambil data guru yang sedang login
+        $teacher = Teacher::findOrFail(Auth::id());
 
-        if (!$exists) {
+        // ✅ Validasi: guru harus mengajar mapel tersebut
+        $teachesMapel = $teacher->masterMapel()->where('mapel_id', $validated['mapel_id'])->exists();
+
+        if (!$teachesMapel) {
             return response()->json([
-                'message' => 'Guru yang dipilih tidak mengajar mata pelajaran tersebut.'
+                'message' => 'Anda tidak mengajar mata pelajaran tersebut.'
             ], 422);
         }
 
+        // ✅ Simpan tugas
         $tugas = new Tugas();
         $tugas->mapel_id = $validated['mapel_id'];
-        $tugas->description = $validated['description']; // ✅ dipastikan tidak null
-        $tugas->student_id = $validated['student_id'];
-        $tugas->teacher_id = $validated['teacher_id'];
+        $tugas->description = $validated['description'];
+        $tugas->teacher_id = $teacher->id;
         $tugas->class_id = $validated['class_id'];
         $tugas->save();
 
-        $classes_for_student = Classes::all();
-
         return response()->json([
             'message' => 'Tugas berhasil ditambahkan.',
-            'data' => $tugas->load(['mapel', 'student', 'teacher', 'kelas']),
-            'classes_for_student' => $classes_for_student,
+            'data' => $tugas->load(['mapel', 'teacher', 'kelas']),
+            'classes_for_student' => Classes::all(),
+            'courses' => $teacher->masterMapel, // ✅ tetap gunakan relasi masterMapel()
+            'teacher_id' => $teacher->id,
         ], 201);
     }
-
 
     public function index(Request $request)
     {
