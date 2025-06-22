@@ -1,12 +1,8 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue';
 import { initFlowbite } from 'flowbite';
-import  SidebarAdmin  from '@/Components/SidebarAdmin.vue';
+import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import DeleteUserForm from './Partials/DeleteUserForm.vue';
-import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
-import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import ApexCharts from 'apexcharts';
 
@@ -345,65 +341,99 @@ const barChartOptions = {
         </div>
       </div>
 
-      <div class="container mx-auto py-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-primary1 text-white p-4 rounded shadow-md">
+      <div class="container mx-auto px-4 py-6">
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          <div
+            class="bg-primary1 text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">58</h3>
-                <p class="font-bold">Data Siswa</p>
+                <h3 class="text-3xl md:text-4xl font-bold text-white">58</h3>
+                <p class="text-sm md:text-base font-semibold">Data Siswa</p>
               </div>
               <i class="ion ion-person-stalker text-4xl"></i>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
+            <a
+              href="/students"
+              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
+            >
+              Lihat detail <i class="fas fa-arrow-circle-right"></i>
             </a>
           </div>
 
-          <div class="bg-success text-white p-4 rounded shadow-md">
+          <div
+            class="bg-success text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">16</h3>
-                <p class="font-bold">Data Guru</p>
+                <h3 class="text-3xl md:text-4xl font-bold text-white">16</h3>
+                <p class="text-sm md:text-base font-semibold">Data Guru</p>
               </div>
               <i class="ion ion-person-stalker text-4xl"></i>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
+            <a
+              href="/teachers"
+              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
+            >
+              Lihat detail <i class="fas fa-arrow-circle-right"></i>
             </a>
           </div>
 
-          <div class="bg-warning text-white p-4 rounded shadow-md">
+          <div
+            class="bg-warning text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">16</h3>
-                <p class="font-bold">Data Kelas</p>
+                <h3 class="text-3xl md:text-4xl font-bold text-white">16</h3>
+                <p class="text-sm md:text-base font-semibold">Data Kelas</p>
               </div>
               <i class="ion ion-stats-bars text-4xl"></i>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
+            <a
+              href="/kelas"
+              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
+            >
+              Lihat detail <i class="fas fa-arrow-circle-right"></i>
             </a>
           </div>
 
-          <!-- Profil Card -->
-          <div class="bg-cyan text-white p-4 rounded shadow-md">
+          <div
+            class="bg-cyan text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">8</h3>
-                <p class="font-bold">Data Mata Pelajaran</p>
+                <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                <p class="text-sm md:text-base font-semibold">
+                  Data Mata Pelajaran
+                </p>
               </div>
               <i class="ion ion-log-in text-4xl"></i>
             </div>
             <a
-              href="/guru/profil"
-              class="block mt-4 text-sm text-white hover:underline"
+              href="/mataPelajaran"
+              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
             >
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
+              Lihat detail <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+
+          <div
+            class="bg-cyan text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                <p class="text-sm md:text-base font-semibold">Data Jabatan</p>
+              </div>
+              <i class="ion ion-log-in text-4xl"></i>
+            </div>
+            <a
+              href="/indexMasterJabatan"
+              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
+            >
+              Lihat detail <i class="fas fa-arrow-circle-right"></i>
             </a>
           </div>
         </div>

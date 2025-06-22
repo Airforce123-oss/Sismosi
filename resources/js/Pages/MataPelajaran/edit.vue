@@ -1,31 +1,68 @@
 <script setup>
 import { defineProps, ref, watch } from 'vue';
-import { useForm, router, Link } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import InputError from '@/Components/InputError.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue'; // Mengembalikan ResponsiveNavLink
 import Swal from 'sweetalert2';
+import { Link } from '@inertiajs/vue3';
+import InputError from '@/Components/InputError.vue';
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 
 const props = defineProps({
   mapel: {
     type: Object,
-    required: false, // Atur apakah properti ini wajib ada
+    default: () => ({}),
   },
 });
-console.log('Props Mapel:', props.mapel);
 
-// Form handling using Inertia
+console.log('📦 Data diterima di edit.vue:', props.mapel);
+
+// Inisialisasi form kosong dulu
 const form = useForm({
-  id: props.mapel?.id || '', // Harus ada nilai jika dalam mode edit
-  kode_mapel: props.mapel?.kode_mapel || '',
-  mapel: props.mapel?.mapel || '',
+  id: '', // id digunakan untuk deteksi update
+  kode_mapel: '',
+  mapel: '',
+  hari: '',
+  jam_ke: '',
 });
 
-console.log('Form Data Initialized:', form);
+// Watch agar form diisi ulang saat props.mapel tersedia/berubah
+watch(
+  () => props.mapel?.data?.id, // track data.id agar reactive
+  (id) => {
+    const mapel = props.mapel?.data;
+    if (mapel && id) {
+      form.id = mapel.id || '';
+      form.kode_mapel = mapel.kode_mapel || '';
+      form.mapel = mapel.mapel || '';
+      form.hari = mapel.hari || '';
+      form.jam_ke = mapel.jam_ke || '';
 
-const sections = ref([]); // Store sections for the selected class
+      console.log('🟢 Form berhasil diisi ulang dari props.mapel.data:', {
+        ...form,
+      });
+    } else {
+      console.log(
+        '⚠️ props.mapel.data masih kosong atau tidak punya id',
+        mapel
+      );
+    }
+  },
+  { immediate: true }
+);
 
-// Watch for class_id change to load related sections
+// Optional: Fetch data lain jika berdasarkan class_id
+const sections = ref([]);
+
+const getSections = async (class_id) => {
+  try {
+    const res = await axios.get(`/api/sections?class_id=${class_id}`);
+    sections.value = res.data;
+  } catch (err) {
+    console.error('❌ Gagal fetch sections:', err);
+  }
+};
+
+// Kalau ada class_id di form, fetch sections-nya
 watch(
   () => form.class_id,
   (newClassId) => {
@@ -35,50 +72,43 @@ watch(
   }
 );
 
-// Fetch sections based on class_id
-const getSections = async (class_id) => {
-  try {
-    const response = await axios.get(`/api/sections?class_id=${class_id}`);
-    sections.value = response.data;
-  } catch (error) {
-    console.error('Error fetching sections:', error);
-  }
-};
+// Submit form
+const submitForm = () => {
+  console.log('🚀 Submitting form:', form);
 
-// Submit form function
-function submitForm() {
-  console.log('Submitting form data:', form);
-  console.log('ID Mapel:', form.id);
+  const isUpdate = !!form.id;
+  const method = isUpdate ? 'put' : 'post';
 
-  // Tentukan metode berdasarkan ada atau tidaknya ID
-  const method = form.id ? 'put' : 'post';
-  const routeName = form.id
-    ? route('matapelajaran.update', { id: form.id }) // Gunakan route update jika id ada
-    : route('matapelajaran.store'); // Gunakan route store jika tidak ada id
+  // Kalau update, hardcode URL API dengan id
+  const routeName = isUpdate
+    ? `/api/matapelajaran/${form.id}`
+    : route('matapelajaran.store');
 
   form[method](routeName, {
     onSuccess: () => {
-      console.log('Data berhasil disimpan');
       Swal.fire({
-        title: 'Berhasil!',
-        text: 'Data mata pelajaran berhasil diperbarui.',
         icon: 'success',
-        confirmButtonText: 'Ok',
+        title: 'Berhasil!',
+        text: isUpdate
+          ? 'Data mata pelajaran berhasil diperbarui.'
+          : 'Data mata pelajaran berhasil disimpan.',
+        confirmButtonText: 'OK',
       }).then(() => {
         router.visit(route('matapelajaran.index'), { replace: true });
       });
     },
     onError: (errors) => {
-      console.error('Error:', errors);
+      console.error('❌ Gagal simpan:', errors);
+
       Swal.fire({
-        title: 'Gagal!',
-        text: 'Terjadi kesalahan saat menyimpan data mata pelajaran.',
         icon: 'error',
-        confirmButtonText: 'Ok',
+        title: 'Gagal!',
+        text: 'Periksa kembali inputan Anda.',
+        confirmButtonText: 'Tutup',
       });
     },
   });
-}
+};
 </script>
 
 <template>
@@ -229,9 +259,9 @@ function submitForm() {
                         v-model="form.kode_mapel"
                         type="text"
                         placeholder="Masukkan Kode Mata Pelajaran"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
                         :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
                             form.errors.kode_mapel,
                         }"
                       />
@@ -253,32 +283,71 @@ function submitForm() {
                         v-model="form.mapel"
                         type="text"
                         placeholder="Masukkan Nama Mata Pelajaran"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
                         :class="{
-                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
                             form.errors.mapel,
                         }"
                       />
                       <InputError class="mt-2" :message="form.errors.mapel" />
                     </div>
+
+                    <!-- Hari -->
+                    <div class="col-span-6 sm:col-span-3">
+                      <label
+                        for="hari"
+                        class="block text-sm font-medium text-gray-700"
+                      >
+                        Hari
+                      </label>
+                      <input
+                        v-model="form.hari"
+                        type="text"
+                        placeholder="Contoh: Senin"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
+                        :class="{
+                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
+                            form.errors.hari,
+                        }"
+                      />
+                      <InputError class="mt-2" :message="form.errors.hari" />
+                    </div>
+
+                    <!-- Jam Ke -->
+                    <div class="col-span-6 sm:col-span-3">
+                      <label
+                        for="jam_ke"
+                        class="block text-sm font-medium text-gray-700"
+                      >
+                        Jam Ke
+                      </label>
+                      <input
+                        v-model="form.jam_ke"
+                        type="number"
+                        min="1"
+                        placeholder="Masukkan jam ke-"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
+                        :class="{
+                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
+                            form.errors.jam_ke,
+                        }"
+                      />
+                      <InputError class="mt-2" :message="form.errors.jam_ke" />
+                    </div>
                   </div>
 
-                  <!-- Update Button -->
-                  <div class="col-span-6 sm:col-span-3"></div>
-                  <div
-                    class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
-                  >
-                    <div class="flex items-center space-x-4">
+                  <!-- Tombol -->
+                  <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                    <div class="flex items-center justify-end space-x-4">
                       <Link
                         :href="route('matapelajaran.index')"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-100 text-sm font-medium rounded-md"
                       >
                         Batal
                       </Link>
-
                       <button
                         type="submit"
-                        class="btn btn-primary modal-title border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
                       >
                         Perbarui
                       </button>

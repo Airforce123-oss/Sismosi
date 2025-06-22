@@ -20,6 +20,14 @@ const courses = ref(props.courses || []);
 const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
 const classesForStudent = ref(props.classes_for_student || []);
 const totalCourses = computed(() => props.tugas?.meta?.total ?? 0);
+const query = new URLSearchParams(window.location.search);
+const student_id = computed(() => query.get('student_id'));
+const student_name = computed(() => query.get('student_name'));
+const auth = usePage().props.auth;
+
+console.log('✅ Student Name dari query:', student_name.value);
+console.log('✅ Student ID dari query:', student_id.value);
+console.log('✅ User:', auth?.user);
 
 for (let i = 0; i < props.teachers.length; i++) {
   const teacher = props.teachers[i];
@@ -237,7 +245,7 @@ onMounted(() => {
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-5">
-      <Head title="Dashboard" />
+      <Head title="Melihat Tugas" />
       <h2
         class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
       >

@@ -1,45 +1,53 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { usePage, useForm, Head } from '@inertiajs/vue3';
 import { initFlowbite } from 'flowbite';
 import SidebarStudent from '@/Components/SidebarStudent.vue';
-// === Props ===
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+
 const { props } = usePage();
-const schedule = ref(props.schedule ?? []); // jadwal dari backend
-const kelasList = ref(props.kelasList ?? []); // daftar kelas
-const waliKelas = ref(props.wali_kelas ?? []); // daftar wali kelas)
 
-// === Hari-hari dalam seminggu ===
+const schedule = ref(props.schedule ?? []);
+const kelas = ref(props.kelas ?? '-');
+const waliKelas = ref(props.wali_kelas ?? '-');
+
+// Hari-hari dalam seminggu
 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
+const filterHari = ref('');
+const filterBulan = ref('');
+const filterTahun = ref('');
+const studentName = ref(props.student_name ?? '-');
 
-// === Kelas yang sedang dipilih ===
-const selectedKelas = ref(''); // default: semua kelas
+watch([filterHari, filterBulan, filterTahun], () => {
+  axios
+    .get('/melihatJadwalPelajaran', {
+      params: {
+        hari: filterHari.value,
+        bulan: filterBulan.value,
+        tahun: filterTahun.value,
+      },
+    })
+    .then((res) => {
+      schedule.value = res.data.schedule;
+    })
+    .catch((err) => {
+      console.error('Gagal memuat jadwal:', err);
+    });
+});
 
-// === Fungsi bantu: cek apakah ada jadwal di hari tertentu ===
-const hasJadwalForDay = (day) => {
-  return schedule.value.some((slot) => !!slot?.jadwal?.[day]);
-};
-
-// === Filter jadwal sesuai hari dan kelas yang dipilih ===
+// Fungsi bantu: ambil jadwal per hari
 const filteredScheduleByDay = (day) => {
   return schedule.value
-    .filter((slot) => {
-      const entry = slot.jadwal?.[day];
-      if (!entry) return false;
-      if (!selectedKelas.value) return true;
-      return entry.kelas_id === selectedKelas.value;
-    })
+    .filter((slot) => !!slot.jadwal?.[day])
     .map((slot) => ({
       jam_ke: slot.jam_ke,
       jam: slot.jam,
       jadwal: { [day]: slot.jadwal[day] },
-      wali_kelas: slot.wali_kelas,
     }));
 };
 
-// === Data user dari session ===
+// Data user dari session (opsional)
 const userName = ref('');
 const form = useForm({
   name: props.auth.user.name,
@@ -47,7 +55,6 @@ const form = useForm({
   role_type: props.auth.user.role_type,
 });
 
-// === Ambil data user dari API session ===
 const fetchSessionData = async () => {
   try {
     const response = await axios.get('/api/session-name');
@@ -57,20 +64,11 @@ const fetchSessionData = async () => {
   }
 };
 
-// === Inisialisasi plugin & ambil data saat komponen dimount ===
 onMounted(() => {
   initFlowbite();
   fetchSessionData();
-  console.log('Daftar kelas:', kelasList.value);
-  console.log('Daftar wali kelas', waliKelas.value);
-});
-
-// === Log perubahan kelas terpilih ===
-watch(selectedKelas, (newVal) => {
-  console.log('Kelas yang dipilih:', newVal);
 });
 </script>
-
 <style scoped>
 @import url('https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css');
 .bg-primary1 {
@@ -232,75 +230,71 @@ watch(selectedKelas, (newVal) => {
       </div>
     </nav>
     <!-- Main -->
+    <main class="p-6 md:ml-64 min-h-screen pt-20 bg-gray-50">
+      <Head title="Jadwal Pelajaran" />
 
-    <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Melihat Jadwal Pelajaran" />
-      <div class="text-2xl col-sm-12 mb-10">
-        <div class="page-sub-header"></div>
-      </div>
-      <div class="mt-10 max-w-4xl mx-auto">
-        <!-- Dropdown Pilih Kelas -->
-        <div class="mb-6">
-          <label for="kelas" class="block text-gray-700 font-semibold mb-2">
-            Pilih Kelas
-          </label>
-          <div class="relative">
-            <select
-              id="kelas"
-              v-model="selectedKelas"
-              class="block w-full appearance-none bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-10 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+      <div class="max-w-5xl mx-auto bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold text-center text-blue-700 mb-1">
+          Jadwal Pelajaran Kelas {{ kelas }}
+        </h2>
+        <p class="text-center text-gray-500 mb-6">
+          Nama Siswa: {{ studentName }}
+        </p>
+
+        <!-- Filter -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1"
+              >Hari</label
             >
-              <option value="">Semua Kelas</option>
-              <option
-                v-for="(name, id) in kelasList"
-                :key="id"
-                :value="Number(id)"
-              >
-                {{ name }}
+            <select
+              v-model="filterHari"
+              class="w-full rounded border-gray-300 focus:ring focus:ring-blue-300"
+            >
+              <option value="">Pilih Semua</option>
+              <option v-for="day in days" :key="day" :value="day">
+                {{ day }}
               </option>
             </select>
-
-            <!-- Icon Dropdown -->
-            <div
-              class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400"
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1"
+              >Bulan</label
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M19 9l-7 7-7-7"
-                ></path>
-              </svg>
-            </div>
+            <select
+              v-model="filterBulan"
+              class="w-full rounded border-gray-300 focus:ring focus:ring-blue-300"
+            >
+              <option value="">Pilih Semua</option>
+              <option v-for="b in 12" :key="b" :value="b">{{ b }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1"
+              >Tahun Ajaran</label
+            >
+            <input
+              v-model="filterTahun"
+              type="text"
+              class="w-full rounded border-gray-300 focus:ring focus:ring-blue-300"
+              placeholder="cth: 2025/2026"
+            />
           </div>
         </div>
 
-        <!--   <p>Selected Kelas ID: {{ selectedKelas }}</p>-->
-
-        <h2 class="text-xl text-center font-bold text-gray-800 mb-4">
-          Laporan Jadwal Mingguan
-        </h2>
-
+        <!-- Tabel Jadwal -->
         <div
           v-for="day in days"
           :key="day"
-          class="mb-8 border border-gray-300 rounded-lg overflow-hidden"
+          class="mb-8 rounded-lg overflow-hidden shadow border"
         >
           <div
-            class="bg-blue-600 px-4 py-2 text-lg text-center text-white font-semibold capitalize border-b"
+            class="bg-blue-600 text-white text-center py-2 font-semibold capitalize"
           >
             {{ day }}
           </div>
-
           <table class="w-full text-sm text-left">
-            <thead class="bg-gray-200">
+            <thead class="bg-gray-100">
               <tr>
                 <th class="p-3 border">Jam Ke</th>
                 <th class="p-3 border">Waktu</th>
@@ -310,19 +304,16 @@ watch(selectedKelas, (newVal) => {
               </tr>
             </thead>
             <tbody>
-              <!-- Hari libur (Sabtu & Minggu) -->
               <tr v-if="day === 'sabtu' || day === 'minggu'">
                 <td
-                  colspan="4"
-                  class="p-3 border text-center text-red-500 font-semibold"
+                  colspan="5"
+                  class="p-3 text-center text-red-500 font-semibold border"
                 >
                   Libur
                 </td>
               </tr>
-
-              <!-- Hari kerja -->
               <template v-else>
-                <template v-if="filteredScheduleByDay(day).length > 0">
+                <template v-if="filteredScheduleByDay(day).length">
                   <tr
                     v-for="slot in filteredScheduleByDay(day)"
                     :key="`${day}-${slot.jam_ke}`"
@@ -341,12 +332,10 @@ watch(selectedKelas, (newVal) => {
                     </td>
                   </tr>
                 </template>
-
-                <!-- Jika tidak ada jadwal -->
                 <tr v-else>
                   <td
-                    colspan="4"
-                    class="p-3 border text-center text-gray-500 italic"
+                    colspan="5"
+                    class="p-3 text-center text-gray-500 italic border"
                   >
                     Tidak ada jadwal
                   </td>
@@ -359,6 +348,9 @@ watch(selectedKelas, (newVal) => {
     </main>
 
     <!-- Sidebar -->
-    <SidebarStudent :student_id="student_id" :student_name="student_name" />
+    <SidebarStudent
+      :student_id="props.student_id"
+      :student_name="props.student_name"
+    />
   </div>
 </template>

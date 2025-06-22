@@ -1,41 +1,49 @@
 <script setup>
 import { onMounted, ref, computed, watch, nextTick } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { initFlowbite } from 'flowbite';
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import Pagination from '@/Components/Pagination11.vue';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import 'jspdf-autotable';
 
-// Reactive references
-const entriesToShow = ref(10);
-const entries = ref([]);
 const isVisible = ref(false);
 const searchQuery = ref('');
-const currentPage = ref(1);
 
 const props = defineProps({
-  auth: { type: Object },
-  classes_for_student: {
-    type: Object,
-    required: true,
-  },
+  auth: Object,
+  classes_for_student: { type: Object, required: true },
+  entries: { type: Object, required: true },
   teachers: { type: Object, default: () => ({ data: [] }) },
-  genders: {
-    type: Array,
-    default: () => [], // Pastikan `genders` adalah array meskipun kosong
-  },
+  genders: { type: Array, default: () => [] },
 });
 
-console.log(
-  'Tipe data classes_for_student:',
-  Array.isArray(props.classes_for_student)
-    ? 'Array'
-    : typeof props.classes_for_student
-);
-console.log('Isi classes_for_student:', props.classes_for_student);
+const entries = ref(props.entries);
+
+// Isi awal entries dari props
+entries.value = props.entries;
+
+const fetchEntries = (page = 1) => {
+  router.get(
+    route('bukuPenghubung1'),
+    { page },
+    {
+      preserveScroll: true,
+      preserveState: true,
+      only: ['entries'],
+      onSuccess: (page) => {
+        console.log('✅ Data berhasil dimuat ulang:', page.props.entries);
+        entries.value = page.props.entries; // hanya satu halaman
+      },
+      onError: (err) => {
+        console.error('❌ Gagal memuat halaman baru:', err);
+      },
+    }
+  );
+};
 
 const modalVisible = ref(false);
 const modalTitle = ref('Tambah Data');
@@ -45,16 +53,17 @@ const form = ref({
   parentName: '',
   studentName: '',
   gender: '',
-  class: '',
+  class_id: '',
   issue: '',
   action: '',
   note: '',
 });
 
-console.log('Classes for student:', props.classes_for_student);
-
-const classesForStudent = props.classes || {};
-console.log(classesForStudent);
+const filteredEntries = computed(() => {
+  return entriesComputed.value.filter((entry) =>
+    entry.studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
 
 const getClassName = (classId) => {
   const classItem = props.classes_for_student.find(
@@ -63,89 +72,6 @@ const getClassName = (classId) => {
   return classItem ? classItem.name : '-';
 };
 
-watch(
-  () => props.classes_for_student,
-  (newValue) => {
-    console.log('Data classes_for_student:', newValue);
-  }
-);
-
-watch(
-  entries,
-  () => {
-    saveEntriesToLocalStorage(); // Simpan perubahan ke localStorage
-  },
-  { deep: true } // Pastikan perubahan mendalam pada objek di dalam array juga terdeteksi
-);
-// Method to save entries to localStorage
-const saveEntriesToLocalStorage = () => {
-  localStorage.setItem('entries', JSON.stringify(entries.value));
-};
-
-// Method to load entries from localStorage
-const loadEntriesFromLocalStorage = () => {
-  const savedEntries = localStorage.getItem('entries');
-
-  if (savedEntries) {
-    // Jika ada data di localStorage, parsing dan tambahkan `class_name`
-    entries.value = JSON.parse(savedEntries).map((entry) => {
-      // Cari nama kelas berdasarkan class_id
-      const classItem = props.classes_for_student.find(
-        (item) => item.id === entry.class_id
-      );
-      return {
-        ...entry,
-        class_name: classItem ? classItem.name : '-', // Tambahkan `class_name`
-      };
-    });
-  } else {
-    // Jika tidak ada data di localStorage, gunakan data default
-    const defaultEntries = [
-      {
-        date: '11 Okt 2023',
-        parentName: 'Ahmad Hidayat',
-        studentName: 'Amelia Nuzul Ramadhani',
-        gender: 'Perempuan',
-        class_id: 'X-1',
-        issue: 'Terlibat perdebatan keras dengan teman',
-        action: 'Diminta menulis surat permintaan maaf dan melakukan refleksi',
-        note: 'Konflik berhasil diselesaikan',
-      },
-      {
-        date: '16 Nov 2023',
-        parentName: 'Siti Fatimah',
-        studentName: 'Annisa Maqfiroh',
-        gender: 'Perempuan',
-        class_id: 'X-3',
-        issue: 'Membuat keributan di perpustakaan',
-        action: 'Diberikan teguran lisan dan diminta untuk tidak mengulangi',
-        note: 'Siswa menyatakan penyesalan',
-      },
-      {
-        date: '20 Nov 2023',
-        parentName: 'Budi Santoso',
-        studentName: 'Aryandhra Nathanael Gustiano',
-        gender: 'Laki-laki',
-        class_id: 'X-1',
-        issue: 'Tidak memakai seragam sesuai aturan',
-        action:
-          'Diminta mengganti seragam sesuai ketentuan sebelum memasuki kelas',
-        note: 'Orang tua diberi pemberitahuan',
-      },
-    ];
-
-    // Tambahkan properti `class_name` untuk data default
-    entries.value = defaultEntries.map((entry) => ({
-      ...entry,
-      class_name: '-', // Default jika kelas belum ditemukan
-    }));
-
-    // Simpan data default ke localStorage
-    saveEntriesToLocalStorage();
-  }
-};
-
-// Method to handle actions confirmation
 const confirmAction = async () => {
   const result = await Swal.fire({
     title: 'Apakah Anda ingin menampilkan opsi?',
@@ -158,41 +84,38 @@ const confirmAction = async () => {
   });
 
   if (result.isConfirmed) {
-    isVisible.value = !isVisible.value; // Menampilkan tombol jika dikonfirmasi
+    isVisible.value = !isVisible.value;
   }
 };
 
-// Computed property to get unique classes from entries
-const uniqueClasses = computed(() => {
-  return [...new Set(entries.value.map((entry) => entry.class))];
-});
+const deleteEntry = async (id) => {
+  const confirm = await Swal.fire({
+    title: 'Yakin ingin menghapus data ini?',
+    text: 'Tindakan ini tidak dapat dibatalkan!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal',
+  });
 
-// Methods for pagination and marking as read
-const markAsRead = (entry) => {
-  entry.dibacaWali = true;
-};
+  if (confirm.isConfirmed) {
+    try {
+      await axios.delete(`/buku-penghubung/${id}`);
+      Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
 
-const deleteEntry = (entry) => {
-  entries.value = entries.value.filter((e) => e.id !== entry.id);
-};
-
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
-};
-
-const nextPage = () => {
-  if (currentPage.value * entriesToShow.value < filteredEntries.value.length) {
-    currentPage.value++;
+      // Reload data dari server
+      reloadEntries();
+    } catch (error) {
+      console.error('Gagal menghapus:', error.response?.data || error.message);
+      Swal.fire('Gagal', 'Terjadi kesalahan saat menghapus data.', 'error');
+    }
   }
 };
 
 const openModal = (type, entry = null) => {
   modalVisible.value = true;
-  nextTick(() => {
-    console.log('Modal sudah siap untuk ditampilkan');
-  });
+  nextTick(() => console.log('Modal siap ditampilkan'));
+
   if (type === 'add') {
     modalTitle.value = 'Tambah Data';
     form.value = {
@@ -201,7 +124,7 @@ const openModal = (type, entry = null) => {
       parentName: '',
       studentName: '',
       gender: '',
-      class: '',
+      class_id: '',
       issue: '',
       action: '',
       note: '',
@@ -211,69 +134,79 @@ const openModal = (type, entry = null) => {
     form.value = { ...entry };
   }
 };
+
 const closeModal = () => {
   modalVisible.value = false;
 };
 
-const handleSubmit = () => {
-  if (form.value.id) {
-    // Edit existing entry
-    const index = entries.value.findIndex((e) => e.id === form.value.id);
-    if (index !== -1) entries.value[index] = { ...form.value };
-  } else {
-    // Add new entry
-    form.value.id = Date.now();
-    entries.value.push({ ...form.value });
+const handleSubmit = async () => {
+  try {
+    console.log('Form yang akan disubmit:', form.value);
+
+    if (form.value.id) {
+      console.log(`Update data dengan ID ${form.value.id}`);
+      await axios.put(`/buku-penghubung1/${form.value.id}`, form.value);
+      console.log('Update berhasil');
+      Swal.fire('Berhasil', 'Data berhasil diperbarui.', 'success');
+    } else {
+      console.log('Tambah data baru');
+      const response = await axios.post('/buku-penghubung', form.value);
+      console.log('Tambah berhasil, response:', response.data);
+      Swal.fire('Berhasil', 'Data berhasil ditambahkan.', 'success');
+    }
+
+    // Setelah submit sukses, tutup modal dan reload data dari server
+    closeModal();
+    console.log('Modal ditutup, akan memuat ulang data...');
+    await reloadEntries();
+  } catch (error) {
+    console.error('Gagal submit:', error.response?.data || error.message);
+    Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error');
   }
-  closeModal();
 };
 
-// Initialize Flowbite on component mount
+const reloadEntries = () => {
+  console.log('Memuat ulang data dari server...');
+
+  router.get(
+    route('bukuPenghubung1'),
+    {},
+    {
+      preserveScroll: true,
+      preserveState: true,
+      only: ['entries'],
+      onSuccess: (page) => {
+        console.log('Data baru diterima dari server:', page.props.entries);
+        entries.value = page.props.entries;
+      },
+      onError: (error) => {
+        console.error('Gagal memuat ulang data:', error);
+      },
+    }
+  );
+};
+
+const entriesComputed = computed(() => {
+  return Array.isArray(entries.value?.data) ? entries.value.data : [];
+});
+
 onMounted(() => {
-  loadEntriesFromLocalStorage();
+  fetchEntries();
   console.log('Loaded entries:', entries.value);
   initFlowbite();
 });
 
-// Export to PDF
+// --- PDF Export
 const exportToPDF = () => {
-  console.log('Ekspor ke PDF');
   const doc = new jsPDF();
-
-  // Menentukan ukuran halaman
   const pageWidth = doc.internal.pageSize.getWidth();
-
-  // Menentukan margin
   const margin = 14;
 
-  // Menambahkan logo kiri (jatimsih.png)
-  const logoWidth = 20; // lebar logo kiri
-  const logoHeight = 20; // tinggi logo kiri
-  const logoY = 10; // posisi vertikal logo
-  doc.addImage(
-    '/images/jatimsih.png',
-    'PNG',
-    margin,
-    logoY,
-    logoWidth,
-    logoHeight
-  );
+  doc.addImage('/images/jatimsih.png', 'PNG', margin, 10, 20, 20);
+  doc.addImage('/images/barunawati.jpeg', 'JPEG', pageWidth - 34, 10, 20, 20);
 
-  // Menambahkan logo kanan (barunawati.jpeg)
-  const logoRightWidth = 20; // lebar logo kanan
-  const logoRightHeight = 20; // tinggi logo kanan
-  const logoRightX = pageWidth - logoRightWidth - margin; // posisi logo kanan
-  doc.addImage(
-    '/images/barunawati.jpeg',
-    'JPEG',
-    logoRightX,
-    logoY,
-    logoRightWidth,
-    logoRightHeight
-  );
-
-  // Menambahkan judul
   doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   const titleLines = [
     'BUKU PENGHUBUNG ORANGTUA/WALI MURID',
     'DENGAN WALI KELAS',
@@ -282,22 +215,13 @@ const exportToPDF = () => {
     'PROVINSI JAWA TIMUR',
   ];
 
-  doc.setFont('helvetica', 'bold');
-
-  let currentY = 40; // Posisi vertikal awal untuk judul (setelah logo)
+  let currentY = 40;
   titleLines.forEach((line) => {
-    const lineWidth =
-      (doc.getStringUnitWidth(line) * doc.internal.getFontSize()) /
-      doc.internal.scaleFactor;
-    const xPos = (pageWidth - lineWidth) / 2; // Posisi horizontal (tengah)
-    doc.text(line, xPos, currentY);
-    currentY += 7; // Jarak antar baris
+    const x = (pageWidth - doc.getTextWidth(line)) / 2;
+    doc.text(line, x, currentY);
+    currentY += 7;
   });
 
-  // Menentukan posisi awal tabel
-  const startY = currentY + 10; // Jarak antara judul dan tabel
-
-  // Header tabel
   const headers = [
     [
       'No.',
@@ -312,7 +236,6 @@ const exportToPDF = () => {
     ],
   ];
 
-  // Isi tabel
   const rows = entries.value.map((entry, index) => [
     index + 1,
     entry.date,
@@ -325,33 +248,25 @@ const exportToPDF = () => {
     entry.note,
   ]);
 
-  // Menambahkan tabel
   doc.autoTable({
     head: headers,
     body: rows,
-    startY: startY,
+    startY: currentY + 10,
     margin: { left: margin, right: margin },
     styles: { fontSize: 10, cellPadding: 2 },
     theme: 'grid',
   });
 
-  // Simpan file PDF
   doc.save('buku_penghubung.pdf');
 };
 
-// Export to JPG
+// --- JPG Export
 const exportToJPG = () => {
-  console.log('Ekspor ke JPG');
   const tableElement = document.getElementById('table-to-export');
-
-  if (!tableElement) {
-    console.error('Tabel tidak ditemukan!');
-    return;
-  }
-
+  if (!tableElement) return console.error('Tabel tidak ditemukan!');
   html2canvas(tableElement, {
-    scale: 2, // Resolusi lebih tinggi
-    useCORS: true, // Mengatasi masalah CORS
+    scale: 2,
+    useCORS: true,
   })
     .then((canvas) => {
       const imgData = canvas.toDataURL('image/jpeg');
@@ -360,10 +275,23 @@ const exportToJPG = () => {
       link.download = 'buku_penghubung.jpg';
       link.click();
     })
-    .catch((error) => {
-      console.error('Gagal membuat gambar:', error);
-    });
+    .catch((error) => console.error('Gagal membuat gambar:', error));
 };
+
+// Total Entries (misalnya untuk tampilan)
+const totalEntries = computed(() => {
+  if (Array.isArray(entries.value)) {
+    return entries.value.length;
+  } else if (
+    entries.value &&
+    typeof entries.value === 'object' &&
+    'total' in entries.value
+  ) {
+    return entries.value.total;
+  } else {
+    return 0;
+  }
+});
 </script>
 
 <template>
@@ -494,156 +422,146 @@ const exportToJPG = () => {
 
     <!-- Main -->
 
-    <main class="p-7 md:ml-64 h-screen pt-20">
+    <main class="md:ml-64 pt-10 px-4 bg-gray-50 min-h-screen">
       <Head title="Buku Penghubung" />
-      <div class="container mx-auto px-4 py-6">
-        <div class="container mx-auto px-4 py-6">
-          <!-- Div trigger untuk menampilkan tombol -->
+
+      <div id="app" class="p-6 bg-white rounded shadow-md">
+        <!-- Trigger Tampilkan Opsi -->
+        <div class="mb-4">
           <div
             @click="confirmAction"
-            class="cursor-pointer mb-4 p-3 border rounded-lg bg-gray-100 hover:bg-gray-200"
+            class="cursor-pointer p-3 border rounded-lg bg-gray-100 hover:bg-gray-200 text-center shadow"
           >
-            <span class="text-lg text font-semibold">Tampilkan Opsi</span>
+            <span class="text-lg font-semibold">Tampilkan Opsi</span>
+          </div>
+        </div>
+
+        <!-- Header Section -->
+        <div class="flex flex-col gap-6 md:gap-4 mb-6">
+          <div
+            class="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left"
+          >
+            <img
+              src="/images/jatimsih.png"
+              alt="Left Logo"
+              class="h-20 object-contain"
+            />
+            <h1 class="text-xl md:text-3xl font-bold leading-tight">
+              BUKU PENGHUBUNG ORANGTUA/WALI MURID DENGAN WALI KELAS<br />
+              SMA BARUNAWATI SURABAYA<br />
+              DINAS PENDIDIKAN PROVINSI JAWA TIMUR
+            </h1>
+            <img
+              src="/images/barunawati.jpeg"
+              alt="Right Logo"
+              class="h-20 object-contain"
+            />
           </div>
 
-          <!-- Div yang berisi tombol, hanya muncul jika isVisible true -->
+          <!-- Filter & Aksi -->
           <div
             v-if="isVisible"
-            class="flex flex-col sm:flex-row justify-end sm:justify-between items-center mb-6 gap-4"
+            class="flex flex-col sm:flex-row justify-between items-center gap-4"
           >
-            <!-- Filter Pencarian -->
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Cari Enrollment..."
-              class="w-full sm:w-auto px-4 py-2 border rounded-md"
+              class="w-full sm:w-1/3 px-4 py-2 border rounded-md"
             />
-
-            <!-- Tombol Tambah Data -->
-            <button
-              class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
-              @click="openModal('add')"
-            >
-              <i class="fa fa-plus mr-2"></i> Tambah Data
-            </button>
-
-            <!-- Tombol Ekspor ke PDF -->
-            <button
-              class="btn btn-success modal-title fs-5 w-full sm:w-auto"
-              @click="exportToPDF"
-            >
-              <i class="fa fa-download mr-2"></i> Ekspor PDF
-            </button>
-
-            <!-- Tombol Ekspor ke JPG -->
-            <button
-              class="btn btn-primary modal-title fs-5 w-full sm:w-auto"
-              @click="exportToJPG"
-            >
-              <i class="fa fa-image mr-2"></i> Ekspor JPG
-            </button>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+              <button
+                @click="openModal('add')"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                <i class="fa fa-plus mr-2"></i> Tambah Data
+              </button>
+              <button
+                @click="exportToPDF"
+                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                <i class="fa fa-download mr-2"></i> Ekspor PDF
+              </button>
+              <button
+                @click="exportToJPG"
+                class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                <i class="fa fa-image mr-2"></i> Ekspor JPG
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div id="app" class="p-6 bg-gray-100 min-h-screen">
-        <!-- Header Section -->
-        <div
-          class="flex flex-col md:flex-row items-center justify-between mb-6"
-        >
-          <img
-            src="/images/jatimsih.png"
-            alt="Left Logo"
-            class="h-20 w-auto object-contain mb-4 md:mb-0"
-          />
-          <h1 class="text-xl md:text-2xl font-bold text-center md:text-left">
-            BUKU PENGHUBUNG ORANGTUA/WALI MURID DENGAN WALI KELAS
-            <br />
-            SMA BARUNAWATI SURABAYA
-            <br />
-            DINAS PENDIDIKAN PROVINSI JAWA TIMUR
-          </h1>
-          <img
-            src="/images/barunawati.jpeg"
-            alt="Right Logo"
-            class="h-20 w-auto object-contain"
-          />
         </div>
 
         <!-- Table Section -->
-        <div class="overflow-x-auto">
-          <table
-            class="min-w-full bg-white border border-gray-200 rounded shadow text-sm md:text-base"
-          >
-            <thead class="bg-gray-100">
+        <div
+          class="w-full overflow-x-auto rounded-lg border border-gray-200 shadow-md"
+        >
+          <table class="w-full text-sm md:text-base text-left bg-white">
+            <thead
+              class="bg-gray-100 text-gray-700 uppercase text-xs md:text-sm"
+            >
               <tr>
-                <th class="border px-2 py-2 md:px-4 md:py-2">No.</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Hari/Tanggal</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">
-                  Nama Orang Tua/Wali Murid
+                <th class="px-4 py-3 whitespace-nowrap border">ID</th>
+                <th class="px-4 py-3 whitespace-nowrap border">Hari/Tanggal</th>
+                <th class="px-4 py-3 whitespace-nowrap border">
+                  Orang Tua/Wali
                 </th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Nama Siswa</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">L/P</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Kelas</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Uraian Masalah</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Tindak Lanjut</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Keterangan</th>
-                <th class="border px-2 py-2 md:px-4 md:py-2">Aksi</th>
+                <th class="px-4 py-3 whitespace-nowrap border">Nama Siswa</th>
+                <th class="px-4 py-3 whitespace-nowrap border">L/P</th>
+                <th class="px-4 py-3 whitespace-nowrap border">Kelas</th>
+                <th class="px-4 py-3 whitespace-nowrap border">Masalah</th>
+                <th class="px-4 py-3 whitespace-nowrap border">
+                  Tindak Lanjut
+                </th>
+                <th class="px-4 py-3 whitespace-nowrap border">Keterangan</th>
+                <th class="px-4 py-3 whitespace-nowrap border text-center">
+                  Aksi
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="text-gray-800">
               <tr
-                v-for="(entry, index) in entries"
+                v-for="(entry, index) in filteredEntries"
                 :key="entry.id"
-                class="hover:bg-gray-50"
+                class="hover:bg-gray-50 transition"
               >
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ index + 1 }}
+                <td class="px-4 py-2 border">
+                  {{ (entries.from || 0) + index }}
                 </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.date }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.parentName }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.studentName }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.gender }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
+                <td class="px-4 py-2 border">{{ entry.date }}</td>
+                <td class="px-4 py-2 border">{{ entry.parentName }}</td>
+                <td class="px-4 py-2 border">{{ entry.studentName }}</td>
+                <td class="px-4 py-2 border">{{ entry.gender }}</td>
+                <td class="px-4 py-2 border">
                   {{ getClassName(entry.class_id) || '-' }}
                 </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.issue }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.action }}
-                </td>
-                <td class="border px-2 py-2 md:px-4 md:py-2">
-                  {{ entry.note }}
-                </td>
-                <td
-                  class="border px-2 py-2 md:px-4 md:py-2 flex space-x-1 md:space-x-2"
-                >
-                  <button
-                    class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs md:text-sm"
-                    @click="openModal('edit', entry)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs md:text-sm"
-                    @click="deleteEntry(entry.id)"
-                  >
-                    Hapus
-                  </button>
+                <td class="px-4 py-2 border">{{ entry.issue }}</td>
+                <td class="px-4 py-2 border">{{ entry.action }}</td>
+                <td class="px-4 py-2 border">{{ entry.note }}</td>
+                <td class="px-4 py-2 border text-center">
+                  <div class="flex flex-wrap justify-center gap-1">
+                    <button
+                      @click="openModal('edit', entry)"
+                      class="min-w-[60px] px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs text-center"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      @click="deleteEntry(entry.id)"
+                      class="min-w-[60px] px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs text-center"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
+          <div class="w-full px-4 py-3 bg-white border-t border-gray-200">
+            <Pagination :data="entries" :updatedPageNumber="fetchEntries" />
+          </div>
         </div>
+
         <!--modal add -->
         <div
           v-if="modalVisible"
@@ -768,83 +686,4 @@ const exportToJPG = () => {
     <!-- Sidebar -->
     <SidebarTeacher />
   </div>
-
-  <!--
-
-        <div class="p-6 bg-gray-100 min-h-screen">
-        <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-            <h1 class="text-2xl font-bold mb-4">Dashboard Wali Murid</h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-         
-                <div
-                    class="p-4 bg-green-100 border border-green-300 rounded-lg flex items-center justify-between"
-                >
-                    <div>
-                        <h2 class="text-lg font-semibold">
-                            Informasi/Catatan Saya
-                        </h2>
-                        <p class="text-sm text-gray-600">0 Catatan</p>
-                    </div>
-                    <div class="text-green-600">
-                        <i class="fas fa-check-circle text-3xl"></i>
-                    </div>
-                </div>
-     
-                <div
-                    class="p-4 bg-red-100 border border-red-300 rounded-lg flex items-center justify-between"
-                >
-                    <div>
-                        <h2 class="text-lg font-semibold">Belum Saya Baca</h2>
-                        <p class="text-sm text-gray-600">0 Catatan</p>
-                    </div>
-                    <div class="text-red-600">
-                        <i class="fas fa-times-circle text-3xl"></i>
-                    </div>
-                </div>
-
-                <div
-                    class="p-4 bg-teal-100 border border-teal-300 rounded-lg flex items-center justify-between"
-                >
-                    <div>
-                        <h2 class="text-lg font-semibold">
-                            Informasi/Catatan Guru
-                        </h2>
-                        <p class="text-sm text-gray-600">0 Catatan</p>
-                    </div>
-                    <div class="text-teal-600">
-                        <i class="fas fa-info-circle text-3xl"></i>
-                    </div>
-                </div>
-   
-                <div
-                    class="p-4 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between"
-                >
-                    <div>
-                        <h2 class="text-lg font-semibold">
-                            Semua Informasi/Catatan
-                        </h2>
-                        <p class="text-sm text-gray-600">0 Catatan</p>
-                    </div>
-                    <div class="text-blue-600">
-                        <i class="fas fa-check-double text-3xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <h2 class="text-xl font-semibold mb-2">
-                    BubungON (Buku Penghubung Online)
-                </h2>
-                <p class="text-gray-700">
-                    BubungON (Buku Penghubung Online) adalah sistem yang
-                    menghubungkan antara orang tua dengan guru (wali kelas) di
-                    sekolah. BubungON (Buku Penghubung Online) merupakan sebuah
-                    administrasi yang dibuat sebagai media komunikasi tidak
-                    langsung dalam rangka menyampaikan atau memberitahukan
-                    hal-hal penting yang menyangkut perkembangan anak di sekolah
-                    dan di rumah.
-                </p>
-            </div>
-        </div>
-    </div>
-    -->
 </template>

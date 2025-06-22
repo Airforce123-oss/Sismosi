@@ -44,24 +44,33 @@ class AttendanceController extends Controller
     {
         $month = $request->query('month');
         $year = $request->query('year');
-    
+
         // Mapping nama bulan ke angka
         $monthMapping = [
-            'Januari' => '01', 'Februari' => '02', 'Maret' => '03', 'April' => '04',
-            'Mei' => '05', 'Juni' => '06', 'Juli' => '07', 'Agustus' => '08',
-            'September' => '09', 'Oktober' => '10', 'November' => '11', 'Desember' => '12',
+            'Januari' => '01',
+            'Februari' => '02',
+            'Maret' => '03',
+            'April' => '04',
+            'Mei' => '05',
+            'Juni' => '06',
+            'Juli' => '07',
+            'Agustus' => '08',
+            'September' => '09',
+            'Oktober' => '10',
+            'November' => '11',
+            'Desember' => '12',
         ];
-    
+
         // Konversi nama bulan ke angka jika perlu
         if (isset($monthMapping[$month])) {
             $month = $monthMapping[$month];
         }
-    
+
         return Attendance::with('siswa')
             ->when($month, function ($query) use ($month, $year) {
                 $startOfMonth = Carbon::createFromFormat('Y-m', "$year-$month")->startOfMonth();
                 $endOfMonth = Carbon::createFromFormat('Y-m', "$year-$month")->endOfMonth();
-    
+
                 $query->whereBetween('tanggal_kehadiran', [$startOfMonth, $endOfMonth]);
             })
             ->get()
@@ -70,8 +79,8 @@ class AttendanceController extends Controller
                 return $attendance->pluck('status_kehadiran', 'tanggal_kehadiran')->toArray();
             });
     }
-    
-    
+
+
 
     // Reusable method for rendering attendance views
     private function renderAttendanceView(Request $request, $viewName)
@@ -88,259 +97,266 @@ class AttendanceController extends Controller
     }
 
     public function absensiSiswaById(Request $request, $id)
-{
-    // Daftar nama view berdasarkan ID
-    $viewNames = [
-        '1' => 'Students/absensiSiswaJanuari',
-        '2' => 'Students/absensiSiswaDua',
-        '3' => 'Students/absensiSiswaTiga',
-        '4' => 'Students/absensiSiswaEmpat',
-        '5' => 'Students/absensiSiswaLima',
-        '6' => 'Students/absensiSiswaEnam',
-        '7' => 'Students/absensiSiswaTujuh',
-        '8' => 'Students/absensiSiswaDelapan',
-        '9' => 'Students/absensiSiswaSembilan',
-        '10' => 'Students/absensiSiswaSepuluh',
-        '11' => 'Students/absensiSiswaSebelas',
-        '12' => 'Students/absensiSiswaDuaBelas',
-    ];
-
-    // Validasi apakah ID valid
-    if (!array_key_exists($id, $viewNames)) {
-        abort(404, 'Halaman tidak ditemukan.');
-    }
-
-    // Dapatkan nama view berdasarkan ID
-    $viewName = $viewNames[$id];
-
-    // Data absensi
-    $attendances = $this->getAttendanceData($request);
-
-    // Render view dengan data yang sesuai
-    return inertia($viewName, [
-        'attendances' => $attendances,
-        'studentCount' => $attendances->count(),
-        'filterParams' => $request->all(),
-    ]);
-}
-
-public function absensiSiswaApi(Request $request)  
-{  
-    $month = $request->query('month');  
-    $year = $request->query('year');  
-
-    // Logika untuk mengambil data absensi siswa berdasarkan bulan dan tahun  
-    $attendanceData = Attendance::whereMonth('tanggal', $month)  
-        ->whereYear('tanggal', $year)  
-        ->get();  
-
-    return response()->json(['data' => $attendanceData]);  
-}  
-
-public function absensiSiswa()
-{
-    return inertia('Students/absensiSiswa');
-}
-
-public function saveSelectedMapel(Request $request)
-{
-    // Validasi data yang diterima
-    $request->validate([
-        'mapel' => 'required|string|max:60',
-        'kelasId' => 'required|integer',
-        // Hapus validasi student_id dan status_kehadiran jika tidak diperlukan
-    ]);
-
-    // Simpan data ke database
-    $attendance = new Attendance();
-    $attendance->mapel = $request->mapel; // Menyimpan nama mapel
-    $attendance->kelas = $request->kelasId; // Menyimpan ID kelas
-    $attendance->tanggal_kehadiran = now(); // Mengatur tanggal kehadiran
-    // Hapus baris ini jika status_kehadiran tidak diperlukan
-    // $attendance->status_kehadiran = $request->status_kehadiran; // Mengambil status kehadiran dari request
-
-    // Simpan ke database
-    if ($attendance->save()) {
-        return response()->json(['message' => 'Data berhasil disimpan'], 200);
-    } else {
-        return response()->json(['message' => 'Gagal menyimpan data'], 500);
-    }
-}
-public function absensiSiswaJanuari($classId, $year, $mapel, $month)
-{
-    $decodedMapel = urldecode($mapel);
-    $decodedMapelList = explode(',', $decodedMapel);
-
-    $user = Auth::user();
-    Log::info('🧪 Auth user check', [
-        'user_id' => $user->id,
-        'user_name' => $user->name,
-    ]);
-    Log::info('🧪 Route parameters', compact('classId', 'year', 'mapel', 'month'));
-    Log::info('🧪 Auth user info', ['id' => $user->id, 'name' => $user->name]);
-
-
-    Log::info('🔎 Mencari wali kelas', [
-        'user_id' => $user->id,
-        'class_id_yang_diminta' => $classId,
-        'data_wali_kelas_user_ini' => WaliKelas::where('user_id', $user->id)->get()
-    ]);
-    
-    Log::info('classId sebelum query', ['classId' => $classId]);
-
-
-    // Verifikasi bahwa user adalah wali dari classId yang diminta
-    $classId = (int) $classId; // pastikan bertipe integer
-
-    $waliKelas = WaliKelas::where('user_id', $user->id)
-        ->where('class_id', $classId)
-        ->first();
-    
-
-    if (!$waliKelas) {
-        return response()->json(['message' => 'Anda bukan wali kelas dari kelas ini.'], 403);
-    }
-
-    $teacherClassData = DB::table('classes')
-    ->where('id', $classId)
-    ->first();
-
-    \Log::info('teacherClassData', ['data' => $teacherClassData]);
-
-
-    // Ambil semua siswa di kelas yang diminta dan sertakan mapel
-    $students = Student::with(['mapel', 'attendances' => function($q) use ($year, $month, $decodedMapelList) {
-        if ($year) $q->whereYear('tanggal_kehadiran', $year);
-        if ($month) $q->whereMonth('tanggal_kehadiran', $month);
-        if (!empty($decodedMapelList)) $q->whereIn('mapel', $decodedMapelList);
-    }])
-    ->where('class_id', $classId)
-    ->get();
-
-    $students = $students->map(function ($student) {
-        return [
-            'id' => $student->id,
-            'name' => $student->name,
-            'subject' => $student->mapel->mapel ?? '-',
-            'attendances' => $student->attendances->map(function($a) {
-                return [
-                    'id' => $a->id,
-                    'tanggal' => $a->tanggal_kehadiran,
-                    'status' => $a->status_kehadiran,
-                    'mapel' => $a->mapel,
-                ];
-            })->values(),
+    {
+        // Daftar nama view berdasarkan ID
+        $viewNames = [
+            '1' => 'Students/absensiSiswaJanuari',
+            '2' => 'Students/absensiSiswaDua',
+            '3' => 'Students/absensiSiswaTiga',
+            '4' => 'Students/absensiSiswaEmpat',
+            '5' => 'Students/absensiSiswaLima',
+            '6' => 'Students/absensiSiswaEnam',
+            '7' => 'Students/absensiSiswaTujuh',
+            '8' => 'Students/absensiSiswaDelapan',
+            '9' => 'Students/absensiSiswaSembilan',
+            '10' => 'Students/absensiSiswaSepuluh',
+            '11' => 'Students/absensiSiswaSebelas',
+            '12' => 'Students/absensiSiswaDuaBelas',
         ];
-    });
-    
-    // Ambil data mapel yang dipilih
-    $selectedMapel = Mapel::whereIn('mapel', $decodedMapelList)->get();
 
-    if ($selectedMapel->isEmpty()) {
-        Log::warning("⚠️ Tidak ada mata pelajaran ditemukan: " . implode(', ', $decodedMapelList));
+        // Validasi apakah ID valid
+        if (!array_key_exists($id, $viewNames)) {
+            abort(404, 'Halaman tidak ditemukan.');
+        }
+
+        // Dapatkan nama view berdasarkan ID
+        $viewName = $viewNames[$id];
+
+        // Data absensi
+        $attendances = $this->getAttendanceData($request);
+
+        // Render view dengan data yang sesuai
+        return inertia($viewName, [
+            'attendances' => $attendances,
+            'studentCount' => $attendances->count(),
+            'filterParams' => $request->all(),
+        ]);
     }
 
-    $data = [
-        'kelas' => $classId,
-        'year' => $year,
-        'mapel' => $decodedMapelList,
-        'month' => $month,
-        'students' => $students,
-        'selectedMapel' => $selectedMapel->toArray(),
-        'teacherClass' => $teacherClassData,
+    public function absensiSiswaApi(Request $request)
+    {
+        $month = $request->query('month');
+        $year = $request->query('year');
 
-    ];
+        // Logika untuk mengambil data absensi siswa berdasarkan bulan dan tahun  
+        $attendanceData = Attendance::whereMonth('tanggal', $month)
+            ->whereYear('tanggal', $year)
+            ->get();
 
-    return request()->wantsJson()
-        ? response()->json($data)
-        : Inertia::render('Students/absensiSiswaJanuari', $data);
-}
+        return response()->json(['data' => $attendanceData]);
+    }
 
-private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
-{
-    $decodedMapel = urldecode($mapel);
-    $student = Student::where('class_id', $kelas)->get();
+    public function absensiSiswa()
+    {
+        return inertia('Students/absensiSiswa');
+    }
 
-    $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
-    if (!$selectedMapel) {
-        $selectedMapel = (object)[
-            'id' => null,
-            'mapel' => '',
-            'kode_mapel' => '',
+    public function saveSelectedMapel(Request $request)
+    {
+        // Validasi data yang diterima
+        $request->validate([
+            'mapel' => 'required|string|max:60',
+            'kelasId' => 'required|integer',
+            // Hapus validasi student_id dan status_kehadiran jika tidak diperlukan
+        ]);
+
+        // Simpan data ke database
+        $attendance = new Attendance();
+        $attendance->mapel = $request->mapel; // Menyimpan nama mapel
+        $attendance->kelas = $request->kelasId; // Menyimpan ID kelas
+        $attendance->tanggal_kehadiran = now(); // Mengatur tanggal kehadiran
+        // Hapus baris ini jika status_kehadiran tidak diperlukan
+        // $attendance->status_kehadiran = $request->status_kehadiran; // Mengambil status kehadiran dari request
+
+        // Simpan ke database
+        if ($attendance->save()) {
+            return response()->json(['message' => 'Data berhasil disimpan'], 200);
+        } else {
+            return response()->json(['message' => 'Gagal menyimpan data'], 500);
+        }
+    }
+    public function absensiSiswaJanuari($classId, $year, $mapel, $month)
+    {
+        $decodedMapel = urldecode($mapel);
+        $decodedMapelList = explode(',', $decodedMapel);
+
+        $user = Auth::user();
+        Log::info('🧪 Auth user check', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+        ]);
+        Log::info('🧪 Route parameters', compact('classId', 'year', 'mapel', 'month'));
+        Log::info('🧪 Auth user info', ['id' => $user->id, 'name' => $user->name]);
+
+
+        Log::info('🔎 Mencari wali kelas', [
+            'user_id' => $user->id,
+            'class_id_yang_diminta' => $classId,
+            'data_wali_kelas_user_ini' => WaliKelas::where('user_id', $user->id)->get()
+        ]);
+
+        Log::info('classId sebelum query', ['classId' => $classId]);
+
+
+        // Verifikasi bahwa user adalah wali dari classId yang diminta
+        $classId = (int) $classId; // pastikan bertipe integer
+
+        $waliKelas = WaliKelas::where('user_id', $user->id)
+            ->where('class_id', $classId)
+            ->first();
+
+
+        if (!$waliKelas) {
+            return response()->json(['message' => 'Anda bukan wali kelas dari kelas ini.'], 403);
+        }
+
+        $teacherClassData = DB::table('classes')
+            ->where('id', $classId)
+            ->first();
+
+        \Log::info('teacherClassData', ['data' => $teacherClassData]);
+
+
+        // Ambil semua siswa di kelas yang diminta dan sertakan mapel
+        $students = Student::with([
+            'mapel',
+            'attendances' => function ($q) use ($year, $month, $decodedMapelList) {
+                if ($year)
+                    $q->whereYear('tanggal_kehadiran', $year);
+                if ($month)
+                    $q->whereMonth('tanggal_kehadiran', $month);
+                if (!empty($decodedMapelList))
+                    $q->whereIn('mapel', $decodedMapelList);
+            }
+        ])
+            ->where('class_id', $classId)
+            ->get();
+
+        $students = $students->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->name,
+                'subject' => $student->mapel->pluck('mapel')->implode(', '),
+
+                'attendances' => $student->attendances->map(function ($a) {
+                    return [
+                        'id' => $a->id,
+                        'tanggal' => $a->tanggal_kehadiran,
+                        'status' => $a->status_kehadiran,
+                        'mapel' => $a->mapel,
+                    ];
+                })->values(),
+            ];
+        });
+
+        // Ambil data mapel yang dipilih
+        $selectedMapel = Mapel::whereIn('mapel', $decodedMapelList)->get();
+
+        if ($selectedMapel->isEmpty()) {
+            Log::warning("⚠️ Tidak ada mata pelajaran ditemukan: " . implode(', ', $decodedMapelList));
+        }
+
+        $data = [
+            'kelas' => $classId,
+            'year' => $year,
+            'mapel' => $decodedMapelList,
+            'month' => $month,
+            'students' => $students,
+            'selectedMapel' => $selectedMapel->toArray(),
+            'teacherClass' => $teacherClassData,
+
         ];
-    } else {
-        $selectedMapel = (object)$selectedMapel->toArray();
+
+        return request()->wantsJson()
+            ? response()->json($data)
+            : Inertia::render('Students/absensiSiswaJanuari', $data);
     }
 
-    return Inertia::render('Students/Absensi' . ucfirst($month), [
-        'kelas' => $kelas,
-        'year' => $year,
-        'mapel' => $decodedMapel,
-        'month' => $month,
-        'students' => $student,
-        'selectedMapel' => $selectedMapel,
-    ]);
-}
+    private function handleAbsensiByMonth($kelas, $year, $mapel, $month)
+    {
+        $decodedMapel = urldecode($mapel);
+        $student = Student::where('class_id', $kelas)->get();
 
-public function absensiJanuari($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'januari');
-}
+        $selectedMapel = Mapel::where('mapel', $decodedMapel)->first();
+        if (!$selectedMapel) {
+            $selectedMapel = (object) [
+                'id' => null,
+                'mapel' => '',
+                'kode_mapel' => '',
+            ];
+        } else {
+            $selectedMapel = (object) $selectedMapel->toArray();
+        }
 
-public function absensiFebruari($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'februari');
-}
+        return Inertia::render('Students/Absensi' . ucfirst($month), [
+            'kelas' => $kelas,
+            'year' => $year,
+            'mapel' => $decodedMapel,
+            'month' => $month,
+            'students' => $student,
+            'selectedMapel' => $selectedMapel,
+        ]);
+    }
 
-public function absensiMaret($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'maret');
-}
+    public function absensiJanuari($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'januari');
+    }
 
-public function absensiApril($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'april');
-}
+    public function absensiFebruari($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'februari');
+    }
 
-public function absensiMei($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'mei');
-}
+    public function absensiMaret($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'maret');
+    }
 
-public function absensiJuni($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juni');
-}
+    public function absensiApril($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'april');
+    }
 
-public function absensiJuli($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juli');
-}
+    public function absensiMei($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'mei');
+    }
 
-public function absensiAgustus($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'agustus');
-}
+    public function absensiJuni($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juni');
+    }
 
-public function absensiSeptember($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'september');
-}
+    public function absensiJuli($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'juli');
+    }
 
-public function absensiOktober($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'oktober');
-}
+    public function absensiAgustus($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'agustus');
+    }
 
-public function absensiNovember($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'november');
-}
+    public function absensiSeptember($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'september');
+    }
 
-public function absensiDesember($kelas, $year, $mapel)
-{
-    return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'desember');
-}
+    public function absensiOktober($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'oktober');
+    }
+
+    public function absensiNovember($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'november');
+    }
+
+    public function absensiDesember($kelas, $year, $mapel)
+    {
+        return $this->handleAbsensiByMonth($kelas, $year, $mapel, 'desember');
+    }
 
 
 
@@ -390,7 +406,7 @@ public function absensiDesember($kelas, $year, $mapel)
             ]
         ], 200);
     }
-        public function store(Request $request)
+    public function store(Request $request)
     {
         try {
             $request->validate([
@@ -399,32 +415,32 @@ public function absensiDesember($kelas, $year, $mapel)
                 'attendances.*.student_id' => 'required|integer|exists:students,id',
                 'attendances.*.status_kehadiran' => 'required|in:A,P,I',
             ]);
-    
+
             $tanggal_kehadiran = Carbon::parse($request->tanggal_kehadiran)->format('Y-m-d');
             $attendances = $request->input('attendances', []);
-    
+
             Log::info('Attendance data before mapping:', ['attendances' => $attendances]);
-    
+
             if (!is_array($attendances) || empty($attendances)) {
                 return response()->json(['message' => 'Data absensi tidak valid.'], 400);
             }
-    
+
             $attendanceData = array_map(function ($attendance) use ($tanggal_kehadiran) {
                 if (!isset($attendance['student_id'], $attendance['status_kehadiran'])) {
                     throw new \Exception("Data attendance tidak lengkap: " . json_encode($attendance));
                 }
-    
+
                 return [
                     'tanggal_kehadiran' => $tanggal_kehadiran,
                     'student_id' => (int) $attendance['student_id'],
                     'status_kehadiran' => $attendance['status_kehadiran'],
                 ];
             }, $attendances);
-    
+
             Attendance::insert($attendanceData);
-    
+
             $attendances = Attendance::whereDate('tanggal_kehadiran', $tanggal_kehadiran)->get();
-    
+
             return response()->json([
                 'message' => 'Attendance saved successfully',
                 'attendances' => $attendances,
@@ -434,7 +450,7 @@ public function absensiDesember($kelas, $year, $mapel)
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'message' => 'Terjadi kesalahan saat menyimpan absensi.',
                 'error' => $e->getMessage(),
@@ -488,13 +504,13 @@ public function absensiDesember($kelas, $year, $mapel)
 
             Attendance::updateOrCreate(
                 [
-                    'student_id' => $entry['siswa_id'],             
-                    'tanggal_kehadiran' => $entry['tanggal_kehadiran'], 
+                    'student_id' => $entry['siswa_id'],
+                    'tanggal_kehadiran' => $entry['tanggal_kehadiran'],
                 ],
                 [
-                    'status_kehadiran' => $entry['status'],         
+                    'status_kehadiran' => $entry['status'],
                     'mapel' => $entry['mapel'],
-      
+
                 ]
             );
         }
@@ -502,6 +518,6 @@ public function absensiDesember($kelas, $year, $mapel)
         return response()->json(['message' => 'Semua absensi berhasil disimpan.']);
     }
 
-                
-    }
+
+}
 

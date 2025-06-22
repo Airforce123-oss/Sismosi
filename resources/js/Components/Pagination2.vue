@@ -1,6 +1,6 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, toRaw } from 'vue';
 const props = defineProps({
   data: {
     type: Object,
@@ -17,7 +17,7 @@ const meta = props.data.meta; // Mengakses meta
 const items = props.data.items;
 console.log('Meta:', meta);
 console.log('Items:', items);
-console.log('Data:', props.data);
+console.log('Data asli:', toRaw(props.data.items));
 console.log('Links:', props.data.meta.links);
 
 const checkButtonStatus = (label) => {
@@ -136,7 +136,7 @@ const validLinks = computed(() => {
               >
                 <span v-html="link.label"></span>
               </button>
-              
+
               <!-- Tombol Last -->
               <button
                 v-if="data.meta.current_page < data.meta.last_page"

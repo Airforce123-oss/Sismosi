@@ -253,16 +253,16 @@ watch(students, (newVal) => {
     <main class="p-7 md:ml-64 pt-20">
       <Head title="Melihat Nilai" />
       <form
-        class="w-full max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 hover:animate-none transition-all"
+        class="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 transition-all"
         @submit.prevent
       >
-        <div class="flex flex-col items-start w-full col-span-2">
+        <!-- Filter Nama Siswa -->
+        <div class="flex flex-col items-start w-full col-span-2 lg:col-span-3">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
             Nama Siswa:
           </label>
-          <!-- Input pencarian nama siswa (opsional, tetap bisa digunakan) -->
           <input
             v-model="filters.nama"
             @input="applyFilter"
@@ -281,7 +281,9 @@ watch(students, (newVal) => {
             </option>
           </datalist>
         </div>
-        <div class="flex flex-col items-start w-full col-span-2">
+
+        <!-- Filter Kelas -->
+        <div class="flex flex-col items-start w-full col-span-2 lg:col-span-3">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
@@ -290,7 +292,7 @@ watch(students, (newVal) => {
           <select
             v-model="filters.kelas"
             @change="applyFilter"
-            class="w-full border-2 border-pink-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 rounded-xl px-4 py-2 text-base transition-all bg-white placeholder:text-pink-400 mb-2"
+            class="w-full border-2 border-pink-300 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 rounded-xl px-4 py-2 text-base transition-all bg-white placeholder:text-pink-400"
           >
             <option value="">Pilih kelas</option>
             <option
@@ -305,7 +307,7 @@ watch(students, (newVal) => {
       </form>
 
       <div
-        class="max-w-4xl mx-auto bg-white p-4 sm:p-8 rounded shadow text-sm border-2 border-dashed border-blue-300"
+        class="w-full max-w-7xl mx-auto bg-white p-4 sm:p-8 rounded shadow text-sm border-2 border-dashed border-blue-300"
       >
         <!-- Header Sekolah -->
         <div class="flex flex-col items-center justify-center mb-4">

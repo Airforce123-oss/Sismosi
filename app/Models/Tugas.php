@@ -21,6 +21,7 @@ class Tugas extends Model
         'teacher_id',
         'class_id',
         'description',
+        'title',
     ];
 
     // Relasi ke master_mapel

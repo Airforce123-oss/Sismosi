@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class MasterJabatan extends Model
 {
-    protected $table = "master_jabatan";
     use HasFactory;
+
+    protected $table = "master_jabatan";
+
+    protected $fillable = [
+        'nama_jabatan',
+        'deskripsi',
+    ];
 }

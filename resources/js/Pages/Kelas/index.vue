@@ -3,6 +3,7 @@ import { initFlowbite } from 'flowbite';
 import Pagination from '../../Components/Pagination1.vue';
 import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import { Link, useForm, usePage, router } from '@inertiajs/vue3';
+import Edit from './edit.vue';
 import Swal from 'sweetalert2';
 import { onMounted, ref, computed, watch, defineProps } from 'vue';
 import { Head } from '@inertiajs/vue3';
@@ -57,6 +58,13 @@ const logWaliKelas = () => {
   });
 };
 
+const showClassEdit = ref(false);
+const selectedClass = ref(null);
+
+const editClass = (classData) => {
+  selectedClass.value = classData;
+  showClassEdit.value = true;
+};
 // Define form and page-related variables
 const form = useForm({
   id_kelas: '',
@@ -388,7 +396,7 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                             scope="col"
                             class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-1/4"
                           >
-                            Kode Kelas
+                            id
                           </th>
                           <th
                             scope="col"
@@ -396,12 +404,12 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                           >
                             Nama Kelas
                           </th>
-                          <!--                   <th
+                          <th
                             scope="col"
                             class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-1/4"
                           >
-                            Wali Kelas
-                          </th>-->
+                            Kode Kelas
+                          </th>
                           <th
                             scope="col"
                             class="relative whitespace-nowrap py-3.5 pl-3 pr-4 text-right text-sm font-semibold text-gray-900 sm:pr-6 w-1/4"
@@ -432,6 +440,11 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
                             class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
                           >
                             {{ classForStudent.name }}
+                          </td>
+                          <td
+                            class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6"
+                          >
+                            {{ classForStudent.kode_kelas }}
                           </td>
                           <td
                             class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
@@ -470,6 +483,11 @@ watch([pageNumber, perPage], ([newPageNumber, newPerPage]) => {
           </div>
         </div>
       </div>
+      <edit
+        v-if="showClassEdit && selectedClass"
+        :classForStudent="selectedClass"
+        @close="showClassEdit = false"
+      />
     </main>
 
     <!-- Sidebar -->

@@ -13,26 +13,40 @@ const form = useForm({
   role_type: props.auth.user.role_type,
 });
 
-const filters = ref({ ...props.filters });
+const filters = ref({
+  nama: props.filters?.nama ?? '',
+  kelas: props.filters?.kelas ?? '',
+  email: props.filters?.email ?? '',
+});
+
+const password = ref('');
+
 const tahunList = props.tahunList;
 const kelasList = props.kelasList;
+const students = ref(props.students ?? []);
+console.log('students:', students.value, 'type:', typeof students.value);
 
-const students = computed(() => props.students.data ?? []);
 const selectedStudentId = ref(
   students.value.length > 0 ? students.value[0].id : null
 );
-const selectedStudent = computed(
-  () => students.value.find((s) => s.id === selectedStudentId.value) || null
-);
+
+const selectedStudent = computed(() => {
+  console.log('students.value:', students.value);
+  if (!students.value || !Array.isArray(students.value)) return null;
+  if (!selectedStudentId.value) return null;
+  return students.value.find((s) => s.id === selectedStudentId.value) || null;
+});
 
 const pagination = computed(() => props.students);
 
 const allMapel = props.allMapel ?? [];
 
 const mapelWithNilai = computed(() => {
+  console.log('selectedStudent:', selectedStudent.value);
+  console.log('studentEnrollments:', studentEnrollments.value);
   if (!selectedStudent.value) return [];
+
   return allMapel.map((mapel, idx) => {
-    // Cari enrollment untuk mapel ini
     const nilai =
       studentEnrollments.value.find((e) => e.mapel_id === mapel.id) || {};
     return {
@@ -51,13 +65,29 @@ let filterTimeout = null;
 
 async function fetchFilteredStudents() {
   try {
-    const response = await axios.get('/api/students/filter', {
-      params: filters.value,
+    const response = await axios.get('/parent/students/filter', {
+      params: {
+        nama: filters.value.nama,
+        kelas: filters.value.kelas,
+        email: filters.value.email, // pastikan ini sudah ada di filters
+      },
+      withCredentials: true,
     });
+    console.log('Response data:', response.data);
 
-    students.value = response.data.students;
+    // response.data.students adalah objek pagination,
+    // siswa-nya ada di response.data.students.data
+    const paginated = response.data.students;
+    const siswaArray = paginated?.data ?? [];
+
+    students.value = siswaArray;
+
+    // Reset selectedStudentId
+    selectedStudentId.value = siswaArray.length > 0 ? siswaArray[0].id : null;
   } catch (error) {
     console.error('Failed to fetch students:', error);
+    students.value = [];
+    selectedStudentId.value = null;
   }
 }
 
@@ -105,15 +135,24 @@ onMounted(() => {
   initFlowbite();
 });
 
-watch(students, (newVal) => {
-  if (
-    newVal.length > 0 &&
-    !newVal.find((s) => s.id === selectedStudentId.value)
-  ) {
-    selectedStudentId.value = newVal[0].id;
-  } else if (newVal.length === 0) {
-    selectedStudentId.value = null;
-  }
+watch(
+  () => students.value,
+  (newVal) => {
+    if (!newVal || !Array.isArray(newVal) || newVal.length === 0) {
+      selectedStudentId.value = null;
+    } else if (!newVal.find((s) => s.id === selectedStudentId.value)) {
+      selectedStudentId.value = newVal[0].id;
+    }
+  },
+  { immediate: true }
+);
+
+watch(selectedStudentId, (val) => {
+  console.log('selectedStudentId changed:', val);
+});
+
+watch(selectedStudent, (val) => {
+  console.log('selectedStudent changed:', val);
 });
 </script>
 
@@ -258,14 +297,14 @@ watch(students, (newVal) => {
 
     <!-- Main -->
 
-    <main class="p-7 md:ml-64 h-screen pt-20">
+    <main class="p-7 md:ml-64 pt-20">
       <Head title="Melihat Nilai" />
       <form
-        class="w-full max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 transition-all"
-        @submit.prevent="applyFilter"
+        class="w-full max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 px-4 mb-6 bg-gradient-to-r from-blue-100 via-pink-100 to-yellow-100 p-6 rounded-2xl shadow-lg border-2 border-dashed border-blue-300 transition-all"
+        @submit.prevent
       >
-        <!-- Input Nama Siswa -->
-        <div class="flex flex-col items-start w-full col-span-1 sm:col-span-2">
+        <!-- Filter Nama Siswa -->
+        <div class="flex flex-col items-start w-full col-span-2 lg:col-span-3">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
@@ -281,7 +320,7 @@ watch(students, (newVal) => {
           />
           <datalist id="daftar-siswa">
             <option
-              v-for="student in students"
+              v-for="student in students.data ?? []"
               :key="student.id"
               :value="student.name"
             >
@@ -290,8 +329,9 @@ watch(students, (newVal) => {
           </datalist>
         </div>
 
-        <!-- Select Kelas -->
-        <div class="flex flex-col items-start w-full col-span-1 sm:col-span-2">
+        <!-- Filter Kelas -->
+        <!-- 
+              <div class="flex flex-col items-start w-full col-span-2 lg:col-span-3">
           <label
             class="mb-1 text-xs font-bold text-blue-700 flex items-center gap-1"
           >
@@ -311,23 +351,11 @@ watch(students, (newVal) => {
               {{ kelas.name }}
             </option>
           </select>
-        </div>
-
-        <!-- Tombol Submit -->
-        <div
-          class="flex items-end justify-end col-span-1 sm:col-span-2 md:col-start-4"
-        >
-          <button
-            type="submit"
-            class="mt-2 px-6 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md"
-          >
-            Terapkan Filter
-          </button>
-        </div>
-      </form>
+        </div>  
+      --></form>
 
       <div
-        class="max-w-4xl mx-auto bg-white p-4 sm:p-8 rounded shadow text-sm border-2 border-dashed border-blue-300"
+        class="w-full max-w-7xl mx-auto bg-white p-4 sm:p-8 rounded shadow text-sm border-2 border-dashed border-blue-300"
       >
         <!-- Header Sekolah -->
         <div class="flex flex-col items-center justify-center mb-4">
@@ -450,12 +478,12 @@ watch(students, (newVal) => {
                 </td>
               </tr>
               <tr>
-                <td class="border border-black px-2 py-1 text-left" colspan="5">
+                <td class="border border-black px-2 py-1 text-left" colspan="6">
                   <b>B. MUATAN LOKAL</b>
                 </td>
               </tr>
               <tr>
-                <td class="border border-black px-2 py-1" colspan="5">
+                <td class="border border-black px-2 py-1" colspan="6">
                   &nbsp; -
                 </td>
               </tr>
@@ -529,7 +557,6 @@ watch(students, (newVal) => {
         </div>
       </div>
     </main>
-
     <!-- Sidebar -->
     <SidebarParent />
   </div>

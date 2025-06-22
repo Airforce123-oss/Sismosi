@@ -15,11 +15,13 @@ import Login from './Auth/Login.vue';
 
 // Ambil props dari Inertia
 const userName = ref('');
-
+const page = usePage();
 // Ambil props yang sudah dikirimkan melalui Inertia
 const { student_id, student_name, auth } = usePage().props;
+const totalAbsensi = computed(() => usePage().props.total_absensi);
 
 console.log('✅ Student Name dari props:', student_name);
+console.log('✅ Total Absensi dari props:', totalAbsensi.value);
 console.log('✅ Student ID dari props:', student_id);
 console.log('✅ User:', auth?.user);
 
@@ -43,9 +45,12 @@ const fetchLoggedInStudent = async () => {
 
     if (response.data && response.data.id) {
       // Perbarui student_id hanya jika berbeda dari yang ada di props
-      if (student_id.value !== response.data.id) {
+      if (student_id !== response.data.id) {
+        console.log(
+          'Student ID berubah, tapi tidak bisa dimutasi langsung karena props.'
+        );
         student_id.value = response.data.id;
-        console.log('✅ Updated studentId:', student_id.value);
+        console.log('✅ Updated studentId:', student_id);
       }
 
       // Perbarui nama user pada auth.user jika ada perubahan
@@ -226,11 +231,13 @@ onMounted(() => {
           >
             <!-- Card 1 -->
             <div
-              class="bg-primary1 text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+              class="bg-primary1 text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
+                  <h3 class="text-3xl md:text-4xl font-bold text-white">
+                    {{ totalAbsensi }}
+                  </h3>
                   <p class="font-semibold text-sm md:text-base">
                     Absensi Kehadiran
                   </p>
@@ -238,7 +245,9 @@ onMounted(() => {
                 <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
               </div>
               <a
-                href="#"
+                :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
+                  student_name
+                )}`"
                 class="block mt-4 text-sm hover:underline flex items-center gap-1"
               >
                 Lihat detail <i class="fas fa-arrow-circle-right"></i>
@@ -247,7 +256,7 @@ onMounted(() => {
 
             <!-- Card 2 -->
             <div
-              class="bg-success text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+              class="bg-success text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
             >
               <div class="flex items-center justify-between">
                 <div>
@@ -257,7 +266,7 @@ onMounted(() => {
                 <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
               </div>
               <a
-                href="#"
+                href="/melihatTugas"
                 class="block mt-4 text-sm hover:underline flex items-center gap-1"
               >
                 Lihat detail <i class="fas fa-arrow-circle-right"></i>
@@ -266,19 +275,20 @@ onMounted(() => {
 
             <!-- Card 3 -->
             <div
-              class="bg-cyan text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105"
+              class="bg-cyan text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
                   <p class="font-semibold text-sm md:text-base">
-                    Data Mata Pelajaran
+                    Jadwal Mata Pelajaran
                   </p>
                 </div>
                 <i class="ion ion-log-in text-3xl md:text-4xl"></i>
               </div>
               <a
-                href="/guru/profil"
+                :href="`/melihatJadwalPelajaran?student_id=${student_id}&student_name=${encodeURIComponent(
+                  student_name
+                )}`"
                 class="block mt-4 text-sm hover:underline flex items-center gap-1"
               >
                 Lihat detail <i class="fas fa-arrow-circle-right"></i>

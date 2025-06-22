@@ -16,10 +16,11 @@ class TeacherResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name, 
+            'name' => $this->name,
             'nip' => $this->nip,
-            'class' => $this->class, 
+            'class' => $this->class,
             'master_mapel' => MapelResource::collection($this->whenLoaded('masterMapel')),
+            'jabatan' => $this->jabatan,
             'created_at' => $this->created_at ? $this->created_at->toDateTimeString() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toDateTimeString() : null,
         ];

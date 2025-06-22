@@ -23,8 +23,13 @@ class StoreTeacherRequest extends FormRequest
     public function rules(): array
     {
         return [
-           'name' => 'required|string|max:255',
-           'class_id' => 'required|exists:classes,id',
+            'name' => 'required|string|max:255',
+            'nip' => 'nullable|string|max:50',
+            'email' => 'nullable|email',
+            'jabatan_id' => 'nullable|integer|exists:master_jabatan,id',
+            'mapel_id' => 'nullable|integer|exists:master_mapel,id',
+            // 'class_id' => 'nullable|exists:classes,id', // kalau tidak dipakai, biarkan tetap dihapus
         ];
     }
+
 }

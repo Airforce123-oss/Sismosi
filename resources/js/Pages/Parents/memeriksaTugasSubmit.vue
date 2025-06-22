@@ -4,16 +4,15 @@ import { initFlowbite } from 'flowbite';
 import { usePage, Head, router } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import SidebarParent from '@/Components/SidebarParent.vue';
+import Pagination from '@/Components/Pagination10.vue';
 
 // Ambil props dari Inertia page
 const { props } = usePage();
+const data = props.data;
+console.log('✅ Komponen Pagination9 diimport:', Pagination);
 
 const kelasList = ref(props.kelasList);
-const selectedClassId = ref(
-  props.selectedClassId != null && props.selectedClassId !== 'null'
-    ? Number(props.selectedClassId)
-    : null
-);
+const selectedClassId = ref(null);
 const selectedClassName = ref(props.selectedClassName);
 
 // Debug: tampilkan props utama untuk cek data
@@ -29,9 +28,14 @@ const form = ref({
 });
 
 // Data tugas yang diterima dari backend
-const tugasList = ref(props.tugas?.data || []);
-console.log('Tugas List:', tugasList.value);
-console.log('tugasList:', tugasList.value);
+const tugas = computed(() => usePage().props.tugas);
+
+console.log(tugas.data); // menampilkan Proxy(Array) {0: {…}, 1: {…}, 2: {…}, 3: {…}, 4: {…}}
+console.log(tugas.meta); // menampilkan undefined
+console.log(tugas.links); // menampilkan Proxy(Array) {0: {…}, 1: {…}, 2: {…}, 3: {…}}
+console.log(usePage().props);
+
+const tugasList = computed(() => tugas.value?.data ?? []);
 console.log(
   'selectedClassId (typeof):',
   selectedClassId.value,
@@ -39,11 +43,11 @@ console.log(
 );
 
 // Metadata pagination tugas
-const meta = ref(props.tugas?.meta || {});
+const meta = computed(() => tugas.value?.meta ?? {});
 console.log('Pagination Meta:', meta.value);
 
 // Link pagination tugas
-const links = ref(props.tugas?.links || {});
+const links = computed(() => tugas.value?.links ?? []);
 console.log('Pagination Links:', links.value);
 
 // Data siswa
@@ -74,54 +78,60 @@ const onChangeClass = () => {
 };
 
 const filteredTugasList = computed(() => {
-  console.log(
-    'selectedClassId:',
-    selectedClassId.value,
-    typeof selectedClassId.value
-  );
-  console.log(
-    'tugasList:',
-    tugasList.value.map((t) => ({
-      id: t.id,
-      kelas_id: t.kelas_id,
-      type: typeof t.kelas_id,
-    }))
-  );
-
-  if (!selectedClassId.value) return tugasList.value;
-
-  const filtered = tugasList.value.filter(
-    (task) => task.kelas_id === selectedClassId.value
-  );
-
-  console.log('Tugas setelah difilter:', filtered);
-  return filtered;
+  return tugasList.value.filter((task) => {
+    const kelasId = task.kelas?.id;
+    return selectedClassId.value ? kelasId === selectedClassId.value : true;
+  });
 });
 
+function fetchTugasPage(page = 1) {
+  const classIdToSend =
+    selectedClassId.value !== null
+      ? selectedClassId.value
+      : student.value.kelas_id;
+
+  console.log('📦 class_id yang dikirim ke pagination:', classIdToSend);
+
+  router.get(
+    '/memeriksa-tugas',
+    {
+      class_id: selectedClassId.value ?? student.value.kelas_id,
+      page,
+    },
+    {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+      onSuccess: () => {
+        console.log('📦 Berhasil fetch tugas halaman:', page);
+      },
+    }
+  );
+}
+
+watch(
+  () => props.data,
+  (val) => {
+    if (val && val.meta) {
+      console.log('🧪 tugas meta:', val.meta);
+    } else {
+      console.log('❌ tugas belum tersedia:', val);
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
+  console.log('👀 tugas di parent:', tugas);
   initFlowbite();
 });
 
-watch(selectedClassId, (val) => {
-  console.log('selectedClassId berubah ke:', val);
-});
-
-watch(tugasList, (val) => {
-  console.log('tugasList berubah ke:', val);
-});
-
-watchEffect(() => {
-  console.log('Reaktif: filteredTugasList =', filteredTugasList.value);
-});
-
 watch(
-  () => props.tugas,
-  (newTugas) => {
-    tugasList.value = newTugas?.data || [];
-    meta.value = newTugas?.meta || {};
-    links.value = newTugas?.links || {};
-    console.log('tugasList diperbarui dari props.tugas:', tugasList.value);
-  }
+  () => props.selectedClassId,
+  (val) => {
+    selectedClassId.value = val != null && val !== 'null' ? Number(val) : null;
+  },
+  { immediate: true }
 );
 </script>
 
@@ -267,7 +277,7 @@ watch(
     <!-- Main -->
 
     <main class="p-7 md:ml-64 h-screen pt-20">
-      <Head title="Dashboard" />
+      <Head title="Memeriksa Tugas Siswa" />
       <div
         class="p-6 bg-gradient-to-br from-white via-indigo-50 to-indigo-100 rounded-xl shadow-xl border border-indigo-200"
       >
@@ -333,11 +343,6 @@ watch(
                 >
                   Kelas
                 </th>
-                <!--      <th
-                  class="px-6 py-3 text-left text-sm font-semibold text-indigo-900 uppercase tracking-wider"
-                >
-                  Aksi
-                </th>-->
               </tr>
             </thead>
             <tbody class="text-indigo-900">
@@ -347,7 +352,7 @@ watch(
                 class="border-b border-indigo-300 last:border-b-0 hover:bg-indigo-100 transition duration-300"
               >
                 <td class="px-6 py-4 whitespace-nowrap font-semibold">
-                  {{ index + 1 }}
+                  {{ (tugas.meta.from ?? 0) + index }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap font-medium">
                   {{ task.mapel?.mapel ?? '—' }}
@@ -358,16 +363,7 @@ watch(
                 <td class="px-6 py-4 whitespace-nowrap">
                   {{ task.kelas?.name ?? '—' }}
                 </td>
-                <!--
-                          <td class="px-6 py-4">
-                  <button
-                    @click="kerjakanTugas(task)"
-                    class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold px-6 py-2 rounded-xl shadow-lg transition duration-300"
-                  >
-                    Kerjakan
-                  </button>
-                </td>  
-              --></tr>
+              </tr>
 
               <tr v-if="filteredTugasList.length === 0">
                 <td colspan="5" class="text-center py-8 text-indigo-400 italic">
@@ -377,6 +373,11 @@ watch(
             </tbody>
           </table>
         </div>
+        <Pagination
+          v-if="tugas && tugas.data && tugas.links"
+          :data="tugas"
+          :updatedPageNumber="fetchTugasPage"
+        />
       </div>
     </main>
 

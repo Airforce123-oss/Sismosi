@@ -23,8 +23,8 @@ class StoreClassesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nama_kelas' => 'required|string|max:60',
-            'kode_kelas' => 'required|string|max:40',
+            'name' => 'required|string|max:60',
+            'kode_kelas' => 'required|string|max:20|unique:classes,kode_kelas,' . $this->route('classId'),
         ];
     }
 

@@ -34,9 +34,15 @@ class Student extends Model
 
     protected $guarded = ['id'];
     protected $fillable = [
-        'name', 'gender_id', 'class_id', 'religion_id', 'no_induk_id',  'user_id'
+        'name',
+        'gender_id',
+        'class_id',
+        'religion_id',
+        'no_induk_id',
+        'user_id',
+        'parent_id'
     ];
-    
+
 
     public function noInduk()
     {
@@ -58,19 +64,19 @@ class Student extends Model
     {
         return $this->belongsTo(Religion::class, 'religion_id');
     }
-    
+
     // Student.php
     public function attendances()
     {
-    return $this->hasMany(Attendance::class, 'student_id');
+        return $this->hasMany(Attendance::class, 'student_id');
     }
 
     public function mapel()
     {
-        return $this->belongsTo(Mapel::class, 'mapel_id');
+        return $this->belongsToMany(Mapel::class, 'enrollments', 'student_id', 'mapel_id');
     }
 
-        public function index(Request $request)
+    public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
         $students = Student::with(['noInduk', 'gender', 'class', 'religion'])
@@ -83,12 +89,12 @@ class Student extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-        public function komentarSiswas()
+    public function komentarSiswas()
     {
         return $this->hasMany(\App\Models\KomentarSiswa::class, 'student_id');
     }
 
-        public function getKelasAttribute()
+    public function getKelasAttribute()
     {
         return \App\Models\Classes::find($this->class_id);
     }

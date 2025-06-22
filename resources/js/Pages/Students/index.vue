@@ -4,6 +4,7 @@ import Pagination from '../../Components/Pagination.vue';
 import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
 import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import Swal from 'sweetalert2';
+import Edit from './edit.vue';
 import { ref, watch, computed, onMounted } from 'vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import MagnifyingGlass from '@/Components/Icons/MagnifyingGlass.vue';
@@ -17,6 +18,9 @@ console.log('perPage:', perPage.value);
 console.log('pageNumber:', pageNumber.value);
 console.log('perPage:', perPage.value);
 //console.log("index:", index);
+
+const showStudentEdit = ref(false);
+const student = ref(null);
 
 defineProps({
   students: {
@@ -409,6 +413,14 @@ onMounted(() => {
           </div>
         </div>
       </div>
+      <edit
+        v-if="showStudentEdit && student"
+        :student="student"
+        :classes="classes"
+        :genders="genders"
+        :religions="religions"
+        :no-induks="no_induks"
+      />
     </main>
 
     <!-- end1-->

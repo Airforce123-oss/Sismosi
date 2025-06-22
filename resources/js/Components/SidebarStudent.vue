@@ -48,8 +48,10 @@ const props = defineProps({
           </a>
         </li>
         <li>
-          <a
-            href="/melihatTugas"
+          <Link
+            :href="`/melihatTugas?student_id=${student_id}&student_name=${encodeURIComponent(
+              student_name
+            )}`"
             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
           >
             <svg
@@ -64,8 +66,9 @@ const props = defineProps({
               />
             </svg>
             <span class="ml-3">Melihat Tugas</span>
-          </a>
+          </Link>
         </li>
+
         <li>
           <a
             :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
@@ -89,7 +92,9 @@ const props = defineProps({
         </li>
         <li>
           <a
-            href="/melihatJadwalPelajaran"
+            :href="`/melihatJadwalPelajaran?student_id=${student_id}&student_name=${encodeURIComponent(
+              student_name
+            )}`"
             class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
           >
             <svg

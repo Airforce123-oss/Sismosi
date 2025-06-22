@@ -1,18 +1,20 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import { initFlowbite } from 'flowbite';
 import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
+import { Link, useForm, usePage, Head, router } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination5.vue';
 import ApexCharts from 'apexcharts';
-
-import axios from 'axios';
+import Swal from 'sweetalert2'; // ✅ Tambahan untuk alert interaktif
+import edit from './edit.vue'; // ✅ lowercase import
 
 const userName = ref('');
 const { props } = usePage();
 const jabatan = props.jabatan;
+
 console.log('isi jabatan: ', jabatan);
+
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
@@ -21,7 +23,37 @@ const form = useForm({
 
 defineProps({ total: Number });
 
-onMounted(async () => {
+const showEdit = ref(false);
+const selectedJabatan = ref(null);
+
+const openEdit = (item) => {
+  selectedJabatan.value = item;
+  showEdit.value = true;
+};
+
+// ✅ Fungsi hapus dengan SweetAlert
+const deleteJabatan = async (id) => {
+  const result = await Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: 'Data jabatan akan dihapus permanen!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      await router.delete(route('master-jabatan.destroy', id));
+      Swal.fire('Terhapus!', 'Data jabatan berhasil dihapus.', 'success');
+    } catch (error) {
+      Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus.', 'error');
+    }
+  }
+};
+
+onMounted(() => {
   initFlowbite();
 });
 </script>
@@ -246,7 +278,10 @@ onMounted(async () => {
                   >
                     Edit
                   </Link>
-                  <button class="ml-2 text-indigo-600 hover:text-indigo-900">
+                  <button
+                    @click="deleteJabatan(item.id)"
+                    class="ml-2 text-red-600 hover:text-red-800"
+                  >
                     Hapus
                   </button>
                 </td>
@@ -259,6 +294,12 @@ onMounted(async () => {
           />
         </div>
       </div>
+      <edit
+        v-if="showEdit && selectedJabatan"
+        :key="selectedJabatan.id"
+        :jabatan="selectedJabatan"
+        @close="showEdit = false"
+      />
     </main>
 
     <!-- Sidebar -->

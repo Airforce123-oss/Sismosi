@@ -6,7 +6,7 @@ use App\Models\Student;
 use App\Models\AttendanceTeacher;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceTeacherController;
-use App\Http\Controllers\BukuPenghubung1Controller; 
+use App\Http\Controllers\BukuPenghubung1Controller;
 use App\Models\Mapel;
 use App\Http\Controllers\ParentController;
 use Illuminate\Support\Facades\Session;
@@ -15,11 +15,11 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnrollmentController;
-use App\Http\Controllers\MataPelajaranController; 
+use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\TugasController;
 use App\Http\Controllers\TeacherController;
-use App\Http\Controllers\MarkController; 
+use App\Http\Controllers\MarkController;
 
 // Authentication routes for API
 Route::post('/login', [AuthController::class, 'login']);
@@ -72,6 +72,8 @@ Route::get('/teachers', [TeacherController::class, 'index']);
 
 //Route::middleware('auth:sanctum')->put('/enrollments/{enrollment}', [EnrollmentController::class, 'update']);
 Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);
+Route::put('/tugas/{id}', [TugasController::class, 'update']);
+
 
 // Route untuk Buku Penghubung (API)
 Route::get('/buku-penghubung', [TeacherController::class, 'bukuPenghubungApi']);
@@ -113,7 +115,7 @@ Route::post('/attendance/store', [AttendanceTeacherController::class, 'storeAtte
 Route::get('/api/mapel', [MataPelajaranController::class, 'getMapel']);
 Route::get('/absensi-siswa', [TeacherController::class, 'showAbsensiSiswa'])->name('absensiSiswa');
 Route::get('/get-mapel-by-teacher-id', [TeacherController::class, 'getMapelByTeacherId']);
-Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);  
+Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswaApi']);
 Route::get('/classes', [ClassController::class, 'index']);
 Route::get('/classes/json', [EnrollmentController::class, 'getOnlyClasses']);
 
@@ -146,11 +148,18 @@ Route::post('/komentar-siswa', [ParentController::class, 'storeKomentarSiswa']);
 
 Route::get('/enrollments/students', [EnrollmentController::class, 'getStudentsByClass']);
 
-Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']); 
+Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']);
 
 Route::get('/students/by-nis/{nomor_induk}', [StudentController::class, 'getByNomorInduk']);
 
 Route::post('/student-login', [AuthController::class, 'studentLogin']);
+
+Route::delete('/tugas/{id}', [TugasController::class, 'destroy']);
+
+Route::put('matapelajaran/{id}', [MataPelajaranController::class, 'update'])->name('matapelajaran.update');
+
+
+
 
 
 

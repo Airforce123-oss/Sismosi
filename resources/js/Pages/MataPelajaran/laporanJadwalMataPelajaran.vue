@@ -502,149 +502,120 @@ watch(schedule, (newVal) => {
     <!-- start1 -->
 
     <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div class="p-6 space-y-6">
-          <!--LAPORAN JADWAL-->
-          <div class="-mt-12">
-            <h2
-              class="text-2xl text-center font-bold text-gray-800 tracking-wide"
-            >
-              Laporan Jadwal Mata Pelajaran
-            </h2>
-          </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mt-8 mb-12 text-center">
+          <h2 class="text-2xl font-bold text-gray-800 tracking-wide">
+            Laporan Jadwal Mata Pelajaran
+          </h2>
         </div>
-      </div>
-      <div v-for="(item, index) in schedule.value" :key="index">
-        <p>Jam Ke: {{ item.jam_ke }}</p>
-        <p>Jam: {{ item.jam }}</p>
-        <div v-for="(hari, day) in item.jadwal" :key="day">
-          <p>
-            {{ day.charAt(0).toUpperCase() + day.slice(1) }}:
-            <span v-if="hari">{{ hari.mapel }} ({{ hari.kelas }})</span>
-            <span v-else>-</span>
-          </p>
-        </div>
-      </div>
 
-      <!-- Perbaikan tampilan jadwal per jam_ke -->
-      <div
-        v-for="(slot, index) in schedule"
-        :key="index"
-        class="w-full max-w-6xl mx-auto mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-lg min-h-[200px]"
-      >
-        <h3 class="font-bold text-lg mb-4 text-blue-700 text-center">
-          Jam ke-{{ slot.jam_ke }}
-          <span class="text-gray-500">({{ slot.jam }})</span>
-        </h3>
+        <div
+          v-for="(slot, index) in schedule"
+          :key="index"
+          class="w-full max-w-7xl mx-auto mt-16 mb-10 p-4 sm:p-6 bg-white rounded-xl shadow-lg"
+        >
+          <h3 class="font-bold text-lg mb-4 text-blue-700 text-center">
+            Jam ke-{{ slot.jam_ke }}
+            <span class="text-gray-500">({{ slot.jam }})</span>
+          </h3>
 
-        <div class="overflow-x-auto">
-          <table
-            class="w-auto text-sm border border-gray-200 rounded-lg overflow-hidden shadow-sm"
-          >
-            <thead
-              class="bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 uppercase text-xs tracking-wider"
+          <div class="overflow-x-auto">
+            <table
+              class="table-fixed w-full min-w-[1000px] text-sm border border-gray-200 rounded-lg overflow-hidden shadow-sm"
             >
-              <tr>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Hari
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Mata Pelajaran
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Kelas
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Guru
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Wali Kelas
-                </th>
-                <th
-                  class="p-3 border-b border-gray-200 text-left whitespace-nowrap"
-                >
-                  Tahun
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="day in days"
-                :key="day"
-                class="even:bg-blue-50 odd:bg-white hover:bg-blue-100 transition-colors"
+              <thead
+                class="bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 uppercase text-xs tracking-wider"
               >
-                <td
-                  class="p-3 border-b border-gray-100 capitalize font-semibold text-blue-800 whitespace-nowrap"
+                <tr>
+                  <th class="w-24 p-3 border-b border-gray-200 text-left">
+                    Hari
+                  </th>
+                  <th class="w-48 p-3 border-b border-gray-200 text-left">
+                    Mata Pelajaran
+                  </th>
+                  <th class="w-32 p-3 border-b border-gray-200 text-left">
+                    Kelas
+                  </th>
+                  <th class="w-40 p-3 border-b border-gray-200 text-left">
+                    Guru
+                  </th>
+                  <th class="w-40 p-3 border-b border-gray-200 text-left">
+                    Wali Kelas
+                  </th>
+                  <th class="w-24 p-3 border-b border-gray-200 text-left">
+                    Tahun
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="day in days"
+                  :key="day"
+                  class="even:bg-blue-50 odd:bg-white hover:bg-blue-100 transition-colors"
                 >
-                  {{ day }}
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-blue-200 text-black font-medium whitespace-nowrap"
+                  <td
+                    class="w-24 p-3 border-b border-gray-100 capitalize font-semibold text-blue-800"
                   >
-                    {{
-                      getMapelName(
-                        slot.jadwal[day]?.mapel_id,
-                        slot.jadwal[day]?.mapel || '-'
-                      )
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-green-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{
-                      slot.jadwal[day]?.kelas_id
-                        ? getKelasName(slot.jadwal[day].kelas_id)
-                        : '-'
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-yellow-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{
-                      slot.jadwal[day]?.guru_id
-                        ? getGuruName(slot.jadwal[day].guru_id)
-                        : '-'
-                    }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-purple-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{ slot.jadwal[day]?.wali_kelas || '-' }}
-                  </span>
-                </td>
-                <td class="p-3 border-b border-gray-100">
-                  <span
-                    class="inline-block px-2 py-1 rounded bg-gray-100 text-black font-medium whitespace-nowrap"
-                  >
-                    {{ slot.jadwal[day]?.tahun || '-' }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                    {{ day }}
+                  </td>
+                  <td class="w-48 p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-blue-200 text-black font-medium max-w-[12rem] line-clamp-2"
+                    >
+                      {{
+                        getMapelName(
+                          slot.jadwal[day]?.mapel_id,
+                          slot.jadwal[day]?.mapel || '-'
+                        )
+                      }}
+                    </span>
+                  </td>
+                  <td class="w-32 p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-green-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{
+                        slot.jadwal[day]?.kelas_id
+                          ? getKelasName(slot.jadwal[day].kelas_id)
+                          : '-'
+                      }}
+                    </span>
+                  </td>
+                  <td class="w-40 p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-yellow-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{
+                        slot.jadwal[day]?.guru_id
+                          ? getGuruName(slot.jadwal[day].guru_id)
+                          : '-'
+                      }}
+                    </span>
+                  </td>
+                  <td class="w-40 p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-purple-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{ slot.jadwal[day]?.wali_kelas || '-' }}
+                    </span>
+                  </td>
+                  <td class="w-24 p-3 border-b border-gray-100">
+                    <span
+                      class="inline-block px-2 py-1 rounded bg-gray-100 text-black font-medium whitespace-nowrap"
+                    >
+                      {{ slot.jadwal[day]?.tahun || '-' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <div v-if="Object.values(slot.jadwal).every((j) => !j)">
-          <span class="text-gray-400 italic block text-center mt-4">
-            Belum ada data jadwal untuk jam ke-{{ slot.jam_ke }}
-          </span>
+          <div v-if="Object.values(slot.jadwal).every((j) => !j)">
+            <p class="text-gray-400 italic text-center mt-4">
+              Belum ada data jadwal untuk jam ke-{{ slot.jam_ke }}
+            </p>
+          </div>
         </div>
       </div>
     </main>

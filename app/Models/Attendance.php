@@ -34,5 +34,8 @@ class Attendance extends Model
         return $this->belongsTo(Student::class, 'student_id');
     }
 
-    
+        public function course()
+    {
+        return $this->belongsTo(\App\Models\Mapel::class, 'course_id');
+    }
 }

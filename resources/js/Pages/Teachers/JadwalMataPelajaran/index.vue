@@ -373,16 +373,17 @@ watch(schedule, (newVal) => {
 
     <main class="md:ml-64 pt-20 min-h-screen bg-gray-100">
       <Head title="Laporan Jadwal Mata Pelajaran" />
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-          <!--LAPORAN JADWAL-->
-          <div class="-mt-12">
-            <h2
-              class="text-2xl text-center font-bold text-gray-800 tracking-wide"
-            >
-              Laporan Jadwal Mata Pelajaran
-            </h2>
-          </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- JUDUL -->
+        <div class="mt-8 mb-12 text-center">
+          <h2 class="text-2xl font-bold text-gray-800 tracking-wide">
+            Laporan Jadwal Mata Pelajaran
+          </h2>
+        </div>
       </div>
+
+      <!-- ISI JADWAL -->
       <div v-for="(item, index) in schedule.value" :key="index">
         <p>Jam Ke: {{ item.jam_ke }}</p>
         <p>Jam: {{ item.jam }}</p>
@@ -395,8 +396,9 @@ watch(schedule, (newVal) => {
         </div>
       </div>
 
+      <!-- TAMPILAN UTAMA -->
       <div>
-        <!-- Tampilkan pesan jika seluruh jadwal kosong -->
+        <!-- Jika tidak ada jadwal -->
         <div
           v-if="!props.schedule || props.schedule.length === 0"
           class="text-gray-500"
@@ -413,7 +415,7 @@ watch(schedule, (newVal) => {
           </span>
         </div>
 
-        <!-- Tampilkan jadwal jika ada -->
+        <!-- Jika ada jadwal -->
         <div
           v-else
           v-for="(slot, index) in props.schedule"
@@ -524,7 +526,7 @@ watch(schedule, (newVal) => {
             </table>
           </div>
 
-          <!-- Pesan jika jadwal pada jam_ke ini kosong -->
+          <!-- Jika jadwal kosong -->
           <div v-if="Object.values(slot.jadwal).every((j) => !j)">
             <span class="text-gray-400 italic block text-center mt-4">
               Belum ada data jadwal untuk jam ke-{{ slot.jam_ke }}

@@ -15,6 +15,9 @@ class Teacher extends Model
         'name',
         'nip',
         'class_id',
+        'jabatan_id',
+        'mapel_id',
+        'user_id',
     ];
 
     public function class()
@@ -41,13 +44,17 @@ class Teacher extends Model
         return $this->hasOne(WaliKelas::class, 'user_id', 'user_id');
     }
 
-public function masterMapel()
-{
-    return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id')
-                ->withPivot('kode_mapel') 
-                ->withTimestamps();      
-}
+    public function masterMapel()
+    {
+        return $this->belongsToMany(Mapel::class, 'teacher_mapel', 'teacher_id', 'mapel_id')
+            ->withPivot('kode_mapel')
+            ->withTimestamps();
+    }
 
+    public function jabatan()
+    {
+        return $this->belongsTo(MasterJabatan::class, 'jabatan_id');
+    }
 
 }
 

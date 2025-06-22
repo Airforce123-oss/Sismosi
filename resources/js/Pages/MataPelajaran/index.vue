@@ -3,8 +3,9 @@ import { initFlowbite } from 'flowbite';
 import Pagination from '../../Components/Pagination6.vue';
 import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import MagnifyingGlass from '../../Components/Icons/MagnifyingGlass.vue';
-import { Link, Head, useForm, router } from '@inertiajs/vue3';
+import { Link, Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { onMounted, ref, watch, computed } from 'vue';
+import Edit from './edit.vue';
 import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 const props = defineProps({
@@ -25,6 +26,9 @@ const form = useForm({
 
 const currentPage = ref(1); // Gunakan ini sebagai pengganti pageNumber
 const searchTerm = ref('');
+
+const showMapelEdit = ref(false);
+const selectedMapel = ref(null);
 
 const kelasUrl = computed(() => {
   const url = new URL(route('matapelajaran.index'));
@@ -90,6 +94,16 @@ const updatedPageNumber = (link) => {
 
 onMounted(() => {
   initFlowbite();
+});
+
+const page = usePage();
+
+const currentQuery = computed(() => {
+  return {
+    search: page.props.search || '',
+    page: page.url.match(/page=(\d+)/)?.[1] || 1,
+    itemsPerPage: page.url.match(/itemsPerPage=(\d+)/)?.[1] || 5,
+  };
 });
 
 const paginationLinks = computed(() => {
@@ -356,12 +370,18 @@ const paginationLinks = computed(() => {
                         >
                           <Link
                             :href="
-                              route('matapelajaran.edit', { mapel: mapel.id })
+                              route('matapelajaran.edit', mapel.id) +
+                              `?search=${encodeURIComponent(
+                                currentQuery.search || ''
+                              )}&page=${currentQuery.page || 1}&itemsPerPage=${
+                                currentQuery.itemsPerPage || 5
+                              }`
                             "
                             class="text-indigo-600 hover:text-indigo-900"
                           >
                             Edit
                           </Link>
+
                           <button
                             @click="deleteMapel(mapel)"
                             class="ml-2 text-indigo-600 hover:text-indigo-900"
@@ -384,6 +404,11 @@ const paginationLinks = computed(() => {
           </div>
         </div>
       </div>
+      <Edit
+        v-if="showMapelEdit && selectedMapel"
+        :mapel="selectedMapel"
+        @close="showMapelEdit = false"
+      />
     </main>
 
     <!-- end1-->

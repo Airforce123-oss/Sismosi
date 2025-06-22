@@ -24,7 +24,10 @@ class UpdateTeacherRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'exists:classes,id'],
+            'nip' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email'],
+            'jabatan_id' => ['nullable', 'integer', 'exists:master_jabatan,id'],
+            'mapel_id' => ['nullable', 'integer', 'exists:master_mapel,id'],
         ];
     }
     public function attributes()

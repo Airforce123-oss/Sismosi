@@ -249,7 +249,10 @@ onMounted(() => {
               </div>
               <i class="ion ion-person-stalker text-4xl"></i>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
+            <a
+              href="/memeriksa-tugas"
+              class="block mt-4 text-sm text-white hover:underline"
+            >
               Lihat detail
               <i class="fas fa-arrow-circle-right"></i>
             </a>

@@ -6,6 +6,7 @@ import { Link, Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { onMounted, ref, watch, computed } from 'vue';
 import Swal from 'sweetalert2';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import EditJadwalMapel from './editJadwalMapel.vue';
 const props = defineProps({
   auth: { type: Object },
   schedule: {
@@ -30,6 +31,28 @@ const props = defineProps({
     required: true,
   },
 });
+
+const selectedMapelItem = ref(null);
+const showEdit = ref(false);
+
+const showEditJadwal = ref(false);
+const selectedMapel = ref(null);
+const kelasId = ref(props.kelas_id);
+
+const editJadwal = (item) => {
+  selectedMapel.value = {
+    jam_ke: item.jam_ke,
+    mapel: item.mapel,
+    kelas: item.kelas,
+    guru_id: item.guru_id,
+    wali_kelas: item.wali_kelas,
+    day: item.day,
+    jam: item.jam,
+    tahun: item.tahun,
+    mapel_id: item.mapel_id ?? null,
+  };
+  showEditJadwal.value = true;
+};
 
 const pageNumber = ref(props.classes_for_student.meta.current_page || 1);
 console.log('isi pagenumber:', pageNumber.value);
@@ -391,20 +414,58 @@ const isTimeSlotMatching = (timeSlot, targetTime) => {
 };
 
 // Fungsi untuk mencari apakah ada slot yang sesuai
-const openEditModal = (jamKe, hari) => {
-  const jamYangDicari = editingSlot.jamKe; // Misalnya "07:00 - 07:30"
+const openEditModal = (jamKe, day) => {
+  const selectedItem = flatSchedule.value.find(
+    (item) => item.jam_ke === jamKe && item.day === day
+  );
 
-  // Cari slot yang memiliki jam yang sesuai
-  const currentSlot = schedule.value.find((slot) => {
-    return isTimeSlotMatching(slot.jam, jamYangDicari);
-  });
-
-  if (currentSlot) {
-    console.log('Slot ditemukan:', currentSlot);
-    // Lakukan aksi yang diinginkan dengan currentSlot
+  if (selectedItem && selectedItem.mapel_id) {
+    router.visit(route('matapelajaran.edit', selectedItem.mapel_id), {
+      data: {
+        kelas_id: props.kelas_id,
+        currentPage: pageNumber.value,
+        itemsPerPage: perPage.value,
+      },
+    });
   } else {
-    console.log('❌ Tidak ditemukan jam untuk jam_ke:', jamYangDicari);
+    console.warn('❌ mapel_id tidak ditemukan atau item kosong');
   }
+};
+
+const handleDelete = (id) => {
+  Swal.fire({
+    title: 'Yakin hapus jadwal ini?',
+    text: 'Tindakan ini tidak bisa dibatalkan!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.delete(route('matapelajaran.deleteJadwal', id), {
+        preserveScroll: true,
+        onSuccess: (page) => {
+          // ✅ Tampilkan alert sukses
+          Swal.fire({
+            title: 'Terhapus!',
+            text: 'Jadwal berhasil dihapus.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+          });
+        },
+        onError: (errors) => {
+          // ❌ Alert jika gagal
+          Swal.fire({
+            title: 'Gagal!',
+            text: 'Terjadi kesalahan saat menghapus.',
+            icon: 'error',
+          });
+        },
+      });
+    }
+  });
 };
 
 onMounted(() => {
@@ -710,11 +771,32 @@ console.log('schedule di parent:', schedule.value);
                   <td
                     class="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-900"
                   >
-                    <button
-                      @click="openEditModal(item.jam_ke, item.day)"
-                      class="text-indigo-600 hover:text-indigo-900"
+                    <Link
+                      :href="route('matapelajaran.editJadwal', item.mapel_id)"
+                      :data="{
+                        jam_ke: item.jam_ke,
+                        hari: item.day,
+                        guru_id: item.guru_id,
+                        wali_kelas: item.wali_kelas,
+                        kelas: item.kelas,
+                        jam: item.jam,
+                        tahun: item.tahun,
+                        ...(props.kelas_id !== 0
+                          ? { kelas_id: props.kelas_id }
+                          : {}),
+                        currentPage: pageNumber,
+                        itemsPerPage: perPage,
+                      }"
+                      method="get"
+                      class="text-indigo-600 hover:text-indigo-900 mr-3"
                     >
                       Edit
+                    </Link>
+                    <button
+                      @click="handleDelete(item.id)"
+                      class="text-red-600 hover:text-red-800"
+                    >
+                      Hapus
                     </button>
                   </td>
                 </tr>
@@ -736,6 +818,12 @@ console.log('schedule di parent:', schedule.value);
           </p>
         </div>
       </div>
+      <EditJadwalMapel
+        v-if="showEditJadwal && selectedMapel"
+        :mapel="selectedMapel"
+        :kelas_id="kelasId"
+        @close="showEditJadwal = false"
+      />
     </main>
 
     <!-- end1-->

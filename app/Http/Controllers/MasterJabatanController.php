@@ -64,7 +64,6 @@ class MasterJabatanController extends Controller
     ]);
 }
 
-
     public function create()
     {
         //
@@ -113,7 +112,6 @@ class MasterJabatanController extends Controller
 
         return redirect()->route('master-jabatan.index')->with('success', 'Jabatan berhasil diperbarui.');
     }
-
 
     /**
      * Remove the specified resource from storage.

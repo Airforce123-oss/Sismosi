@@ -18,6 +18,7 @@ use App\Models\Tugas;
 use App\Models\WaliKelas;
 use App\Models\Classes;
 use App\Models\AbsensiSiswa;
+use App\Models\MasterJabatan;
 use App\Models\BukuPenghubung;
 use App\Models\Teacher;
 use App\Models\Mapel;
@@ -25,44 +26,44 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
 class TeacherController extends Controller
-{  
+{
     public function showAbsensi($kelas, $year, $mapel, $month)
     {
         Log::info("Received parameters: Year: $year, Mapel: $mapel, Kelas: $kelas, Month: $month");
-    
+
         $mapelArray = explode(',', $mapel); // ubah jadi array mapel
         $validMapel = DB::table('master_mapel')->pluck('mapel')->toArray();
-    
+
         // Validasi semua mapel harus valid
         foreach ($mapelArray as $m) {
             if (!in_array($m, $validMapel)) {
                 return redirect()->route('studentsabsensiSiswaSatu');
             }
         }
-    
+
         $validKelas = DB::table('classes')->pluck('id')->toArray();
         if (!in_array($kelas, $validKelas)) {
             return redirect()->route('absensiSiswaJanuari');
         }
-    
+
         // Validasi kombinasi tahun + kelas + mapel
         $isValidCombination = DB::table('attendances')
             ->whereYear('tanggal_kehadiran', $year)
             ->where('kelas', $kelas)
             ->whereIn('mapel', $mapelArray)
             ->exists();
-    
+
         if (!$isValidCombination) {
             return redirect()->route('absensiSiswaJanuari');
         }
-    
+
         // Ambil data absensi
         $dataAbsensi = DB::table('attendances')
             ->whereYear('tanggal_kehadiran', $year)
             ->where('kelas', $kelas)
             ->whereIn('mapel', $mapelArray)
             ->get();
-    
+
         return response()->json([
             'dataAbsensi' => $dataAbsensi,
             'year' => $year,
@@ -71,7 +72,7 @@ class TeacherController extends Controller
             'month' => $month,
         ]);
     }
-    
+
 
     public function bukuPenghubung()
     {
@@ -81,7 +82,7 @@ class TeacherController extends Controller
         ]);
     }
 
-        public function getAllTeachers()
+    public function getAllTeachers()
     {
         return Teacher::with('masterMapel')->get();
     }
@@ -126,18 +127,7 @@ class TeacherController extends Controller
 
         return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', [
             'tugas' => [
-                'data' => collect($tugas->items())->map(function ($t) {
-                    return [
-                        'id' => $t->id,
-                        'mapel' => $t->mapel,
-                        'student' => $t->student,
-                        'teacher' => $t->teacher,
-                        'kelas' => $t->kelas,
-                        'description' => $t->description, // ✅ ditambahkan di sini
-                        'created_at' => $t->created_at,
-                        'updated_at' => $t->updated_at,
-                    ];
-                }),
+                'data' => $tugas->items(),
                 'meta' => [
                     'current_page' => $tugas->currentPage(),
                     'from' => $tugas->firstItem(),
@@ -146,18 +136,14 @@ class TeacherController extends Controller
                     'per_page' => $tugas->perPage(),
                     'total' => $tugas->total(),
                 ],
-                'links' => [
-                    'first' => $tugas->url(1),
-                    'last' => $tugas->url($tugas->lastPage()),
-                    'prev' => $tugas->previousPageUrl(),
-                    'next' => $tugas->nextPageUrl(),
-                ],
+                'links' => $tugas->linkCollection()->toArray(),
             ],
             'teachers' => $teachers,
             'students' => $students,
             'mapels' => $mapels,
             'classes_for_student' => $classes_for_student,
         ]);
+
     }
     public function createTugasSiswa(Request $request)
     {
@@ -196,14 +182,15 @@ class TeacherController extends Controller
             'teacher_id' => $teacher->id,
         ], 201);
     }
-
+    
     public function index(Request $request)
     {
-        $teacherQuery = Teacher::query()->with(['class', 'masterMapel', 'user']);
-    
+        $teacherQuery = Teacher::query()->with(['class', 'masterMapel', 'user', 'jabatan']);
+
+
         // Apply search filter if present
         $this->applySearch($teacherQuery, $request->search);
-    
+
         // Pagination
         //$wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
         //$wali_kelas = $teacherQuery->paginate(5)->appends($request->query());
@@ -214,29 +201,28 @@ class TeacherController extends Controller
         if ($request->wantsJson()) {
             return response()->json($wali_kelas);
         }
-    
-       //dd($wali_kelas->items());
+
+        //dd($wali_kelas->items());
 
         $itemsPerPage = $request->input('itemsPerPage', 20); // Default to 20 items per page
         $currentPage = $request->input('currentPage', 1); // Default to page 1
-    
+
         // Ambil data classes yang relevan
         $classesQuery = Classes::query();
-    
+
         // Ambil data master_mapel yang relevan
         $mapelQuery = Mapel::query();
         $mapelData = $mapelQuery->get();
-    
+
         // Ambil data teacher berdasarkan ID jika diberikan dalam request
         $teacherId = $request->input('teacher_id'); // Ambil ID guru dari request jika ada
         $teacher = $teacherId ? Teacher::with('masterMapel')->find($teacherId) : null;
-    
+
         //Cek apakah data `mapel` ditemukan
         // dd($mapelData);
-    
+
         $classes_for_student = $classesQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
             ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
-    
 
         return inertia('Teachers/index', [
             'wali_kelas' => TeacherResource::collection($wali_kelas),
@@ -250,11 +236,13 @@ class TeacherController extends Controller
                 'current_page' => $wali_kelas->currentPage(),
                 'last_page' => $wali_kelas->lastPage(),
                 'links' => array_merge(
-                    [[
-                        'url' => $wali_kelas->url(1),
-                        'label' => 'First',
-                        'active' => $wali_kelas->currentPage() == 1,
-                    ]],
+                    [
+                        [
+                            'url' => $wali_kelas->url(1),
+                            'label' => 'First',
+                            'active' => $wali_kelas->currentPage() == 1,
+                        ]
+                    ],
                     collect(range(1, $wali_kelas->lastPage()))->map(function ($page) use ($wali_kelas) {
                         return [
                             'url' => $wali_kelas->url($page),
@@ -262,26 +250,27 @@ class TeacherController extends Controller
                             'active' => $wali_kelas->currentPage() == $page,
                         ];
                     })->toArray(),
-                    [[
-                        'url' => $wali_kelas->previousPageUrl(),
-                        'label' => 'Previous',
-                        'active' => $wali_kelas->previousPageUrl() !== null,
-                    ],
                     [
-                        'url' => $wali_kelas->nextPageUrl(),
-                        'label' => 'Next',
-                        'active' => $wali_kelas->nextPageUrl() !== null,
-                    ],
-                    [
-                        'url' => $wali_kelas->url($wali_kelas->lastPage()),
-                        'label' => 'Last',
-                        'active' => $wali_kelas->currentPage() == $wali_kelas->lastPage(),
-                    ]]
+                        [
+                            'url' => $wali_kelas->previousPageUrl(),
+                            'label' => 'Previous',
+                            'active' => $wali_kelas->previousPageUrl() !== null,
+                        ],
+                        [
+                            'url' => $wali_kelas->nextPageUrl(),
+                            'label' => 'Next',
+                            'active' => $wali_kelas->nextPageUrl() !== null,
+                        ],
+                        [
+                            'url' => $wali_kelas->url($wali_kelas->lastPage()),
+                            'label' => 'Last',
+                            'active' => $wali_kelas->currentPage() == $wali_kelas->lastPage(),
+                        ]
+                    ]
                 ),
             ],
         ]);
     }
-    
 
     public function indexApi(Request $request)
     {
@@ -308,68 +297,68 @@ class TeacherController extends Controller
         });
     }
 
-    public function showAbsensiSiswa(Request $request)  
-{  
-    // Ambil semua data mata pelajaran  
-    $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran  
-  
-    //Log::info('Data Mapel:', $mapelList->toArray());
-    // Query untuk mengambil data kelas    
-    $classesQuery = Classes::query();    
-    
-  
-    // Terapkan filter pencarian jika ada  
-    $this->applySearch($classesQuery, $request->search);  
-  
-    // Urutkan berdasarkan ID kelas    
-    $classesQuery->orderBy('id');    
-  
-    // Pagination, dengan jumlah per halaman 20    
-    $classes = $classesQuery->paginate(20)->appends($request->only('search'));     
-    //Log::info('Classes Type:', [gettype($classes)]);
+    public function showAbsensiSiswa(Request $request)
+    {
+        // Ambil semua data mata pelajaran  
+        $mapelList = Mapel::all(['id', 'mapel']); // Ambil semua data mata pelajaran  
 
-  
-    // Kirim data ke komponen Vue  
-    return response()->json([    
-    'data' => $mapelList, // Return the mapelList in a mapel property    
-    'classes' => $classes, // Return the paginated classes   
-    ]);   
-}  
+        //Log::info('Data Mapel:', $mapelList->toArray());
+        // Query untuk mengambil data kelas    
+        $classesQuery = Classes::query();
 
-public function storeAttendance(Request $request)
-{
-    Log::info('Request received Store Attendance teacherController:', $request->all()); 
-    try {
-        $validatedData = $request->validate([
-            'siswa_id' => 'required|exists:students,id',
-            'tanggal_kehadiran' => 'required|date',
-            'status' => 'required|in:P,A,S,I'
-        ]);
 
-        $attendance = AbsensiSiswa::updateOrCreate(
-            [
-                'siswa_id' => $validatedData['siswa_id'],
-                'tanggal_kehadiran' => $validatedData['tanggal_kehadiran'],
-            ],
-            [
-                'status' => $validatedData['status'],
-            ]
-        );
+        // Terapkan filter pencarian jika ada  
+        $this->applySearch($classesQuery, $request->search);
 
+        // Urutkan berdasarkan ID kelas    
+        $classesQuery->orderBy('id');
+
+        // Pagination, dengan jumlah per halaman 20    
+        $classes = $classesQuery->paginate(20)->appends($request->only('search'));
+        //Log::info('Classes Type:', [gettype($classes)]);
+
+
+        // Kirim data ke komponen Vue  
         return response()->json([
-            'success' => true,
-            'message' => 'Absensi berhasil diperbarui.',
-            'data' => $attendance,
+            'data' => $mapelList, // Return the mapelList in a mapel property    
+            'classes' => $classes, // Return the paginated classes   
         ]);
-    } catch (\Exception $e) {
-        Log::error('Error updating attendance:', ['error' => $e->getMessage()]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memperbarui absensi.',
-        ], 500);
     }
-}
+
+    public function storeAttendance(Request $request)
+    {
+        Log::info('Request received Store Attendance teacherController:', $request->all());
+        try {
+            $validatedData = $request->validate([
+                'siswa_id' => 'required|exists:students,id',
+                'tanggal_kehadiran' => 'required|date',
+                'status' => 'required|in:P,A,S,I'
+            ]);
+
+            $attendance = AbsensiSiswa::updateOrCreate(
+                [
+                    'siswa_id' => $validatedData['siswa_id'],
+                    'tanggal_kehadiran' => $validatedData['tanggal_kehadiran'],
+                ],
+                [
+                    'status' => $validatedData['status'],
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Absensi berhasil diperbarui.',
+                'data' => $attendance,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating attendance:', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui absensi.',
+            ], 500);
+        }
+    }
 
 
     public function create()
@@ -377,10 +366,10 @@ public function storeAttendance(Request $request)
         $classes = ClassesResource::collection(Classes::all());
         $mapelQuery = Mapel::query();
         $mapelData = $mapelQuery->get()->toArray();
-    
+
         return inertia('Teachers/create', [
             'classes' => $classes,
-           'mapels' => $mapelData,
+            'mapels' => $mapelData,
         ]);
     }
 
@@ -388,36 +377,37 @@ public function storeAttendance(Request $request)
     {
         try {
             $data = $request->validated();
-
-            dd(['Test dulu gak seh' => $data]);
-
-    
             Teacher::create([
                 'name' => $data['name'],
                 'nip' => $data['nip'] ?? null,
                 'email' => $data['email'] ?? null,
-                'subject_id' => $data['subject_id'] ?? null,
-                'class_id' => $data['class_id'] ?? null,
+                'jabatan_id' => $data['jabatan_id'] ?? null,
+                'mapel_id' => $data['mapel_id'] ?? null,
+                'user_id' => auth()->id(), // atau dari data lain
             ]);
-    
+
             return redirect()->route('teachers.index')->with('success', 'Teacher created successfully.');
         } catch (\Exception $e) {
             Log::error('Error creating teacher:', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Failed to create teacher.');
         }
     }
-    
+
     public function edit(Teacher $teacher)
     {
-        $classes = ClassesResource::collection(Classes::all());
+        // Eager load relasi masterMapel dan class
+        $teacher->load('masterMapel', 'class');
 
+        $jabatans = MasterJabatan::select('id', 'nama_jabatan')->get();
+
+        $classes = ClassesResource::collection(Classes::all());
         $mapelQuery = Mapel::query();
         $mapelData = $mapelQuery->get();
-    
+
         return inertia('Teachers/edit', [
-            'student' => StudentResource::make($teacher),
-            'mapels' => $mapelData ?? [],
-            'classes' => $classes,
+            'teacher' => $teacher,
+            'mapel' => $mapelData ?? [],
+            'jabatans' => $jabatans,
         ]);
     }
 
@@ -425,22 +415,26 @@ public function storeAttendance(Request $request)
     {
         try {
             $data = $request->validated();
-    
             $teacher->update([
                 'name' => $data['name'],
                 'nip' => $data['nip'] ?? null,
                 'email' => $data['email'] ?? null,
-                'subject_id' => $data['subject_id'] ?? null,
-                'class_id' => $data['class_id'] ?? null,
+                'jabatan_id' => $data['jabatan_id'] ?? null,
+                'mapel_id' => $data['mapel_id'] ?? null,
+                'user_id' => $teacher->user_id, // tetap atau biarkan
             ]);
-    
+
+            // Kalau kamu pakai banyak mapel di pivot, ini tetap dipakai
+            if (isset($data['mapel_ids'])) {
+                $teacher->masterMapel()->sync($data['mapel_ids']);
+            }
+
             return redirect()->route('teachers.index')->with('success', 'Teacher updated successfully.');
         } catch (\Exception $e) {
             Log::error('Error updating teacher:', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Failed to update teacher.');
         }
     }
-    
 
     public function destroy(Teacher $teacher)
     {
@@ -454,13 +448,13 @@ public function storeAttendance(Request $request)
         try {
             // Ambil data teacher berdasarkan ID kelas
             $teacher = Teacher::findOrFail($id_kelas);
-            
+
             // Ambil data wali kelas yang terkait dengan teacher
             $waliKelas = $teacher->waliKelas;
-            
+
             // Ambil data mapel yang terkait dengan teacher
             $mapels = $teacher->masterMapel; // Menggunakan relasi masterMapel
-        
+
             // Kembalikan data ke vue dengan menggunakan Inertia
             return inertia('Teachers/show', [
                 'teacher' => TeacherResource::make($teacher),
@@ -471,8 +465,8 @@ public function storeAttendance(Request $request)
             return redirect()->route('dashboard')->with('error', 'Teacher not found');
         }
     }
-    
-    
+
+
     // Menampilkan Buku Penghubung
     public function bukuPenghubungApi()
     {
@@ -486,12 +480,12 @@ public function storeAttendance(Request $request)
             'id' => $id,
             'request_data' => $request->all(),
         ]);
-    
+
         try {
             // Proses update data siswa di database
             $student = Student::findOrFail($id);
             $student->update($request->all());
-    
+
             return response()->json([
                 'message' => 'Data siswa berhasil diperbarui!',
             ], 200);
@@ -499,14 +493,14 @@ public function storeAttendance(Request $request)
             Log::error('Error updating student:', [
                 'error' => $e->getMessage(),
             ]);
-    
+
             return response()->json([
                 'error' => 'Gagal memperbarui data siswa.',
             ], 500);
         }
     }
-    
-    
+
+
     // Menyimpan Buku Penghubung baru
     public function storeBukuPenghubung(Request $request)
     {
@@ -520,16 +514,16 @@ public function storeAttendance(Request $request)
                 'parentName' => 'required|string|max:255',
                 'address' => 'required|string',
             ]);
-        
+
             BukuPenghubung::create($validated);
-        
+
             return response()->json(['message' => 'Data berhasil disimpan'], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'error' => $e->errors(),
                 'request_data' => $request->all()
             ], 422);
-        } 
+        }
     }
 
     // Mengambil detail siswa
@@ -550,20 +544,20 @@ public function storeAttendance(Request $request)
         Log::info('📥 Semua query param: ' . json_encode($request->query()));
         Log::info('📥 Semua request param: ' . json_encode($request->all()));
         Log::info('Request received with ID: ' . $id);
-    
+
         if (!$id) {
             return response()->json(['message' => 'Parameter ID tidak ditemukan'], 400);
         }
-    
+
         $teacher = Teacher::with('class')->find($id); // pastikan relasi dimuat
-    
+
         if ($teacher && $teacher->class) {
             return response()->json(['class' => $teacher->class]);
         } else {
             return response()->json(['message' => 'Tidak ada kelas terkait'], 404);
         }
     }
-    
+
     public function getMapelByTeacherId(Request $request)
     {
         $teacherId = $request->input('teacher_id');
@@ -590,27 +584,27 @@ public function storeAttendance(Request $request)
         $teacherId = $user->id;
 
         $jadwalFlat = \App\Models\JadwalMataPelajaran::with([
-                'mapel',
-                'kelas',
-                'guru',
-                'kelas.waliKelas'
-            ])
+            'mapel',
+            'kelas',
+            'guru',
+            'kelas.waliKelas'
+        ])
             ->where('guru_id', $teacherId)
             ->get()
             ->map(function ($item) {
                 return [
-                    'id'         => $item->id,
-                    'hari'       => $item->hari,
-                    'jam_ke'     => $item->jam_ke,
-                    'jam'        => $item->jam,
-                    'mapel_id'   => $item->mapel_id,
+                    'id' => $item->id,
+                    'hari' => $item->hari,
+                    'jam_ke' => $item->jam_ke,
+                    'jam' => $item->jam,
+                    'mapel_id' => $item->mapel_id,
                     'mapel_nama' => $item->mapel->mapel ?? '-',
-                    'guru_id'    => $item->guru_id,
-                    'guru_nama'  => $item->guru?->name ?? '-',
-                    'kelas_id'   => $item->kelas_id,
+                    'guru_id' => $item->guru_id,
+                    'guru_nama' => $item->guru?->name ?? '-',
+                    'kelas_id' => $item->kelas_id,
                     'kelas_nama' => $item->kelas?->name ?? '-',
                     'wali_kelas' => optional(optional($item->kelas)->waliKelas)->name,
-                    'tahun'      => $item->tahun,
+                    'tahun' => $item->tahun,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
                 ];
@@ -631,7 +625,7 @@ public function storeAttendance(Request $request)
         }
 
         // Pastikan semua hari ada (meski null)
-        $days = ['senin','selasa','rabu','kamis','jumat','sabtu','minggu'];
+        $days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
         foreach ($grouped as &$slot) {
             foreach ($days as $day) {
                 if (!isset($slot['jadwal'][$day])) {
@@ -674,13 +668,13 @@ public function storeAttendance(Request $request)
         $students = $studentsQuery->with('class', 'noInduk')->paginate(20);
 
         $kelasList = Classes::all(['id', 'name']);
-        $tahunList = Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran'); 
+        $tahunList = Student::select('tahun_pelajaran')->distinct()->pluck('tahun_pelajaran');
         $studentIds = collect($students->items())->pluck('id');
         // Ambil enrollments berdasarkan student_id yang sudah diambil dari pagination
         $enrollments = \App\Models\Enrollment::with(['mapel', 'student'])
-        ->whereIn('student_id', $studentIds)
-        ->get();
-        
+            ->whereIn('student_id', $studentIds)
+            ->get();
+
         $attendances = \App\Models\Attendance::whereIn('student_id', collect($students->items())->pluck('id'))->get();
 
         return inertia('Teachers/settingLaporanNilaiSiswa', [

@@ -12,6 +12,9 @@ class Classes extends Model
     protected $fillable = [
         'name',
         'wali_kelas_id',
+        'tahun_ajaran',
+        'nama_kelas',
+        'kode_kelas',
     ];
 
     protected $table = 'classes';
@@ -21,13 +24,12 @@ class Classes extends Model
         return $this->hasMany(Section::class, 'class_id');
     }
 
-
     public function waliKelas()
     {
-        return $this->belongsTo(Teacher::class, 'wali_kelas_id'); // Menghubungkan dengan model Teacher
+        return $this->belongsTo(Teacher::class, 'wali_kelas_id');
     }
 
-        public function attendanceTeachers()
+    public function attendanceTeachers()
     {
         return $this->hasMany(AttendanceTeacher::class, 'class_id');
     }
@@ -41,5 +43,4 @@ class Classes extends Model
     {
         return $this->hasMany(Student::class, 'class_id');
     }
-
 }

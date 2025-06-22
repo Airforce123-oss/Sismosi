@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Student;
+use App\Models\Attendance;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,87 +36,79 @@ class ProfileController extends Controller
         
     }
 
-    public function dashboard(Request $request)
-    {
-        $user = auth()->user();
+public function dashboard(Request $request)
+{
+    $user = auth()->user();
 
-      if (!$user) {
+    if (!$user) {
         \Log::info('User null, redirect ke login.');
         return redirect()->route('login');
     }
-        //$role = $user->role_name;
-        $role = $user->roles->first()?->name;
 
-        if (!$role) {
-            \Log::warning('User ID ' . $user->id . ' tidak punya role. Role kosong.');
-            // Tampilkan error page daripada logout
-            return Inertia::render('ErrorPage', [
-                'message' => 'Role tidak ditemukan. Silakan hubungi admin.',
-            ]);
-        }
-    
-        $studentId = $request->input('student_id', session('student_id')); // bisa dari form atau session
-        $studentName = $request->input(key: 'student_name'); // dari request
-    
-        $totalStudents = cache()->remember('total_students', 60, function () {
-            return Student::count();
-        });
-    
-        switch ($role) {
-            case 'admin':
-                return Inertia::render('dashboard', [
-                    'total' => $totalStudents,
-                    'role_type' => $role,
-                ]);
-            case 'teacher':
-                return Inertia::render('teachersDashboard', [
-                    'total' => $totalStudents,
-                    'role_type' => $role,
-                ]);
-            case 'student':
-                // Mengambil student_id dari session yang sudah disimpan saat login
-                $studentId = $request->input('student_id', session('student_id'));
-                $studentName = $request->input('student_name');
+    $role = $user->roles->first()?->name;
 
-
-                // Jika student_id tidak ditemukan di session, redirect ke login
-                if (!$studentId) {
-                    Log::warning('Student ID tidak ditemukan di session maupun request');
-                    return redirect()->route('login');
-                }
-
-                if (!$studentName) {
-                    $student = Student::find($studentId);
-                    if (!$student) {
-                        return Inertia::render('ErrorPage', [
-                            'message' => 'Student tidak ditemukan.',
-                        ]);
-                    }
-                    $studentName = $student->name;
-                }
-
-                Log::info('Mengirim data ke frontend', [
-                    'student_id' => $studentId,
-                    'student_name' => $studentName,
-                ]);
-    
-    
-                return Inertia::render('studentsDashboard', [
-                    'total' => $totalStudents,
-                    'role_type' => $role,
-                    'profileUrl' => route('profile.edit'),
-                    'student_id' => $studentId,
-                    'student_name' => $studentName,
-                    'auth'         => ['user' => $user],
-                ]);
-            default:
-                return Inertia::render('ErrorPage', [
-                    'message' => 'Access denied. Please contact the administrator.',
-                ]);
-        }
+    if (!$role) {
+        \Log::warning('User ID ' . $user->id . ' tidak punya role.');
+        return Inertia::render('ErrorPage', [
+            'message' => 'Role tidak ditemukan. Silakan hubungi admin.',
+        ]);
     }
-    
-    
+
+    $totalStudents = cache()->remember('total_students', 60, fn () => Student::count());
+
+    switch ($role) {
+        case 'admin':
+            return Inertia::render('dashboard', [
+                'total' => $totalStudents,
+                'role_type' => $role,
+            ]);
+
+        case 'teacher':
+            return Inertia::render('teachersDashboard', [
+                'total' => $totalStudents,
+                'role_type' => $role,
+            ]);
+
+        case 'student':
+            // ✅ Ambil data student via relasi yang sudah terbukti valid
+            $student = $user->student;
+
+            if (!$student) {
+                \Log::warning("Student tidak ditemukan untuk user ID {$user->id}");
+                return Inertia::render('ErrorPage', [
+                    'message' => 'Student tidak ditemukan.',
+                ]);
+            }
+
+            $studentId = $student->id;
+            $studentName = $student->name;
+
+            // ✅ Hitung total absensi siswa
+            $totalAbsensi = Attendance::where('student_id', $studentId)->count();
+
+            \Log::info('Mengirim data student ke frontend', [
+                'student_id' => $studentId,
+                'student_name' => $studentName,
+                'total_absensi' => $totalAbsensi,
+            ]);
+
+            return Inertia::render('studentsDashboard', [
+                'total' => $totalStudents,
+                'role_type' => $role,
+                'profileUrl' => route('profile.edit'),
+                'student_id' => $studentId,
+                'student_name' => $studentName,
+                'total_absensi' => $totalAbsensi,
+                'auth' => ['user' => $user],
+            ]);
+
+        default:
+            return Inertia::render('ErrorPage', [
+                'message' => 'Access denied. Please contact the administrator.',
+            ]);
+    }
+}
+
     /**
      * Update the user's profile information.
      */

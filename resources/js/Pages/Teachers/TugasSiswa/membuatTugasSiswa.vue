@@ -2,7 +2,8 @@
 import { ref, onMounted, computed, watch, toRaw } from 'vue';
 import { initFlowbite } from 'flowbite';
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
-import Pagination from '../../../Components/Pagination7.vue';
+import Pagination from '../../../Components/Pagination10.vue';
+import Swal from 'sweetalert2';
 import { useForm, usePage, Head, router, Link } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import axios from 'axios';
@@ -143,6 +144,7 @@ watch(
       `Mapel untuk guru ${currentTeacher.name}:`,
       toRaw(filteredCourses.value)
     );
+    console.log('Isi 1 course:', toRaw(filteredCourses.value[0]));
   },
   { immediate: true }
 );
@@ -160,21 +162,35 @@ const closeTaskModal = () => {
   console.log('Closing modal - after', isTaskModalOpen.value);
 };
 
+const selectedClassId = ref(null);
+const student = ref(props.student || {});
+
 const fetchTugas = (page = 1) => {
-  //console.log('fetchTugas dipanggil dengan page:', page);
-  router.visit(route('membuatTugasSiswa'), {
-    method: 'get',
-    data: { page },
-    preserveScroll: true,
-    preserveState: true,
-    only: ['tugas'],
-    onSuccess: () => {
-      //console.log('Navigasi ke halaman tugas berhasil');
+  const classIdToSend =
+    selectedClassId.value !== null
+      ? selectedClassId.value
+      : student.value.kelas_id;
+
+  console.log('📦 class_id yang dikirim ke pagination:', classIdToSend);
+
+  router.get(
+    '/membuatTugasSiswa', // pakai URL yang sama seperti sebelumnya
+    {
+      class_id: classIdToSend,
+      page,
     },
-    onError: (errors) => {
-      console.error('Gagal fetch tugas (Inertia):', errors);
-    },
-  });
+    {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+      onSuccess: () => {
+        console.log('📦 Berhasil fetch tugas halaman:', page);
+      },
+      onError: (errors) => {
+        console.error('❌ Gagal fetch tugas:', errors);
+      },
+    }
+  );
 };
 
 // Save Task Function
@@ -249,6 +265,7 @@ const saveTask = async () => {
     axios.defaults.withCredentials = true;
 
     console.log('Data yang akan dikirim ke backend:', {
+      title: taskForm.value.title,
       mapel_id: taskForm.value.mapel_id,
       description: taskForm.value.description,
       teacher_id: taskForm.value.teacher_id,
@@ -258,6 +275,7 @@ const saveTask = async () => {
 
     // Kirim data ke backend API
     const response = await axios.post('/api/tugas', {
+      title: taskForm.value.title,
       mapel_id: taskForm.value.mapel_id,
       description: taskForm.value.description,
       teacher_id: taskForm.value.teacher_id,
@@ -285,40 +303,73 @@ const updateTask = async () => {
   try {
     console.log('Data sebelum update:', taskForm.value);
 
-    // Konversi teacher_id ke integer
     editForm.value.teacher_id = parseInt(editForm.value.teacher_id);
 
-    const response = await axios.put(
-      '/api/enrollments/' + taskForm.value.id,
-      editForm.value
-    );
+    const response = await axios.put(`/api/tugas/${taskForm.value.id}`, {
+      id: taskForm.value.id,
+      title: taskForm.value.title, // 👈 tambahkan title
+      mapel_id: taskForm.value.mapel_id,
+      description: taskForm.value.description,
+      teacher_id: taskForm.value.teacher_id,
+      class_id: taskForm.value.class_id,
+    });
 
     console.log('Respons API setelah update:', response.data);
 
-    if (response.data && response.data.enrollment) {
-      const updatedEnrollment = response.data.enrollment;
+    if (response.data && response.data.data) {
+      const updatedTask = response.data.data;
 
       const index = enrollments.value.findIndex(
-        (enrollment) => enrollment.id === updatedEnrollment.id
+        (enrollment) => enrollment.id === updatedTask.id
       );
 
       if (index !== -1) {
-        enrollments.value[index] = { ...updatedEnrollment };
+        enrollments.value[index] = { ...updatedTask };
         console.log('Enrollments setelah update:', toRaw(enrollments.value));
       }
 
       localStorage.setItem('editForm', JSON.stringify(editForm.value));
       closeEditModal();
+
+      Swal.fire({
+        title: 'Berhasil!',
+        text: 'Tugas berhasil diperbarui.',
+        icon: 'success',
+        confirmButtonText: 'OK',
+      });
     } else {
-      console.log('Gagal mengupdate enrollment:', response.data);
+      console.log('Gagal mengupdate tugas:', response.data);
     }
   } catch (error) {
     console.error(
       'Error updating task:',
       error.response?.data || error.message || 'Unknown error occurred'
     );
+
+    Swal.fire({
+      title: 'Gagal!',
+      text: 'Terjadi kesalahan saat memperbarui tugas.',
+      icon: 'error',
+      confirmButtonText: 'OK',
+    });
   }
 };
+
+const deskripsiPopup = ref('');
+const showDeskripsiModal = ref(false);
+
+function isDeskripsiPendek(desc) {
+  return desc.length < 100 && !desc.includes('\n');
+}
+
+function potongDeskripsi(desc) {
+  return desc.slice(0, 100);
+}
+
+function lihatDeskripsi(fullDesc) {
+  deskripsiPopup.value = fullDesc;
+  showDeskripsiModal.value = true;
+}
 
 const handleTask = () => {
   if (taskForm.value.id) {
@@ -332,19 +383,9 @@ const handleTask = () => {
 
 const pageNumber = ref(1);
 
-watch(pageNumber, (newPage) => {
-  console.log('Watcher: pageNumber berubah jadi', newPage);
-  fetchTugas(newPage);
-});
-
-const updatedPageNumber = (page) => {
-  if (!page || isNaN(page)) {
-    console.warn('Halaman tidak valid:', page);
-    return;
-  }
-
-  console.log('Berpindah ke halaman:', page);
-  pageNumber.value = Number(page); // Akan memicu fetch ulang jika ada watch()
+const changePage = (page) => {
+  pageNumber.value = page;
+  fetchTugas(page);
 };
 
 // On Mounted Hook to Fetch Initial Data
@@ -364,6 +405,7 @@ onMounted(async () => {
       const enrollmentsResponse = await axios.get('/api/enrollments', {
         params: { page: currentPage.value },
       });
+
       enrollments.value = enrollmentsResponse.data.data;
       totalPages.value = enrollmentsResponse.data.last_page;
       localStorage.setItem('enrollments', JSON.stringify(enrollments.value));
@@ -440,13 +482,9 @@ watch(
   pageNumber,
   (newPage) => {
     if (!newPage || isNaN(newPage)) return;
-
-    // Update URL tanpa reload halaman
     const baseUrl = window.location.origin + window.location.pathname;
     const newUrl = `${baseUrl}?page=${newPage}`;
     window.history.pushState({}, '', newUrl);
-
-    // Panggil ulang data untuk halaman baru
     fetchTugas(newPage);
   },
   { immediate: true }
@@ -470,21 +508,10 @@ watch(
     console.log('Selected Teacher:', selectedTeacher);
   }
 );
-// Edit and Delete Enrollment Functions
-function editEnrollment(enrollment) {
-  console.log('Editing enrollment:', enrollment);
-  editForm.value = { ...enrollment };
-  isEditModalOpen.value = true;
-  console.log('Modal state after edit:', isEditModalOpen.value);
-}
 
 function closeEditModal() {
   isEditModalOpen.value = false;
 }
-
-const deleteEnrollment = (id) => {
-  console.log(`Delete enrollment dengan ID: ${id}`);
-};
 
 const submitEdit = async () => {
   try {
@@ -551,6 +578,73 @@ const submitEdit = async () => {
       'Error updating enrollment:',
       error.response?.data || error.message || 'Unknown error occurred'
     );
+  }
+};
+
+const showTaskModal = ref(false);
+
+const editTask = (task) => {
+  taskForm.value = {
+    id: task.id,
+    mapel_id: task.mapel_id ?? task.mapel?.id ?? null,
+    description: task.description ?? '',
+    teacher_id: task.teacher_id ?? task.teacher?.id ?? null,
+    student_id:
+      task.student_id ??
+      task.student?.id ??
+      students.value.find((s) => s.class_id === task.class_id)?.id ??
+      null,
+    class_id: task.class_id ?? task.kelas?.id ?? null,
+  };
+
+  showTaskModal.value = true;
+  console.log('Edit task:', toRaw(taskForm.value));
+};
+
+const deleteTask = async (id) => {
+  const result = await Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: 'Tugas yang dihapus tidak bisa dikembalikan!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal',
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const token = document.head.querySelector(
+      'meta[name="csrf-token"]'
+    ).content;
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    axios.defaults.withCredentials = true;
+
+    const response = await axios.delete(`/api/tugas/${id}`);
+    console.log('Tugas berhasil dihapus:', response.data);
+
+    await fetchTugas(); // Refresh data
+
+    await Swal.fire({
+      title: 'Berhasil!',
+      text: 'Tugas telah dihapus.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  } catch (error) {
+    console.error(
+      'Gagal menghapus tugas:',
+      error.response?.data || error.message
+    );
+
+    Swal.fire({
+      title: 'Gagal',
+      text: 'Terjadi kesalahan saat menghapus tugas.',
+      icon: 'error',
+    });
   }
 };
 </script>
@@ -651,7 +745,7 @@ const submitEdit = async () => {
 }
 
 .btn-cancel {
-background-color: #f44336;
+  background-color: #f44336;
   color: white;
   padding: 10px 20px;
   border-radius: 5px;
@@ -879,6 +973,23 @@ background-color: #f44336;
                 </select>
               </div>
 
+              <!-- Input Judul Tugas -->
+              <div class="mb-4">
+                <label
+                  for="title"
+                  class="block text-sm font-medium text-gray-700"
+                >
+                  Judul Tugas
+                </label>
+                <input
+                  v-model="taskForm.title"
+                  id="title"
+                  type="text"
+                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  placeholder="Masukkan judul tugas"
+                />
+              </div>
+
               <!-- Input Deskripsi Tugas -->
               <div class="mb-4">
                 <label
@@ -1030,12 +1141,19 @@ background-color: #f44336;
         class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
       >
         <table class="min-w-full table-auto border-collapse">
-          <thead class="bg-gray-100 sticky top-0 z-10">
+          <thead
+            class="bg-gray-100 sticky top-0 z-10 text-gray-700 text-sm font-semibold"
+          >
             <tr>
               <th
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
               >
                 ID
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Judul
               </th>
               <th
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
@@ -1070,20 +1188,34 @@ background-color: #f44336;
               :key="task.id"
               class="border-b hover:bg-gray-50 transition duration-150"
             >
-              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
-              <td class="px-4 py-3 whitespace-nowrap">
+              <td class="px-2 py-3 whitespace-nowrap">{{ task.id }}</td>
+              <td class="px-2 py-3 whitespace-nowrap">
+                {{ task.title || '—' }}
+              </td>
+              <td class="px-2 py-3 whitespace-nowrap">
                 {{ task.mapel?.mapel ?? '—' }}
               </td>
-              <td class="px-4 py-3 whitespace-pre-wrap">
-                {{ task.description }}
+              <td class="px-2 py-3 whitespace-pre-wrap max-w-xs">
+                <div v-if="isDeskripsiPendek(task.description)">
+                  {{ task.description }}
+                </div>
+                <div v-else>
+                  {{ potongDeskripsi(task.description) }}...
+                  <button
+                    @click="lihatDeskripsi(task.description)"
+                    class="text-blue-600 hover:underline text-sm ml-1"
+                  >
+                    Lihat detail
+                  </button>
+                </div>
               </td>
-              <td class="px-4 py-3 whitespace-nowrap">
+              <td class="px-2 py-3 whitespace-nowrap">
                 {{ task.teacher?.name ?? '—' }}
               </td>
-              <td class="px-4 py-3 whitespace-nowrap">
+              <td class="px-2 py-3 whitespace-nowrap">
                 {{ task.kelas?.name ?? '—' }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-2 py-3">
                 <div class="flex items-center justify-center space-x-2">
                   <button
                     @click="editTask(task)"
@@ -1131,9 +1263,136 @@ background-color: #f44336;
             </tr>
           </tbody>
         </table>
-      </div>
 
-      <Pagination :data="props.tugas" :updatedPageNumber="updatedPageNumber" />
+        <!-- Modal Form Tugas -->
+        <div
+          v-if="showTaskModal"
+          class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+        >
+          <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-center">
+              {{ taskForm.id ? 'Edit Tugas' : 'Tambah Tugas' }}
+            </h3>
+
+            <!-- Form Fields -->
+            <div class="space-y-4">
+              <!-- Mapel -->
+              <div>
+                <label class="block text-sm font-medium">Mapel</label>
+                <select
+                  v-model="taskForm.mapel_id"
+                  class="w-full mt-1 p-2 border rounded-md"
+                >
+                  <option disabled value="">Pilih Mapel</option>
+                  <option
+                    v-for="course in filteredCourses"
+                    :key="course.id"
+                    :value="course.id"
+                  >
+                    {{ course.nama_mapel ?? '—' }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Guru -->
+              <div>
+                <label class="block text-sm font-medium">Guru</label>
+                <select
+                  v-model="taskForm.teacher_id"
+                  class="w-full mt-1 p-2 border rounded-md"
+                >
+                  <option disabled value="">Pilih Guru</option>
+                  <option
+                    v-for="teacher in teachers"
+                    :key="teacher.id"
+                    :value="teacher.id"
+                  >
+                    {{ teacher.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Kelas -->
+              <div>
+                <label class="block text-sm font-medium">Kelas</label>
+                <select
+                  v-model="taskForm.class_id"
+                  class="w-full mt-1 p-2 border rounded-md"
+                >
+                  <option disabled value="">Pilih Kelas</option>
+                  <option
+                    v-for="kelas in classesForStudent"
+                    :key="kelas.id"
+                    :value="kelas.id"
+                  >
+                    {{ kelas.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Judul Tugas -->
+              <div>
+                <label class="block text-sm font-medium">Judul Tugas</label>
+                <input
+                  v-model="taskForm.title"
+                  type="text"
+                  class="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Masukkan judul tugas"
+                />
+              </div>
+
+              <!-- Deskripsi -->
+              <div>
+                <label class="block text-sm font-medium">Deskripsi</label>
+                <textarea
+                  v-model="taskForm.description"
+                  rows="4"
+                  class="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Tulis deskripsi tugas..."
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Tombol -->
+            <div class="mt-6 flex justify-end space-x-3">
+              <button
+                @click="showTaskModal = false"
+                class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                Batal
+              </button>
+              <button
+                @click="updateTask"
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Lihat Deskripsi -->
+        <div
+          v-if="showDeskripsiModal"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+        >
+          <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 class="text-lg font-semibold mb-4">Deskripsi Lengkap</h3>
+            <p class="whitespace-pre-wrap text-gray-700">
+              {{ deskripsiPopup }}
+            </p>
+            <div class="mt-6 text-right">
+              <button
+                @click="showDeskripsiModal = false"
+                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Pagination :data="tugas" :updatedPageNumber="changePage" />
     </main>
     <!-- Sidebar -->
     <SidebarTeacher />

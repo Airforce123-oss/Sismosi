@@ -17,7 +17,7 @@ use App\Models\DetailStudent;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Attendance;
-use App\Models\Classes; 
+use App\Models\Classes;
 use App\Models\Section;
 use App\Models\Religion;
 use Inertia\Inertia;
@@ -36,21 +36,21 @@ class StudentController extends Controller
     public function index(Request $request)
     {
         // Ambil data siswa dengan relasi
-        $studentQuery = Student::query()->with(['noInduk', 'religion', 'gender', 'class','attendances']);
-    
+        $studentQuery = Student::query()->with(['noInduk', 'religion', 'gender', 'class', 'attendances']);
+
         // Terapkan filter pencarian jika ada
         $this->applySearch($studentQuery, $request->search);
         $studentQuery->orderBy('id');
-        
+
         // Pagination
         $students = $studentQuery->paginate(5)->appends($request->only('search'));
-    
+
         // Ambil data untuk classes, genders, no_induks, dan religions
         $classes = Classes::all();  // Ganti dengan model yang sesuai
         $genders = Gender::all();      // Ganti dengan model yang sesuai
         $noInduks = NoInduk::all();    // Ganti dengan model yang sesuai
         $religions = Religion::all();  // Ganti dengan model yang sesuai
-    
+
         // Kirim data ke komponen Inertia
         return inertia('Students/index', [
             'students' => StudentResource::collection($students),
@@ -66,15 +66,15 @@ class StudentController extends Controller
         try {
             // Ambil semua data siswa dengan relasi (tanpa filter, tanpa pagination)
             $students = Student::with(['noInduk', 'religion', 'gender', 'class', 'attendances'])
-                            ->orderBy('id')
-                            ->get();
-    
+                ->orderBy('id')
+                ->get();
+
             // Ambil data lain seperti di index()
             $classes = Classes::all();
             $genders = Gender::all();
             $noInduks = NoInduk::all();
             $religions = Religion::all();
-    
+
             // Kirim dalam bentuk JSON (tanpa info user/roles karena public)
             return response()->json([
                 'students' => StudentResource::collection($students),
@@ -92,31 +92,30 @@ class StudentController extends Controller
             ], 500);
         }
     }
-    
-    
+
+
     public function getLoggedInStudent(Request $request)
     {
         $user = Auth::user();
 
 
-    
+
         if (!$user || $user->role_name !== 'student') {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
-    
+
         // Ambil student yang berelasi dengan user
         $student = Student::where('user_id', $user->id)->first();
-    
+
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404);
         }
-    
+
         return response()->json([
             'id' => $student->id,
             'name' => $student->name,
         ]);
     }
-    
     public function melihatDataAbsensiSiswa(Request $request)
     {
         $user = auth()->user();
@@ -184,19 +183,19 @@ class StudentController extends Controller
     }
 
     public function indexDetailStudentApi(Request $request)
-{
-    // Query untuk DetailStudent dengan relasi yang sesuai
-    $detailStudentQuery = DetailStudent::query()->with('student'); // Jika DetailStudent punya relasi ke student
-    $this->applySearch($detailStudentQuery, $request->search);
+    {
+        // Query untuk DetailStudent dengan relasi yang sesuai
+        $detailStudentQuery = DetailStudent::query()->with('student'); // Jika DetailStudent punya relasi ke student
+        $this->applySearch($detailStudentQuery, $request->search);
 
-    // Pagination untuk detail students
-    $detailStudents = $detailStudentQuery->paginate(10)->appends($request->only('search'));
+        // Pagination untuk detail students
+        $detailStudents = $detailStudentQuery->paginate(10)->appends($request->only('search'));
 
-    return response()->json($detailStudents);
-}
+        return response()->json($detailStudents);
+    }
 
 
-    
+
 
     protected function applySearch(Builder $query, $search)
     {
@@ -224,14 +223,14 @@ class StudentController extends Controller
     public function store(StoreStudentRequest $request)
     {
         //Log::info('Data yang diterima:', $request->validated());
-        
+
         //$student = Student::create($request->validated());
-        
+
         //Log::info('Data yang berhasil disimpan:', $student->toArray());
 
         StudentHelper::logReceivedData($request->all());
 
-         $validated = StudentHelper::validateStudentData($request);
+        $validated = StudentHelper::validateStudentData($request);
 
         try {
             Student::create($request->validated());
@@ -241,31 +240,53 @@ class StudentController extends Controller
             return redirect()->back()->with('error', 'Failed to create student.');
         }
     }
-    
 
     public function edit(Student $student)
     {
-        $classes = ClassesResource::collection(Classes::all());
-        $religions = ReligionResource::collection(Religion::all());
-        $no_induks = NoIndukResource::collection(NoInduk::all());
-        $genders = GenderResource::collection(Gender::all());
+        // Eager load relasi penting agar form bisa tampil lengkap
+        $student->load(['class', 'gender', 'religion', 'noInduk']);
 
+        // Ambil semua data relasi yang diperlukan
+        $classes = Classes::query()->select(['id', 'name'])->get();
+        $genders = Gender::query()->select(['id', 'name'])->get();
+        $religions = Religion::query()->select(['id', 'name'])->get();
+        $no_induks = NoInduk::query()->select(['id', 'no_induk'])->get();
 
         return inertia('Students/edit', [
-            'student' => StudentResource::make($student),
-            'classes' => $classes,
-            'religions' => $religions,
-            'genders' => $genders,
-            'no_induks' => $no_induks,
+            'student' => $student,
+            'classes' => [
+                'data' => $classes,
+            ],
+            'genders' => [
+                'data' => $genders,
+            ],
+            'religions' => [
+                'data' => $religions,
+            ],
+            'no_induks' => [
+                'data' => $no_induks,
+            ],
         ]);
     }
 
     public function update(UpdateStudentRequest $request, Student $student)
     {
-        $student->update($request->validated());
+        try {
+            // Validasi dan update data
+            $student->update($request->validated());
 
-        return redirect()->route('students.index');
+            // Redirect ke index dengan pesan sukses
+            return redirect()->route('students.index')
+                ->with('success', 'Data siswa berhasil diperbarui.');
+        } catch (\Exception $e) {
+            \Log::error('Gagal memperbarui siswa', ['error' => $e->getMessage()]);
+
+            // Redirect kembali dengan pesan error
+            return redirect()->back()
+                ->with('error', 'Terjadi kesalahan saat memperbarui data siswa.');
+        }
     }
+
 
     public function destroy(Student $student)
     {
@@ -273,7 +294,7 @@ class StudentController extends Controller
 
         return redirect()->route('students.index');
     }
-    
+
     public function getSections(Request $request)
     {
         $classId = $request->query('class_id');
@@ -321,13 +342,13 @@ class StudentController extends Controller
 
         return response()->json($noInduks);
     }
-    
+
     public function showStudent($id)
     {
         try {
             // Ambil data siswa berdasarkan ID dari tabel 'detailstudents'
             $student = DetailStudent::findOrFail($id);  // Menggunakan findOrFail agar memunculkan error jika ID tidak ditemukan
-            
+
             return response()->json([
                 'student' => $student,
             ], 200);
@@ -341,17 +362,17 @@ class StudentController extends Controller
     public function show()
     {
         $student = auth()->user();
-    
+
         // Cek role manual, misal kolom 'role'
         logger('User role:', ['role' => $student->role]);
-    
+
         return response()->json($student);
     }
-    
+
     public function getByNomorInduk($nomor_induk)
     {
         $student = Student::whereHas('noInduk', function ($query) use ($nomor_induk) {
-            $query->where('no_induk', $nomor_induk); 
+            $query->where('no_induk', $nomor_induk);
         })->with('noInduk')->first();
 
         if (!$student) {
@@ -361,7 +382,7 @@ class StudentController extends Controller
         return response()->json($student);
     }
 
-        public function indexApiDetailStudent(Request $request)
+    public function indexApiDetailStudent(Request $request)
     {
         // Ambil data dari tabel detailstudents, misalnya dengan pagination
         $students = DetailStudent::paginate(10);  // Sesuaikan pagination sesuai kebutuhan
@@ -380,7 +401,7 @@ class StudentController extends Controller
             'parent_name' => 'nullable|string|max:255',
             'address' => 'nullable|string',
         ]);
-    
+
         try {
             // Simpan data ke dalam tabel detailstudents
             $student = DetailStudent::create([
@@ -391,7 +412,7 @@ class StudentController extends Controller
                 'parent_name' => $validated['parent_name'] ?? null,
                 'address' => $validated['address'] ?? null,
             ]);
-    
+
             // Mengembalikan respon sukses
             return response()->json(['message' => 'Siswa berhasil ditambahkan!', 'student' => $student], 201);
         } catch (\Exception $e) {
@@ -399,5 +420,5 @@ class StudentController extends Controller
             return response()->json(['error' => 'Terjadi kesalahan saat menyimpan data siswa'], 500);
         }
     }
-    
+
 }
