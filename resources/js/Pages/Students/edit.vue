@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { watch, ref, onMounted } from 'vue';
+import Swal from 'sweetalert2';
 import { initFlowbite } from 'flowbite';
 import axios from 'axios';
 
@@ -20,6 +21,7 @@ const props = defineProps({
 const classes = ref(props.classes.data || []);
 const genders = ref(props.genders.data || []);
 const religions = ref(props.religions.data || []);
+const noInduks = ref(props.no_induks.data || []);
 
 let sections = ref({});
 
@@ -40,7 +42,30 @@ const getSections = async (class_id) => {
   }
 };
 
+onMounted(() => {
+  if (props.student) {
+    form.name = props.student.name ?? '';
+    form.gender_id = props.student.gender_id ?? '';
+    form.class_id = props.student.class_id ?? '';
+    form.religion_id = props.student.religion_id ?? '';
+
+    // 🔁 Ubah dari ID ke nilai no_induk
+    const matched = noInduks.value.find(
+      (n) => n.id === props.student.no_induk_id
+    );
+    form.no_induk_id = matched ? matched.no_induk : ''; // ← ini yang penting
+  }
+});
+
+const resolveNoIndukId = () => {
+  const match = noInduks.value.find(
+    (item) => item.no_induk === form.no_induk_id
+  );
+  if (match) form.no_induk_id = match.id;
+};
+
 const submit = () => {
+  resolveNoIndukId();
   form.put(route('students.update', props.student.id), {
     onSuccess: () => {
       Swal.fire({
@@ -66,20 +91,6 @@ const submit = () => {
     },
   });
 };
-
-onMounted(() => {
-  if (props.student) {
-    form.name = props.student.name ?? '';
-    form.no_induk_id = props.student.no_induk_id ?? '';
-    form.gender_id = props.student.gender_id ?? '';
-    form.class_id = props.student.class_id ?? '';
-    form.religion_id = props.student.religion_id ?? '';
-  }
-
-  console.log('🟡 Nama siswa setelah mount:', form.name);
-  console.log('🟢 Semua nilai form:', form);
-  initFlowbite();
-});
 
 watch(
   () => form.class_id,
@@ -260,7 +271,7 @@ watch(
                       <input
                         v-model="form.no_induk_id"
                         type="text"
-                        id="nomorInduk"
+                        id="no_induk_id"
                         placeholder="Masukkan Nomor Induk"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         :class="{

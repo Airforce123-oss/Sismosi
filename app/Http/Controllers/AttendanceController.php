@@ -168,7 +168,6 @@ class AttendanceController extends Controller
         // Hapus baris ini jika status_kehadiran tidak diperlukan
         // $attendance->status_kehadiran = $request->status_kehadiran; // Mengambil status kehadiran dari request
 
-        // Simpan ke database
         if ($attendance->save()) {
             return response()->json(['message' => 'Data berhasil disimpan'], 200);
         } else {

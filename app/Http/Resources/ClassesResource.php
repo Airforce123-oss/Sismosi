@@ -14,7 +14,16 @@ class ClassesResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'kode_kelas' => $this->kode_kelas,
+            'wali_kelas_id' => $this->wali_kelas_id,
+            'tahun_ajaran' => $this->tahun_ajaran,
+            'created_at' => $this->created_at?->toDateTimeString(),
+            'updated_at' => $this->updated_at?->toDateTimeString(),
+
+        ];
     }
 }
 

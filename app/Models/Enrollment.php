@@ -49,9 +49,4 @@ class Enrollment extends Model
         {
             return $this->belongsTo(Teacher::class, 'teacher_id');
         }
-    
-    
-   
-
-
 }

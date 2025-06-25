@@ -15,14 +15,6 @@ class StudentHelper
     // Fungsi untuk melakukan validasi data
     public static function validateStudentData($request)
     {
-        return $request->validate([
-            'no_induk_id' => 'required|exists:no_induks,id',
-            'gender_id' => 'required|exists:genders,id',
-            'religion_id' => 'required|exists:religions,id',
-            'name' => 'required|string|max:255',
-            'class_id' => 'required|exists:classes,id',  
-            //'parent_name' => 'required|string|max:255',
-            //'address' => 'required|string|max:255',
-        ]);
+        return $request->validated(); // ✅ ini aman, karena StoreStudentRequest sudah memvalidasi sebelumnya
     }
 }

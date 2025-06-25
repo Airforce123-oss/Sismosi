@@ -45,6 +45,8 @@ defineProps({
   },
 });
 
+const selectedStudent = ref(null);
+
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
@@ -69,6 +71,21 @@ const studentsUrl = computed(() => {
   }
   return url;
 });
+
+const handleTambahSiswa = () => {
+  console.log('Selected Student:', selectedStudent.value);
+
+  if (selectedStudent.value) {
+    // Gunakan no_induk_id, bukan student_id
+    router.visit(
+      route('students.create', {
+        no_induk_id: selectedStudent.value.no_induk_id,
+      })
+    );
+  } else {
+    router.visit(route('students.create'));
+  }
+};
 
 watch(
   () => studentsUrl.value,
@@ -264,14 +281,16 @@ onMounted(() => {
               </div>
             </div>
           </div>
-          <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <!-- Link untuk tambah guru -->
-            <Link
-              :href="route('students.create')"
-              class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          <div class="mt-4 sm:ml-16 sm:flex-none">
+            <button
+              @click.prevent="handleTambahSiswa"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
             >
               Tambah Siswa
-            </Link>
+              <template v-if="selectedStudent">
+                : {{ selectedStudent.name }}
+              </template>
+            </button>
           </div>
         </div>
       </div>
@@ -289,51 +308,45 @@ onMounted(() => {
                     <thead class="bg-gray-50">
                       <tr>
                         <th
-                          scope="col"
                           class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                         >
                           ID
                         </th>
                         <th
-                          scope="col"
                           class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                         >
                           Nomor Induk Siswa
                         </th>
                         <th
-                          scope="col"
                           class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                         >
                           Nama
                         </th>
                         <th
-                          scope="col"
                           class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
                         >
                           Jenis Kelamin
                         </th>
                         <th
-                          scope="col"
                           class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                         >
                           Kelas
                         </th>
                         <th
-                          scope="col"
                           class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                         >
                           Agama
                         </th>
                         <th
-                          scope="col"
                           class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                         >
                           Dibuat Pada
                         </th>
                         <th
-                          scope="col"
-                          class="relative py-3.5 pl-3 pr-4 sm:pr-6"
-                        />
+                          class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                        >
+                          Aksi
+                        </th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
@@ -383,16 +396,14 @@ onMounted(() => {
                         >
                           {{ student.created_at }}
                         </td>
-
                         <td
-                          class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                          class="relative whitespace-nowrap py-4 pl-3 pr-4 text-sm font-medium sm:pr-6"
                         >
                           <Link
                             :href="route('students.edit', student.id)"
                             class="text-indigo-600 hover:text-indigo-900"
+                            >Edit</Link
                           >
-                            Edit
-                          </Link>
                           <button
                             @click="deleteStudent(student.id)"
                             class="ml-2 text-indigo-600 hover:text-indigo-900"
@@ -404,6 +415,7 @@ onMounted(() => {
                     </tbody>
                   </table>
                 </div>
+
                 <Pagination
                   :data="students"
                   :updatedPageNumber="updatedPageNumber"

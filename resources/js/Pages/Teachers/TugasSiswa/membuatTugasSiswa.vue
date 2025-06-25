@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch, toRaw } from 'vue';
+import { ref, onMounted, computed, watch, toRaw, watchEffect } from 'vue';
 import { initFlowbite } from 'flowbite';
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
 import Pagination from '../../../Components/Pagination10.vue';
@@ -165,16 +165,22 @@ const closeTaskModal = () => {
 const selectedClassId = ref(null);
 const student = ref(props.student || {});
 
+const defaultClassId = computed(() => {
+  return selectedClassId.value ?? student.value?.kelas_id ?? 1; // 👈 fallback default class_id yang valid
+});
+
 const fetchTugas = (page = 1) => {
-  const classIdToSend =
-    selectedClassId.value !== null
-      ? selectedClassId.value
-      : student.value.kelas_id;
+  const classIdToSend = defaultClassId.value;
+
+  if (!classIdToSend) {
+    console.warn('⚠️ classIdToSend masih undefined. Abort fetch.');
+    return; // 🛑 Jangan lanjutkan jika belum siap
+  }
 
   console.log('📦 class_id yang dikirim ke pagination:', classIdToSend);
 
   router.get(
-    '/membuatTugasSiswa', // pakai URL yang sama seperti sebelumnya
+    '/membuatTugasSiswa',
     {
       class_id: classIdToSend,
       page,
@@ -192,6 +198,17 @@ const fetchTugas = (page = 1) => {
     }
   );
 };
+
+watch(
+  () => student.value?.kelas_id,
+  (kelasId) => {
+    if (kelasId) {
+      console.log('👀 kelas_id dari student tersedia:', kelasId);
+      fetchTugas(); // page default 1
+    }
+  },
+  { immediate: true }
+);
 
 // Save Task Function
 const saveTask = async () => {
@@ -358,13 +375,10 @@ const updateTask = async () => {
 const deskripsiPopup = ref('');
 const showDeskripsiModal = ref(false);
 
-function isDeskripsiPendek(desc) {
-  return desc.length < 100 && !desc.includes('\n');
-}
+const potongDeskripsi = (desc, limit = 5) =>
+  desc.trim().split(/\s+/).slice(0, limit).join(' ');
 
-function potongDeskripsi(desc) {
-  return desc.slice(0, 100);
-}
+const isDeskripsiPendek = (desc) => desc.trim().split(/\s+/).length <= 5;
 
 function lihatDeskripsi(fullDesc) {
   deskripsiPopup.value = fullDesc;
@@ -595,10 +609,20 @@ const editTask = (task) => {
       students.value.find((s) => s.class_id === task.class_id)?.id ??
       null,
     class_id: task.class_id ?? task.kelas?.id ?? null,
+    title: task.title ?? '', // Pastikan title ikut dimasukkan
   };
 
   showTaskModal.value = true;
-  console.log('Edit task:', toRaw(taskForm.value));
+
+  // Log per bidang (lebih mudah dibaca dan didiagnosis)
+  console.log('📥 Memulai Edit Task');
+  console.log('🆔 ID:', taskForm.value.id);
+  console.log('📘 Title:', taskForm.value.title);
+  console.log('📚 Mapel ID:', taskForm.value.mapel_id);
+  console.log('👤 Guru ID:', taskForm.value.teacher_id);
+  console.log('🏫 Kelas ID:', taskForm.value.class_id);
+  console.log('🎓 Siswa ID (opsional):', taskForm.value.student_id);
+  console.log('📝 Deskripsi:', taskForm.value.description);
 };
 
 const deleteTask = async (id) => {
@@ -647,6 +671,18 @@ const deleteTask = async (id) => {
     });
   }
 };
+watch(
+  () => props.tugas,
+  (newVal) => {
+    console.log('📥 props.tugas berubah:', newVal);
+    tugas.value = newVal;
+  },
+  { immediate: true }
+);
+
+watchEffect(() => {
+  tugas.value = usePage().props.tugas;
+});
 </script>
 
 <style scoped>
@@ -887,7 +923,7 @@ const deleteTask = async (id) => {
     <main class="p-7 md:ml-64 h-screen">
       <Head title="Membuat Tugas Siswa" />
       <h2
-        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-10 mb-6 text-center"
       >
         Tugas Siswa
       </h2>
@@ -911,30 +947,32 @@ const deleteTask = async (id) => {
           </button>
         </div>
 
+        <!-- Modal Overlay -->
         <div
           v-if="isTaskModalOpen"
-          class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+          class="fixed inset-0 z-50 bg-gradient-to-br from-black/60 to-black/40 flex items-center justify-center px-4"
         >
-          <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <!-- Add Judul Modal -->
-            <h3 class="text-xl font-bold text-center mb-6">
+          <!-- Modal Box -->
+          <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
+            <!-- Judul Modal -->
+            <h3 class="text-2xl font-bold text-center mb-6 text-gray-800">
               Tambah Tugas Siswa
             </h3>
+
             <!-- Form -->
-            <form @submit.prevent="handleTask">
-              <!-- Input Guru -->
-              <!-- Nama Guru (Auto-selected & Disabled) -->
-              <div class="mb-4">
+            <form @submit.prevent="handleTask" class="space-y-5">
+              <!-- Guru (Auto-filled & Disabled) -->
+              <div>
                 <label
                   for="teacher_id"
-                  class="block text-sm font-medium text-gray-700"
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Nama Guru
                 </label>
                 <select
                   v-model="taskForm.teacher_id"
                   id="teacher_id"
-                  class="w-full px-4 py-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                  class="w-full p-2.5 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
                   disabled
                 >
                   <option
@@ -947,22 +985,20 @@ const deleteTask = async (id) => {
                 </select>
               </div>
 
-              <!-- Nama Mata Pelajaran -->
-              <div class="mb-4">
+              <!-- Mata Pelajaran -->
+              <div>
                 <label
                   for="course_id"
-                  class="block text-sm font-medium text-gray-700"
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Nama Mata Pelajaran
                 </label>
                 <select
                   v-model="taskForm.mapel_id"
                   id="course_id"
-                  class="w-full px-4 py-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
-                  <option value="" disabled selected>
-                    Pilih Mata Pelajaran
-                  </option>
+                  <option value="" disabled>Pilih Mata Pelajaran</option>
                   <option
                     v-for="course in filteredCourses"
                     :key="course.id"
@@ -973,11 +1009,11 @@ const deleteTask = async (id) => {
                 </select>
               </div>
 
-              <!-- Input Judul Tugas -->
-              <div class="mb-4">
+              <!-- Judul Tugas -->
+              <div>
                 <label
                   for="title"
-                  class="block text-sm font-medium text-gray-700"
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Judul Tugas
                 </label>
@@ -985,37 +1021,40 @@ const deleteTask = async (id) => {
                   v-model="taskForm.title"
                   id="title"
                   type="text"
-                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="Masukkan judul tugas"
                 />
               </div>
 
-              <!-- Input Deskripsi Tugas -->
-              <div class="mb-4">
+              <!-- Deskripsi Tugas -->
+              <div>
                 <label
                   for="description"
-                  class="block text-sm font-medium text-gray-700"
-                  >Deskripsi</label
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
+                  Deskripsi
+                </label>
                 <textarea
                   v-model="taskForm.description"
                   id="description"
-                  class="mt-1 block w-full border-gray-300 rounded-md"
+                  rows="4"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="Masukkan deskripsi"
                 ></textarea>
               </div>
 
-              <!-- Input Kelas -->
-              <div class="mb-4">
+              <!-- Kelas -->
+              <div>
                 <label
                   for="class_id"
-                  class="block text-sm font-medium text-gray-700"
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Kelas
                 </label>
                 <select
                   v-model="taskForm.class_id"
-                  class="w-full px-4 py-2 border rounded-md"
+                  id="class_id"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value="" disabled>Pilih Kelas</option>
                   <option
@@ -1028,21 +1067,26 @@ const deleteTask = async (id) => {
                 </select>
               </div>
 
-              <div class="flex justify-end space-x-4">
+              <!-- Tombol Aksi -->
+              <div class="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   @click="closeTaskModal"
-                  class="btn btn-secondary mr-3"
+                  class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
                 >
                   Batal
                 </button>
-                <button type="submit" class="btn btn-primary mr-2">
+                <button
+                  type="submit"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
                   Simpan
                 </button>
               </div>
             </form>
           </div>
         </div>
+
         <div
           v-if="isEditModalOpen"
           class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
@@ -1140,82 +1184,72 @@ const deleteTask = async (id) => {
       <div
         class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
       >
-        <table class="min-w-full table-auto border-collapse">
+        <table
+          class="min-w-full table-auto border-collapse shadow-lg rounded-xl overflow-hidden"
+        >
           <thead
-            class="bg-gray-100 sticky top-0 z-10 text-gray-700 text-sm font-semibold"
+            class="bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-sm font-semibold"
           >
             <tr>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                ID
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Judul
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Mata Pelajaran
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Deskripsi
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Guru
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Kelas
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Aksi
-              </th>
+              <th class="px-4 py-3 text-left">ID</th>
+              <th class="px-4 py-3 text-left">Judul</th>
+              <th class="px-4 py-3 text-left">Mata Pelajaran</th>
+              <th class="px-4 py-3 text-left">Deskripsi</th>
+              <th class="px-4 py-3 text-left">Guru</th>
+              <th class="px-4 py-3 text-left">Kelas</th>
+              <th class="px-4 py-3 text-left">Aksi</th>
             </tr>
           </thead>
           <tbody class="text-gray-700 text-sm md:text-base">
             <tr
-              v-for="task in tugas.data"
+              v-for="(task, index) in tugas.data"
               :key="task.id"
-              class="border-b hover:bg-gray-50 transition duration-150"
+              :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+              class="transition duration-150 hover:bg-indigo-50"
             >
-              <td class="px-2 py-3 whitespace-nowrap">{{ task.id }}</td>
-              <td class="px-2 py-3 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.title || '—' }}
               </td>
-              <td class="px-2 py-3 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.mapel?.mapel ?? '—' }}
               </td>
-              <td class="px-2 py-3 whitespace-pre-wrap max-w-xs">
+              <td class="px-4 py-3 whitespace-pre-wrap max-w-xs">
                 <div v-if="isDeskripsiPendek(task.description)">
                   {{ task.description }}
                 </div>
-                <div v-else>
-                  {{ potongDeskripsi(task.description) }}...
-                  <button
-                    @click="lihatDeskripsi(task.description)"
-                    class="text-blue-600 hover:underline text-sm ml-1"
-                  >
-                    Lihat detail
-                  </button>
+                <div v-else class="flex items-start flex-col space-y-1">
+                  <p class="text-gray-800">
+                    {{ potongDeskripsi(task.description) }}...
+                    <button
+                      @click="lihatDeskripsi(task.description)"
+                      class="ml-1 inline-flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium transition"
+                    >
+                      <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M15 12H9m0 0l3-3m-3 3l3 3"
+                        />
+                      </svg>
+                      Lihat selengkapnya
+                    </button>
+                  </p>
                 </div>
               </td>
-              <td class="px-2 py-3 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.teacher?.name ?? '—' }}
               </td>
-              <td class="px-2 py-3 whitespace-nowrap">
+              <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.kelas?.name ?? '—' }}
               </td>
-              <td class="px-2 py-3">
+              <td class="px-4 py-3">
                 <div class="flex items-center justify-center space-x-2">
                   <button
                     @click="editTask(task)"
@@ -1265,23 +1299,28 @@ const deleteTask = async (id) => {
         </table>
 
         <!-- Modal Form Tugas -->
+        <!-- Modal Wrapper -->
         <div
           v-if="showTaskModal"
-          class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+          class="fixed inset-0 z-50 bg-gradient-to-br from-black/60 to-black/40 flex items-center justify-center px-4"
         >
-          <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-center">
+          <!-- Modal Box -->
+          <div class="bg-white w-full max-w-lg p-6 rounded-2xl shadow-2xl">
+            <!-- Judul -->
+            <h3 class="text-2xl font-bold text-center mb-6 text-gray-800">
               {{ taskForm.id ? 'Edit Tugas' : 'Tambah Tugas' }}
             </h3>
 
             <!-- Form Fields -->
-            <div class="space-y-4">
+            <div class="space-y-5">
               <!-- Mapel -->
               <div>
-                <label class="block text-sm font-medium">Mapel</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Mapel</label
+                >
                 <select
                   v-model="taskForm.mapel_id"
-                  class="w-full mt-1 p-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                 >
                   <option disabled value="">Pilih Mapel</option>
                   <option
@@ -1296,10 +1335,12 @@ const deleteTask = async (id) => {
 
               <!-- Guru -->
               <div>
-                <label class="block text-sm font-medium">Guru</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Guru</label
+                >
                 <select
                   v-model="taskForm.teacher_id"
-                  class="w-full mt-1 p-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                 >
                   <option disabled value="">Pilih Guru</option>
                   <option
@@ -1314,10 +1355,12 @@ const deleteTask = async (id) => {
 
               <!-- Kelas -->
               <div>
-                <label class="block text-sm font-medium">Kelas</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Kelas</label
+                >
                 <select
                   v-model="taskForm.class_id"
-                  class="w-full mt-1 p-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                 >
                   <option disabled value="">Pilih Kelas</option>
                   <option
@@ -1332,38 +1375,42 @@ const deleteTask = async (id) => {
 
               <!-- Judul Tugas -->
               <div>
-                <label class="block text-sm font-medium">Judul Tugas</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Judul Tugas</label
+                >
                 <input
                   v-model="taskForm.title"
                   type="text"
-                  class="w-full mt-1 p-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                   placeholder="Masukkan judul tugas"
                 />
               </div>
 
               <!-- Deskripsi -->
               <div>
-                <label class="block text-sm font-medium">Deskripsi</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Deskripsi</label
+                >
                 <textarea
                   v-model="taskForm.description"
                   rows="4"
-                  class="w-full mt-1 p-2 border rounded-md"
+                  class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                   placeholder="Tulis deskripsi tugas..."
                 ></textarea>
               </div>
             </div>
 
-            <!-- Tombol -->
-            <div class="mt-6 flex justify-end space-x-3">
+            <!-- Tombol Aksi -->
+            <div class="mt-6 flex justify-end gap-3 flex-wrap">
               <button
                 @click="showTaskModal = false"
-                class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
               >
                 Batal
               </button>
               <button
                 @click="updateTask"
-                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
               >
                 Simpan
               </button>

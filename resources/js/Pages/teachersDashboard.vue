@@ -3,17 +3,9 @@ import { onMounted, ref } from 'vue';
 import { initFlowbite } from 'flowbite';
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import VueApexCharts from 'vue3-apexcharts';
-//import ApexCharts from "apexcharts";
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
-import $ from 'jquery';
-//import "@/assets/plugins/jquery.simple-calendar.js";
-//import "@assets/js/bootstrap-datetimepicker.min.js";
-//import "@assets/plugins/simple-calendar/jquery.simple-calendar.js";
-import '@assets/plugins/simple-calendar/jquery.simple-calendar.js';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 
-const userName = ref('');
 const { props } = usePage();
 const form = useForm({
   name: props.auth.user.name,
@@ -22,7 +14,9 @@ const form = useForm({
 });
 
 defineProps({
-  total: Number, // Pastikan tipe data sesuai dengan yang dikirimkan dari Laravel
+  totalStudents: Number,
+  totalClasses: Number,
+  totalMapel: Number,
 });
 
 onMounted(() => {
@@ -250,50 +244,93 @@ onMounted(() => {
       </div>
 
       <div class="container mx-auto py-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- Data Siswa Card -->
-          <div class="bg-primary1 text-white p-4 rounded shadow-md">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <!-- Card: Total Siswa -->
+          <div
+            class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">{{ total }} 125</h3>
-                <p class="font-bold">Data Siswa</p>
+                <h3 class="text-5xl text-white font-extrabold">
+                  {{ totalStudents }}
+                </h3>
+                <p class="mt-1 text-base font-semibold">Total Siswa Diampu</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Berdasarkan kelas yang Anda ajar melalui absensi & tugas
+                </p>
               </div>
-              <i class="ion ion-person-stalker text-4xl"></i>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-person-stalker text-4xl opacity-90"></i>
+              </div>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/absensiSiswa"
+                class="text-white hover:underline flex items-center"
+              >
+                <span>Lihat daftar siswa</span>
+                <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Data real-time</span
+              >
+            </div>
           </div>
 
-          <!-- Absensi Card -->
-          <div class="bg-success text-white p-4 rounded shadow-md">
+          <!-- Card: Total Kelas -->
+          <div
+            class="bg-gradient-to-r from-green-500 to-green-700 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">16</h3>
-                <p class="font-bold">Total Kelas</p>
+                <h3 class="text-5xl text-white font-extrabold">
+                  {{ totalClasses }}
+                </h3>
+                <p class="mt-1 text-base font-semibold">Total Kelas Diampu</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Kelas tempat Anda melakukan absensi
+                </p>
               </div>
-              <i class="ion ion-person text-4xl"></i>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-university text-4xl opacity-90"></i>
+              </div>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Tahun ajaran aktif</span
+              >
+            </div>
           </div>
 
-          <!-- Input Card -->
-          <div class="bg-warning text-white p-4 rounded shadow-md">
+          <!-- Card: Total Mata Pelajaran -->
+          <div
+            class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl font-bold text-white">8</h3>
-                <p class="font-bold">Total Mata Pelajaran</p>
+                <h3 class="text-5xl text-white font-extrabold">
+                  {{ totalMapel }}
+                </h3>
+                <p class="mt-1 text-base font-semibold">Total Mata Pelajaran</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Mapel yang Anda ampu dan tercatat
+                </p>
               </div>
-              <i class="ion ion-person text-4xl"></i>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-book text-4xl opacity-90"></i>
+              </div>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Semester saat ini</span
+              >
+            </div>
           </div>
         </div>
       </div>

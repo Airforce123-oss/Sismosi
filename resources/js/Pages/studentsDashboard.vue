@@ -1,29 +1,38 @@
 <script setup>
-import { onMounted, ref, watchEffect, computed, watch } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import axios from 'axios';
 import { Head, usePage, useForm, router } from '@inertiajs/vue3';
 import SidebarStudent from '@/Components/SidebarStudent.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import VueApexCharts from 'vue3-apexcharts';
-import VSelect from 'vue-select';
 import 'vue-select/dist/vue-select.css';
 import { initFlowbite } from 'flowbite';
-import { useRoute } from 'vue-router';
-import $ from 'jquery';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
-import Login from './Auth/Login.vue';
 
 // Ambil props dari Inertia
 const userName = ref('');
 const page = usePage();
-// Ambil props yang sudah dikirimkan melalui Inertia
-const { student_id, student_name, auth } = usePage().props;
-const totalAbsensi = computed(() => usePage().props.total_absensi);
+const props = usePage().props;
+
+const student_id = computed(() => props.student_id);
+const student_name = computed(() => props.student_name);
+const totalAbsensi = computed(() => props.totalAbsensi ?? 0);
+const totalTugas = computed(() => props.totalTugas ?? 0);
+const jadwalPelajaran = computed(() => {
+  const data = usePage().props.jadwalPelajaran;
+  return Array.isArray(data) ? data : [];
+});
+
+const auth = computed(() => props.auth ?? { user: { name: '' } });
 
 console.log('✅ Student Name dari props:', student_name);
 console.log('✅ Total Absensi dari props:', totalAbsensi.value);
 console.log('✅ Student ID dari props:', student_id);
+console.log('📦 Total Tugas:', totalTugas.value);
+console.log('📚 Jadwal Pelajaran:', jadwalPelajaran.value);
+
 console.log('✅ User:', auth?.user);
+
+const previewJadwal = computed(() => jadwalPelajaran.value.slice(0, 3));
 
 // Fungsi untuk mengambil data session
 const fetchSessionData = async () => {
@@ -229,70 +238,134 @@ onMounted(() => {
           <div
             class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
           >
-            <!-- Card 1 -->
+            <!-- Absensi Kehadiran -->
             <div
-              class="bg-primary1 text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
+              class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-3xl md:text-4xl font-bold text-white">
+                  <h3 class="text-4xl text-white font-extrabold">
                     {{ totalAbsensi }}
                   </h3>
-                  <p class="font-semibold text-sm md:text-base">
-                    Absensi Kehadiran
+                  <p class="mt-1 text-base font-semibold">Absensi Kehadiran</p>
+                  <p class="mt-1 text-xs text-white/80 italic">
+                    Jumlah absensi yang telah dicatat
                   </p>
                 </div>
-                <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
-              </div>
-              <a
-                :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
-                  student_name
-                )}`"
-                class="block mt-4 text-sm hover:underline flex items-center gap-1"
-              >
-                Lihat detail <i class="fas fa-arrow-circle-right"></i>
-              </a>
-            </div>
-
-            <!-- Card 2 -->
-            <div
-              class="bg-success text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
-            >
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
-                  <p class="font-semibold text-sm md:text-base">Tugas</p>
+                <div
+                  class="flex items-center justify-center w-14 h-14 bg-white/10 rounded-full"
+                >
+                  <i class="ion ion-ios-calendar text-3xl"></i>
                 </div>
-                <i class="ion ion-person-stalker text-3xl md:text-4xl"></i>
               </div>
-              <a
-                href="/melihatTugas"
-                class="block mt-4 text-sm hover:underline flex items-center gap-1"
-              >
-                Lihat detail <i class="fas fa-arrow-circle-right"></i>
-              </a>
+              <div class="mt-4 flex justify-between items-center text-sm">
+                <a
+                  :href="`/melihatDataAbsensiSiswa?student_id=${student_id}&student_name=${encodeURIComponent(
+                    student_name
+                  )}`"
+                  class="flex items-center hover:underline"
+                >
+                  Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+                </a>
+                <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                  >Realtime</span
+                >
+              </div>
             </div>
 
-            <!-- Card 3 -->
+            <!-- Tugas -->
             <div
-              class="bg-cyan text-white p-4 rounded-xl shadow-md transition-transform hover:scale-105 h-full flex flex-col justify-between min-h-[150px]"
+              class="bg-gradient-to-r from-green-500 to-green-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="font-semibold text-sm md:text-base">
+                  <h3 class="text-4xl text-white font-extrabold">
+                    {{ totalTugas }}
+                  </h3>
+                  <p class="mt-1 text-base font-semibold">Tugas</p>
+                  <p class="mt-1 text-xs text-white/80 italic">
+                    Total tugas dari berbagai mapel
+                  </p>
+                </div>
+                <div
+                  class="flex items-center justify-center w-14 h-14 bg-white/10 rounded-full"
+                >
+                  <i class="ion ion-ios-paper-outline text-3xl"></i>
+                </div>
+              </div>
+              <div class="mt-4 flex justify-between items-center text-sm">
+                <a
+                  href="/melihatTugas"
+                  class="flex items-center hover:underline"
+                >
+                  Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+                </a>
+                <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                  >Update</span
+                >
+              </div>
+            </div>
+
+            <!-- Jadwal Mata Pelajaran -->
+            <div
+              class="bg-gradient-to-r from-cyan-500 to-cyan-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[200px]"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <p class="text-xl font-semibold mb-1">
                     Jadwal Mata Pelajaran
                   </p>
+                  <p class="text-xs text-white/80 italic mb-3">
+                    Daftar pelajaran terdekat Anda
+                  </p>
+
+                  <table
+                    v-if="previewJadwal.length"
+                    class="w-full text-sm mb-2"
+                  >
+                    <tbody>
+                      <tr
+                        v-for="(item, index) in previewJadwal"
+                        :key="index"
+                        class="border-b border-white/20"
+                      >
+                        <td class="py-1 pr-2 font-medium whitespace-nowrap">
+                          {{ item.mapel?.mapel || 'Mapel' }}
+                        </td>
+                        <td class="py-1 text-white/80 text-xs">
+                          {{ item.hari }} (Jam {{ item.jam_ke }})
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <p v-else class="text-sm text-white/80 italic">
+                    Belum ada jadwal tersedia.
+                  </p>
                 </div>
-                <i class="ion ion-log-in text-3xl md:text-4xl"></i>
+
+                <div class="flex-shrink-0">
+                  <div
+                    class="w-14 h-14 flex items-center justify-center bg-white/10 rounded-full"
+                  >
+                    <i class="ion ion-ios-clock-outline text-3xl"></i>
+                  </div>
+                </div>
               </div>
-              <a
-                :href="`/melihatJadwalPelajaran?student_id=${student_id}&student_name=${encodeURIComponent(
-                  student_name
-                )}`"
-                class="block mt-4 text-sm hover:underline flex items-center gap-1"
-              >
-                Lihat detail <i class="fas fa-arrow-circle-right"></i>
-              </a>
+
+              <div class="mt-4 flex justify-between items-center text-sm">
+                <a
+                  :href="`/melihatJadwalPelajaran?student_id=${student_id}&student_name=${encodeURIComponent(
+                    student_name
+                  )}`"
+                  class="flex items-center hover:underline"
+                >
+                  Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+                </a>
+                <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium">
+                  Terjadwal
+                </span>
+              </div>
             </div>
           </div>
         </div>

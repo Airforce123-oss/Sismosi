@@ -240,71 +240,134 @@ onMounted(() => {
 
       <div class="container mx-auto py-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-primary1 text-white p-4 rounded shadow-md">
+          <!-- Memeriksa Tugas Submit -->
+          <div
+            class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-2xl font-bold text-white">
+                <h3 class="text-xl text-white font-semibold">
                   Memeriksa Tugas Submit
                 </h3>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Cek tugas siswa yang telah dikumpulkan
+                </p>
               </div>
-              <i class="ion ion-person-stalker text-4xl"></i>
+              <div
+                class="w-14 h-14 flex items-center justify-center bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-paper text-3xl"></i>
+              </div>
             </div>
-            <a
-              href="/memeriksa-tugas"
-              class="block mt-4 text-sm text-white hover:underline"
-            >
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/memeriksa-tugas"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Tugas</span
+              >
+            </div>
           </div>
 
-          <div class="bg-success text-white p-4 rounded shadow-md">
+          <!-- Melihat Nilai Siswa -->
+          <div
+            class="bg-gradient-to-r from-green-500 to-green-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-2xl font-bold text-white">
-                  Melihat Nilai Siswa
+                <div class="flex items-center gap-2">
+                  <h3 class="text-xl text-white font-semibold">
+                    Melihat Nilai Siswa
+                  </h3>
+                </div>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Data nilai tugas dan kehadiran siswa
+                </p>
+              </div>
+              <div
+                class="w-14 h-14 flex items-center justify-center bg-white/10 rounded-full"
+              >
+                <i class="ion ion-stats-bars text-3xl"></i>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/melihat-nilai"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium">
+                Nilai
+              </span>
+            </div>
+          </div>
+
+          <!-- Memberikan Komentar -->
+          <div
+            class="bg-gradient-to-r from-yellow-500 to-yellow-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xl text-white font-semibold">
+                  Memberikan Komentar
                 </h3>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Berikan umpan balik kepada siswa
+                </p>
               </div>
-              <i class="ion ion-person-stalker text-4xl"></i>
+              <div
+                class="w-14 h-14 flex items-center justify-center bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-chatboxes text-3xl"></i>
+              </div>
             </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/memberikan-komentar"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Komentar</span
+              >
+            </div>
           </div>
 
-          <div class="bg-warning text-white p-4 rounded shadow-md">
+          <!-- Melihat Presensi -->
+          <div
+            class="bg-gradient-to-r from-cyan-600 to-cyan-800 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl flex flex-col justify-between min-h-[180px]"
+          >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-2xl font-bold text-white">
-                  Memberikan Komentar Kepada Siswa
-                </h3>
-              </div>
-              <i class="ion ion-stats-bars text-4xl"></i>
-            </div>
-            <a href="#" class="block mt-4 text-sm text-white hover:underline">
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
-          </div>
-
-          <!-- Profil Card -->
-          <div class="bg-cyan text-white p-4 rounded shadow-md">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-2xl font-bold text-white">
+                <h3 class="text-xl text-white font-semibold">
                   Melihat Presensi Siswa
                 </h3>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Data kehadiran siswa dalam kelas Anda
+                </p>
               </div>
-              <i class="ion ion-log-in text-4xl"></i>
+              <div
+                class="w-14 h-14 flex items-center justify-center bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-calendar text-3xl"></i>
+              </div>
             </div>
-            <a
-              href="/guru/profil"
-              class="block mt-4 text-sm text-white hover:underline"
-            >
-              Lihat detail
-              <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/melihat-presensi"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Presensi</span
+              >
+            </div>
           </div>
         </div>
       </div>

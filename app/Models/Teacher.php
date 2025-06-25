@@ -56,5 +56,10 @@ class Teacher extends Model
         return $this->belongsTo(MasterJabatan::class, 'jabatan_id');
     }
 
+        public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'teacher_id');
+    }
+    
 }
 

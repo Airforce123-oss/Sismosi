@@ -63,24 +63,9 @@ const form = useForm({
   mapel: [],
 });
 
-const teacherMapel = computed(() => {
-  // Periksa apakah props.teacher ada
-  if (!props.teacher) {
-    return 'Tidak diketahui';
-  }
-  return getTeacherMapel(props.teacher);
-});
-
 const getTeacherMapel = (teacher) => {
-  // Debugging output
-  //console.log('Teacher:', teacher);
-  //console.log('Wali Kelas:', waliKelas.value); // Pastikan menggunakan `waliKelas.value`
-  //console.log('Mapelss:', mapels.value);
-  //console.log('Nilai teacher.master_mapel:', teacher.master_mapel);
-
   // 1. Pastikan teacher ada
   if (!teacher) {
-    //console.log('Teacher tidak ditemukan.');
     return 'Data guru tidak tersedia';
   }
 
@@ -100,18 +85,13 @@ const getTeacherMapel = (teacher) => {
   }
 
   // 4. Jika ada mata pelajaran, lanjutkan proses pencarian
-  //console.log('Mata pelajaran ditemukan:', teacher.master_mapel);
-
   // Map dan gabungkan nama mata pelajaran
   return teacher.master_mapel
     .map((mapel) => {
-      //console.log('Mencocokkan mapel_id:', mapel.id); // Ganti mapel.mapel_id dengan mapel.id
       const mapelDetail = mapels.value.find((m) => m.id === mapel.id); // Ganti mapel.mapel_id dengan mapel.id
       if (mapelDetail) {
-        //console.log('Mapel ditemukan:', mapelDetail.mapel);
         return mapelDetail.mapel; // Kembalikan nama mata pelajaran
       } else {
-        //console.log('Mapel tidak ditemukan untuk mapel_id:', mapel.id); // Ganti mapel.mapel_id dengan mapel.id
         return 'Tidak diketahui'; // Jika tidak ada kecocokan, tampilkan 'Tidak diketahui'
       }
     })
@@ -146,26 +126,15 @@ const updatedPageNumber = (link) => {
   try {
     const urlObj = new URL(link.url, window.location.origin);
     const page = urlObj.searchParams.get('page');
-    //console.log('URL yang diparsing:', urlObj.toString());
-    //console.log('Nomor halaman di query param:', page);
-
     if (page === null) {
       console.warn('Parameter page tidak ditemukan di URL:', urlObj.toString());
       return;
     }
-
     pageNumber.value = Number(page);
-    //console.log('pageNumber.value di-set ke:', pageNumber.value);
   } catch (error) {
     console.error('Error parsing URL:', error);
   }
 };
-
-const paginatedFlatSchedule = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
-  return flatSchedule.value.slice(start, end);
-});
 
 onMounted(() => {
   initFlowbite();
@@ -184,9 +153,7 @@ watch(
 
 watch(
   () => props.mapel,
-  (newVal) => {
-    //console.log('Updated Mapel:', newVal);
-  },
+  (newVal) => {},
   { immediate: true }
 );
 
@@ -224,7 +191,7 @@ const deleteTeacher = (id) => {
 watch(
   () => page.props.wali_kelas,
   (newVal) => {
-    if (newVal) {
+    if (newVal && newVal.data) {
       waliKelas.value = newVal;
     }
   },

@@ -124,11 +124,12 @@ class StudentRoleController extends Controller
         // Ambil semua data kelas
         $classes_for_student = Classes::all();
 
-        // ✅ Ambil data student yang sedang login beserta kelasnya
-        $student = auth()->user()->student()->with('class')->first();
+        // Ambil data student yang sedang login beserta kelasnya
+        $student = auth()->user()->student;
+        $student?->load('class');
 
-        return Inertia::render('Students/melihatTugasSiswa', [
-            // ✅ Kirim data student
+        // Simpan hasil yang akan dikirim ke frontend ke dalam array
+        $result = [
             'student' => [
                 'id' => $student?->id,
                 'name' => $student?->name,
@@ -138,6 +139,7 @@ class StudentRoleController extends Controller
                 'data' => collect($tugas->items())->map(function ($t) {
                     return [
                         'id' => $t->id,
+                        'title' => $t->title, 
                         'mapel' => $t->mapel,
                         'student' => $t->student,
                         'teacher' => $t->teacher,
@@ -166,7 +168,13 @@ class StudentRoleController extends Controller
             'students' => $students,
             'mapels' => $mapels,
             'classes_for_student' => $classes_for_student,
-        ]);
+        ];
+
+        // Dump semua data yang akan dikirim ke frontend
+        //  dd($result);
+
+        // (Tidak dijalankan karena dd menghentikan eksekusi)
+        return Inertia::render('Students/melihatTugasSiswa', $result);
     }
 
     public function melihatDataAbsensiSiswa(Request $request)

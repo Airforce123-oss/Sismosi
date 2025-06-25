@@ -1,7 +1,6 @@
 <script setup>
-import { computed, onMounted, watch, toRaw } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 
-// 👇 Ambil props
 const props = defineProps({
   data: {
     type: [Object, null],
@@ -13,9 +12,9 @@ const props = defineProps({
   },
 });
 
-// 👇 Tambahkan ini supaya bisa pakai langsung di template
 const data = props.data;
 
+// Debug helper
 function debugPaginationData(data) {
   const unwrapped = data?.value ?? data;
 
@@ -27,33 +26,28 @@ function debugPaginationData(data) {
     console.warn('⚠️ Data pagination tidak lengkap:', unwrapped);
   } else {
     console.log('📦 Pagination data:', unwrapped);
-    console.log('📦 Pagination current_page:', unwrapped.current_page);
-    console.log('📦 Pagination links:', unwrapped.links);
+    console.log('📦 current_page:', unwrapped.current_page);
+    console.log('📦 links:', unwrapped.links);
   }
 }
 
-// 👇 Extract nomor page dari URL
+// Extract nomor halaman dari URL
 function extractPageNumber(url) {
   if (!url) return null;
   const match = url.match(/page=(\d+)/);
   return match ? Number(match[1]) : 1;
 }
 
-// 👇 Link valid dari props.data.links
+// Links valid
 const validLinks = computed(() => {
-  if (!props.data || !Array.isArray(props.data.links)) return [];
-
-  return props.data.links.map((link) => ({
-    url: link.url,
-    label: link.label,
-    active: link.active,
+  if (!data || !Array.isArray(data.links)) return [];
+  return data.links.map((link) => ({
+    ...link,
     page: extractPageNumber(link.url),
   }));
 });
 
-console.log('🔗 Valid links:', validLinks.value);
-
-// 👇 Fungsi ketika tombol pagination diklik
+// Navigasi ke halaman lain
 function goToPage(link) {
   if (!link.active && link.url) {
     props.updatedPageNumber(link.page);
@@ -61,27 +55,15 @@ function goToPage(link) {
 }
 
 onMounted(() => {
-  debugPaginationData(props.data);
-  console.log(
-    '🧪 Pagination mounted, updatedPageNumber type:',
-    typeof props.updatedPageNumber
-  );
+  debugPaginationData(data);
+  console.log('🧪 updatedPageNumber type:', typeof props.updatedPageNumber);
 });
 
 watch(
   () => props.data,
   (val) => {
-    console.log('📦 Pagination data changed:', val);
-    console.log('🔗 Links dari props.data:', val?.links);
-    console.log('🔗 Valid links (dari computed):', validLinks.value);
-  },
-  { immediate: true }
-);
-
-watch(
-  () => props.data,
-  (val) => {
-    console.log('📦 Data diterima di Pagination10.vue:', toRaw(val));
+    console.log('📦 Pagination updated:', val);
+    debugPaginationData(val);
   },
   { immediate: true }
 );
@@ -94,14 +76,22 @@ watch(
         class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
       >
         <!-- Info jumlah data -->
-        <div class="mr-10">
+        <div
+          class="mr-10"
+          v-if="
+            data &&
+            data.from !== undefined &&
+            data.to !== undefined &&
+            data.total !== undefined
+          "
+        >
           <p class="text-sm text-gray-700">
             Showing
-            <span class="font-medium">{{ data.meta.from }}</span>
+            <span class="font-medium">{{ data.from }}</span>
             to
-            <span class="font-medium">{{ data.meta.to }}</span>
+            <span class="font-medium">{{ data.to }}</span>
             of
-            <span class="font-medium">{{ data.meta.total }}</span>
+            <span class="font-medium">{{ data.total }}</span>
             results
           </p>
         </div>

@@ -31,8 +31,6 @@ use Illuminate\Support\Facades\Log;
 
 class StudentController extends Controller
 {
-
-
     public function index(Request $request)
     {
         // Ambil data siswa dengan relasi
@@ -46,10 +44,10 @@ class StudentController extends Controller
         $students = $studentQuery->paginate(5)->appends($request->only('search'));
 
         // Ambil data untuk classes, genders, no_induks, dan religions
-        $classes = Classes::all();  // Ganti dengan model yang sesuai
-        $genders = Gender::all();      // Ganti dengan model yang sesuai
-        $noInduks = NoInduk::all();    // Ganti dengan model yang sesuai
-        $religions = Religion::all();  // Ganti dengan model yang sesuai
+        $classes = Classes::all(); 
+        $genders = Gender::all();   
+        $noInduks = NoInduk::all();   
+        $religions = Religion::all();  
 
         // Kirim data ke komponen Inertia
         return inertia('Students/index', [
@@ -204,73 +202,95 @@ class StudentController extends Controller
         });
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $classes = ClassesResource::collection(Classes::all());
-        $genders = GenderResource::collection(Gender::all());
-        $religions = ReligionResource::collection(Religion::all());
-        $no_induks = NoIndukResource::collection(NoInduk::all());
+        $no_induk_id = null;
+        $nomor_induk = null;
 
+        if ($request->filled('student_id')) {
+            $student = Student::with('noInduk')->find($request->student_id);
+            if ($student && $student->noInduk) {
+                $no_induk_id = $student->no_induk_id;
+                $nomor_induk = $student->noInduk->no_induk; // Ambil nilai no_induk dari relasi
+            }
+        }
 
         return inertia('Students/create', [
-            'no_induks' => $no_induks,
-            'classes' => $classes,
-            'genders' => $genders,
-            'religions' => $religions,
+            'no_induk_id' => $no_induk_id,
+            'nomor_induk' => $nomor_induk,
+            'classes' => ClassesResource::collection(Classes::all()),
+            'genders' => GenderResource::collection(Gender::all()),
+            'religions' => ReligionResource::collection(Religion::all()),
         ]);
     }
 
     public function store(StoreStudentRequest $request)
     {
-        //Log::info('Data yang diterima:', $request->validated());
-
-        //$student = Student::create($request->validated());
-
-        //Log::info('Data yang berhasil disimpan:', $student->toArray());
-
+        // Log awal: semua input masuk
         StudentHelper::logReceivedData($request->all());
 
-        $validated = StudentHelper::validateStudentData($request);
-
         try {
-            Student::create($request->validated());
-            return redirect()->route('students.index')->with('success', 'Student created successfully.');
+            $validated = StudentHelper::validateStudentData($request);
+
+            // Log hasil validasi
+            Log::info('Data tervalidasi:', $validated);
+
+            // Cek apakah perlu membuat NoInduk baru
+            if (empty($validated['no_induk_id'])) {
+                Log::info('Membuat NoInduk baru dengan no_induk:', [
+                    'no_induk' => $validated['no_induk'] ?? null,
+                ]);
+
+                $noInduk = NoInduk::create([
+                    'no_induk' => $validated['no_induk'], // wajib sudah tervalidasi
+                ]);
+
+                $validated['no_induk_id'] = $noInduk->id;
+            }
+
+            // Jangan ikut simpan ke table students
+            unset($validated['no_induk']);
+
+            // Simpan ke tabel students
+            $student = Student::create($validated);
+
+            Log::info('Siswa berhasil disimpan:', $student->toArray());
+
+            return redirect()->route('students.index')->with('success', 'Siswa berhasil ditambahkan.');
         } catch (\Exception $e) {
-            Log::error('Error creating student:', ['error' => $e->getMessage()]);
-            return redirect()->back()->with('error', 'Failed to create student.');
+            Log::error('Gagal menyimpan siswa', [
+                'request_data' => $request->all(),
+                'validated_data' => $validated ?? [],
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal menambahkan siswa. Detail kesalahan telah dicatat.');
         }
     }
 
     public function edit(Student $student)
     {
-        // Eager load relasi penting agar form bisa tampil lengkap
+        // Eager load relasi
         $student->load(['class', 'gender', 'religion', 'noInduk']);
 
-        // Ambil semua data relasi yang diperlukan
-        $classes = Classes::query()->select(['id', 'name'])->get();
-        $genders = Gender::query()->select(['id', 'name'])->get();
-        $religions = Religion::query()->select(['id', 'name'])->get();
-        $no_induks = NoInduk::query()->select(['id', 'no_induk'])->get();
+        // Ambil data relasi yang diperlukan
+        $classes = Classes::select(['id', 'name'])->get();
+        $genders = Gender::select(['id', 'name'])->get();
+        $religions = Religion::select(['id', 'name'])->get();
+        $no_induks = NoInduk::select(['id', 'no_induk'])->get();
 
         return inertia('Students/edit', [
             'student' => $student,
-            'classes' => [
-                'data' => $classes,
-            ],
-            'genders' => [
-                'data' => $genders,
-            ],
-            'religions' => [
-                'data' => $religions,
-            ],
-            'no_induks' => [
-                'data' => $no_induks,
-            ],
+            'classes' => ['data' => $classes],
+            'genders' => ['data' => $genders],
+            'religions' => ['data' => $religions],
+            'no_induks' => ['data' => $no_induks], // <- disamakan dengan struktur lainnya
         ]);
     }
 
     public function update(UpdateStudentRequest $request, Student $student)
-    {
+    { 
         try {
             // Validasi dan update data
             $student->update($request->validated());
@@ -390,35 +410,39 @@ class StudentController extends Controller
         return response()->json($students);
     }
 
-    public function storeStudent(Request $request)
-    {
-        // Validasi data yang diterima
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'student_id' => 'required|string|unique:detailstudents,student_id|max:255',
-            'class_id' => 'required|exists:classes,id',
-            'gender' => 'required|string|max:10',
-            'parent_name' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
+public function storeStudent(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'student_id' => 'required|string|unique:students,student_id|max:255',
+        // Hapus validasi no_induk_id jika tidak digunakan lagi
+        'class_id' => 'required|exists:classes,id',
+        'gender_id' => 'required|exists:genders,id',
+        'religion_id' => 'required|exists:religions,id',
+    ]);
+
+    try {
+        $student = Student::create([
+            'name' => $validated['name'],
+            'student_id' => $validated['student_id'], // ← sekarang ini dianggap sebagai NIS
+            'class_id' => $validated['class_id'],
+            'gender_id' => $validated['gender_id'],
+            'religion_id' => $validated['religion_id'],
+            // Jangan isi no_induk_id kalau tidak dipakai
         ]);
 
-        try {
-            // Simpan data ke dalam tabel detailstudents
-            $student = DetailStudent::create([
-                'name' => $validated['name'],
-                'student_id' => $validated['student_id'],
-                'class_id' => $validated['class_id'],
-                'gender' => $validated['gender'],
-                'parent_name' => $validated['parent_name'] ?? null,
-                'address' => $validated['address'] ?? null,
-            ]);
-
-            // Mengembalikan respon sukses
-            return response()->json(['message' => 'Siswa berhasil ditambahkan!', 'student' => $student], 201);
-        } catch (\Exception $e) {
-            Log::error('Error creating student:', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Terjadi kesalahan saat menyimpan data siswa'], 500);
-        }
+        return response()->json([
+            'message' => 'Siswa berhasil ditambahkan!',
+            'student' => $student,
+        ], 201);
+    } catch (\Exception $e) {
+        Log::error('Error creating student:', ['error' => $e->getMessage()]);
+        return response()->json([
+            'error' => 'Terjadi kesalahan saat menyimpan data siswa',
+            'detail' => $e->getMessage(),
+        ], 500);
     }
+}
+
 
 }

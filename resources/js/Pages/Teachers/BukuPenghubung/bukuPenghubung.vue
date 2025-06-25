@@ -528,9 +528,15 @@ table td {
         </button>
       </div>
       <!-- Identitas Siswa -->
-      <div class="overflow-x-auto bg-white rounded-lg shadow-md mb-6">
-        <table class="min-w-full table-auto">
-          <thead>
+      <div
+        class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
+      >
+        <table
+          class="min-w-full table-auto border-collapse shadow-lg rounded-xl overflow-hidden"
+        >
+          <thead
+            class="bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-sm font-semibold"
+          >
             <tr class="bg-gray-100">
               <th
                 class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
@@ -540,7 +546,7 @@ table td {
               <th
                 class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
               >
-                Nama
+                Namaa
               </th>
               <th
                 class="px-4 py-2 text-left text-sm font-semibold text-gray-700"

@@ -8,6 +8,13 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceTeacherController;
 use App\Http\Controllers\MasterJabatanController;
 use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\Classes;
+use App\Models\Enrollment;
+use App\Models\Mapel;
+use App\Models\Tugas;
+use App\Models\JadwalMataPelajaran;
+use App\Models\MasterJabatan;
 use App\Models\Attendance;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Inertia\Inertia;
@@ -85,6 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             case 'parent':
                 return Inertia::location(route('parent.dashboard'));
             case 'admin':
+                
                 return Inertia::location(route('admin.dashboard'));
             default:
                 \Log::info('Invalid role, redirecting to login.');
@@ -93,33 +101,66 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
 
-    // Dashboard Admin
-    Route::get('/admin-dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('admin.dashboard');
+        // Dashboard Admin
+        Route::get('/admin-dashboard', function () {
+            $totalStudents = Student::count();
+            $totalTeachers = Teacher::count();
+            $totalClasses = Classes::count();
+            $totalMapel = Mapel::count();
+            $totalJabatan = MasterJabatan::count();
 
-    // Dashboard Guru
+            return Inertia::render('dashboard', [
+                'total' => $totalStudents,
+                'totalTeachers' => $totalTeachers,
+                'totalClasses' => $totalClasses,
+                'totalMapel' => $totalMapel,
+                'totalJabatan' => $totalJabatan,
+            ]);
+        })->name('admin.dashboard');
+
+        // Dashboard Guru
     Route::get('/teacher-dashboard', function () {
-        return Inertia::render('teachersDashboard');
+        $teacherId = Auth::user()->teacher->id ?? null;
+
+        $totalStudents = $teacherId
+            ? Enrollment::where('teacher_id', $teacherId)
+                ->distinct('student_id')
+                ->count('student_id')
+            : 0;
+
+        $totalClasses = $teacherId
+            ? Enrollment::where('teacher_id', $teacherId)
+                ->join('students', 'enrollments.student_id', '=', 'students.id')
+                ->distinct('students.class_id')
+                ->count('students.class_id')
+            : 0;
+
+        $totalMapel = $teacherId
+            ? Teacher::with('masterMapel')->find($teacherId)->masterMapel->count()
+            : 0;
+
+        return Inertia::render('teachersDashboard', [
+            'totalStudents' => $totalStudents,
+            'totalClasses' => $totalClasses,
+            'totalMapel' => $totalMapel,
+        ]);
     })->name('teacher.dashboard');
 
     Route::get('/parent-dashboard', function () {
         return Inertia::render('Parents/parentsDashboard');
     })->name('parent.dashboard');
 
-
-
     // Dashboard Siswa
     Route::middleware('auth')->get('/student-dashboard/{student_id?}', function (Request $request, $student_id = null) {
         $user = Auth::user();
 
-        // Ambil student_id dari route param atau query string
+        // Ambil student_id dari parameter route atau query string
         $studentId = $student_id ?? $request->input('student_id');
 
-        // Ambil student_name dari query string, jika tidak ada gunakan nama siswa dari DB nanti
+        // Ambil student_name dari query string (jika dikirimkan)
         $studentNameFromQuery = $request->query('student_name');
 
-        // Query siswa dengan user_id dan student_id jika ada
+        // Cari siswa berdasarkan user_id (dan student_id jika diberikan)
         $studentQuery = Student::where('user_id', $user->id);
 
         if ($studentId) {
@@ -128,24 +169,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         $student = $studentQuery->first();
 
+        // Jika tidak ditemukan atau bukan milik user login
         if (!$student) {
-            return redirect()->route('dashboard')->with('message', 'Student not found or unauthorized access');
+            return redirect()->route('dashboard')->with('message', 'Siswa tidak ditemukan atau akses tidak sah');
         }
 
-        // Jika student_name dari query string tidak ada, pakai nama dari DB
+        // Pakai nama dari DB jika query string tidak tersedia
         $studentName = $studentNameFromQuery ?: $student->name;
 
-        // ✅ Tambahkan logika total absensi siswa
+        // ✅ Total absensi
         $totalAbsensi = Attendance::where('student_id', $student->id)->count();
 
+        // ✅ Total tugas
+        $totalTugas = Tugas::where('class_id', $student->class_id)->count();
+
+        // ✅ Jadwal mata pelajaran berdasarkan kelas siswa
+        $jadwal = JadwalMataPelajaran::with(['mapel:id,mapel', 'guru:id,name'])
+            ->where('kelas_id', $student->class_id)
+            ->get(['id', 'hari', 'jam_ke', 'jam', 'mapel_id', 'guru_id', 'kelas_id']);
+
         return Inertia::render('studentsDashboard', [
-            'student_id' => $student->id,
-            'student_name' => $studentName,
-            'total_absensi' => $totalAbsensi, // ⬅️ Dikirim ke frontend
+            'student_id'       => $student->id,
+            'student_name'     => $studentName,
+            'totalAbsensi'     => $totalAbsensi,
+            'totalTugas'       => $totalTugas,
+            'jadwalPelajaran'  => $jadwal,
         ]);
     })->name('student.dashboard');
-
-
 
     Route::get('/memeriksa-tugas', [ParentController::class, 'memeriksaTugasSubmit'])->name('memeriksa-tugas');
     Route::get('/memberikan-komentar', [ParentController::class, 'memberikanKomentarKepadaSiswa'])->name('memberikan-komentar');
@@ -315,6 +365,7 @@ Route::put('/settingJadwalMataPelajaran/{id}', [MataPelajaranController::class, 
 
 Route::delete('/matapelajaran/{id}/delete-jadwal', [MataPelajaranController::class, 'deleteJadwal'])->name('matapelajaran.deleteJadwal');
 
+Route::get('/students/create-with-student', [StudentController::class, 'createWithStudent'])->name('students.create.with');
 
 
 // Include Auth Routes

@@ -12,14 +12,7 @@ import '@assets/plugins/simple-calendar/simple-calendar.css';
 
 const userName = ref('');
 const { props } = usePage();
-const students = ref(props.students || []);
-const filteredCourses = ref([]);
-const teachers = ref(props.teachers || []);
-const mapels = ref(props.mapels || []);
-const courses = ref(props.courses || []);
 const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
-const classesForStudent = ref(props.classes_for_student || []);
-const totalCourses = computed(() => props.tugas?.meta?.total ?? 0);
 const query = new URLSearchParams(window.location.search);
 const student_id = computed(() => query.get('student_id'));
 const student_name = computed(() => query.get('student_name'));
@@ -29,23 +22,28 @@ console.log('✅ Student Name dari query:', student_name.value);
 console.log('✅ Student ID dari query:', student_id.value);
 console.log('✅ User:', auth?.user);
 
+// Fungsi bantu untuk memotong deskripsi jadi 5 kata
+const getShortDescription = (text, limit = 5) => {
+  if (!text) return '—';
+  return text.split(' ').slice(0, limit).join(' ') + '...';
+};
+
+const selectedTask = ref(null);
+const showModal = ref(false);
+
+const editTask = (task) => {
+  selectedTask.value = task;
+  showModal.value = true;
+};
+
 for (let i = 0; i < props.teachers.length; i++) {
   const teacher = props.teachers[i];
   const masterMapel = toRaw(teacher.masterMapel);
-
-  //console.log(`--- Guru ke-${i} ---`);
-  //console.log(`Nama Guru: ${teacher.name}`);
-  //console.log(`NIP: ${teacher.nip}`);
-
   if (Array.isArray(masterMapel)) {
     if (masterMapel.length === 0) {
-      //console.log(`⚠️ masterMapel kosong untuk guru ke-${i}`);
     } else {
       masterMapel.forEach((mapel, index) => {
-        //console.log(`  Mapel ${index}:`, mapel);
-
         if (mapel.id && mapel.nama_mapel) {
-          //console.log(`    → ID: ${mapel.id}, Nama: ${mapel.nama_mapel}`);
         } else {
           console.log(`    ⚠️ Mapel tidak lengkap:`, mapel);
         }
@@ -72,8 +70,6 @@ const fetchSessionData = async () => {
   }
 };
 
-// Inisialisasi kalender
-// Memanggil Flowbite dan SimpleCalendar setelah komponen dimuat
 onMounted(() => {
   initFlowbite();
 
@@ -247,7 +243,7 @@ onMounted(() => {
     <main class="p-7 md:ml-64 h-screen pt-5">
       <Head title="Melihat Tugas" />
       <h2
-        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-20 mb-6 text-center"
+        class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-10 mb-6 text-center"
       >
         Melihat Tugas Siswa
       </h2>
@@ -268,6 +264,11 @@ onMounted(() => {
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
               >
                 Mata Pelajaran
+              </th>
+              <th
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              >
+                Judul
               </th>
               <th
                 class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
@@ -301,8 +302,11 @@ onMounted(() => {
               <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.mapel?.mapel ?? '—' }}
               </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ task.title ?? '—' }}
+              </td>
               <td class="px-4 py-3 whitespace-pre-wrap">
-                {{ task.description }}
+                {{ getShortDescription(task.description) }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.teacher?.name ?? '—' }}
@@ -330,34 +334,90 @@ onMounted(() => {
                         d="M15.232 5.232l3.536 3.536M9 11l6-6m2 2L11 15H9v-2l6-6z"
                       />
                     </svg>
-                    Edit
-                  </button>
-
-                  <button
-                    @click="deleteTask(task.id)"
-                    class="inline-flex items-center gap-2 bg-red-500 text-white h-9 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 transition"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z"
-                      />
-                    </svg>
-                    Hapus
+                    Detail
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+
+        <!-- Modal Detail Tugas -->
+        <div
+          v-if="showModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-neutral-800/50 to-neutral-900/70 backdrop-blur-sm transition-opacity duration-300"
+          @click.self="showModal = false"
+        >
+          <!-- Modal Container -->
+          <div
+            class="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl p-6 transition-all transform duration-300 scale-95 hover:scale-100"
+          >
+            <!-- Close Button -->
+            <button
+              @click="showModal = false"
+              class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition duration-200"
+              aria-label="Tutup"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center mb-6">
+              <div
+                class="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-100 rounded-full"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-8 h-8 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12h6m-3-3v6m9-6a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-800">Detail Tugas</h2>
+              <p class="text-sm text-gray-500">
+                Berikut deskripsi lengkap dari tugas ini.
+              </p>
+            </div>
+
+            <!-- Modal Body -->
+            <div
+              class="mb-6 text-gray-700 whitespace-pre-wrap leading-relaxed text-base"
+            >
+              {{ selectedTask?.description }}
+            </div>
+
+            <!-- Modal Footer -->
+            <div>
+              <button
+                @click="showModal = false"
+                class="w-full py-3 bg-gray-200 text-gray-800 font-semibold rounded-xl hover:bg-gray-300 transition-colors duration-200"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 

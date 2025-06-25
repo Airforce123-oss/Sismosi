@@ -5,7 +5,6 @@ import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import ApexCharts from 'apexcharts';
-
 import axios from 'axios';
 
 const userName = ref('');
@@ -16,13 +15,22 @@ const form = useForm({
   role_type: props.auth.user.role_type,
 });
 
+// ✅ Ambil props dari backend (jumlah siswa)
+const dashboardProps = defineProps({
+  total: Number,
+  totalTeachers: Number,
+  totalClasses: Number,
+  totalMapel: Number,
+  totalJabatan: Number,
+});
+
+// Untuk menampilkan di DOM, bisa gunakan nanti di <template>: {{ dashboardProps.total }}
+
 const apexChartElement = ref(null);
 const barChartElement = ref(null);
 const mainChartElement = ref(null);
 
-defineProps({ total: Number });
-
-// Options untuk Chart Utama
+// Chart options, watchers, observers... (tidak diubah)
 const chartOptions = ref(null);
 const series = ref(null);
 
@@ -48,13 +56,13 @@ watch([chartOptions, series], async ([newChartOptions, newSeries]) => {
       newSeries,
     });
 
-    // Pastikan data sudah benar sebelum lanjut
     if (!newChartOptions || !newSeries) {
       console.warn('Data belum lengkap, menunggu update...');
       return;
     }
 
-    await nextTick(); // Tunggu DOM untuk memperbarui
+    await nextTick();
+
     if (
       !document.querySelector('#apexcharts-area') ||
       !document.querySelector('#bar')
@@ -62,16 +70,14 @@ watch([chartOptions, series], async ([newChartOptions, newSeries]) => {
       console.error('Chart elements not found in DOM.');
       return;
     }
+
     checkChartElements();
-    checkChartElements(); // Periksa apakah elemen sudah dirender
   } catch (error) {
     console.error('Error during watch execution:', error);
   }
 });
 
 const initializeChart = (selector, options) => {
-  console.log(`Attempting to initialize chart with selector: '${selector}'`);
-
   const element = document.querySelector(selector);
   if (!element) {
     console.error(`Element with selector '${selector}' not found.`);
@@ -80,44 +86,29 @@ const initializeChart = (selector, options) => {
 
   const chart = new ApexCharts(element, options);
   chart.render();
-  console.log(`Chart initialized:`, chart);
   return chart;
 };
 
 onMounted(async () => {
-  // Tunggu hingga DOM diperbarui sepenuhnya
   nextTick(() => {
     checkChartElements();
-    const apexChart = initializeChart('#apexcharts-area', lineChartOptions);
-    const barChart = initializeChart('#bar', barChartOptions);
-
-    if (apexChart && barChart) {
-      console.log('Charts successfully initialized.');
-    } else {
-      console.error('Failed to initialize charts.');
-    }
-    const apexChartElement = document.querySelector('#apexcharts-area');
-    const barChartElement = document.querySelector('#bar');
-    if (apexChartElement && barChartElement) {
-      console.log('Chart elements found:', apexChartElement, barChartElement);
-    } else {
-      console.log('Waiting for chart elements...');
-    }
+    initializeChart('#apexcharts-area', lineChartOptions);
+    initializeChart('#bar', barChartOptions);
   });
-  console.log('Rendering Chart...', apexChartElement.value);
+
   initFlowbite();
 });
 
 const observer = new MutationObserver((mutationsList) => {
-  mutationsList.forEach((mutation) => {
+  mutationsList.forEach(() => {
     const apexChartElement = document.querySelector('#apexcharts-area');
     const barChartElement = document.querySelector('#bar');
     const mainChartElement = document.querySelector('#chart');
 
     if (
-      apexChartElement.value.length > 0 &&
-      barChartElement.value.length > 0 &&
-      mainChartElement.value.length > 0
+      apexChartElement?.value?.length > 0 &&
+      barChartElement?.value?.length > 0 &&
+      mainChartElement?.value?.length > 0
     ) {
       setupCharts();
     } else {
@@ -126,34 +117,27 @@ const observer = new MutationObserver((mutationsList) => {
   });
 });
 
-// Setup Charts setelah elemen DOM ditemukan
 function setupCharts() {
   if (
-    apexChartElement.value.length > 0 &&
-    barChartElement.value.length > 0 &&
-    mainChartElement.value.length > 0
+    apexChartElement?.value?.length > 0 &&
+    barChartElement?.value?.length > 0 &&
+    mainChartElement?.value?.length > 0
   ) {
     createChart(apexChartElement.value[0], lineChartOptions);
     createChart(barChartElement.value[0], barChartOptions);
     createChart(mainChartElement.value[0], chartOptions);
-  } else {
-    console.error('Required chart elements still not found in DOM.');
   }
 }
 
 const createChart = (selector, options) => {
-  console.log('Trying to initialize chart with selector:', selector);
-
   const chartElement = document.querySelector(selector);
-
   if (!chartElement) {
     console.error(`Element with selector '${selector}' not found.`);
     return null;
   }
 
   const chart = new ApexCharts(chartElement, options);
-  chart.render(); // Metode render
-  console.log('Chart initialized:', chart);
+  chart.render();
   return chart;
 };
 
@@ -167,7 +151,6 @@ const lineChartOptions = {
   xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'] },
 };
 
-// Options untuk Bar Chart
 const barChartOptions = {
   chart: { type: 'bar', height: 300, toolbar: { show: false } },
   dataLabels: { enabled: false },
@@ -343,98 +326,154 @@ const barChartOptions = {
 
       <div class="container mx-auto px-4 py-6">
         <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         >
+          <!-- Data Siswa -->
           <div
-            class="bg-primary1 text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+            class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl min-h-[180px] flex flex-col justify-between"
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-3xl md:text-4xl font-bold text-white">58</h3>
-                <p class="text-sm md:text-base font-semibold">Data Siswa</p>
-              </div>
-              <i class="ion ion-person-stalker text-4xl"></i>
-            </div>
-            <a
-              href="/students"
-              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
-            >
-              Lihat detail <i class="fas fa-arrow-circle-right"></i>
-            </a>
-          </div>
-
-          <div
-            class="bg-success text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
-          >
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-3xl md:text-4xl font-bold text-white">16</h3>
-                <p class="text-sm md:text-base font-semibold">Data Guru</p>
-              </div>
-              <i class="ion ion-person-stalker text-4xl"></i>
-            </div>
-            <a
-              href="/teachers"
-              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
-            >
-              Lihat detail <i class="fas fa-arrow-circle-right"></i>
-            </a>
-          </div>
-
-          <div
-            class="bg-warning text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
-          >
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-3xl md:text-4xl font-bold text-white">16</h3>
-                <p class="text-sm md:text-base font-semibold">Data Kelas</p>
-              </div>
-              <i class="ion ion-stats-bars text-4xl"></i>
-            </div>
-            <a
-              href="/kelas"
-              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
-            >
-              Lihat detail <i class="fas fa-arrow-circle-right"></i>
-            </a>
-          </div>
-
-          <div
-            class="bg-cyan text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
-          >
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
-                <p class="text-sm md:text-base font-semibold">
-                  Data Mata Pelajaran
+                <h3 class="text-4xl text-white font-extrabold">
+                  {{ dashboardProps.total }}
+                </h3>
+                <p class="mt-1 text-base font-semibold">Total Siswa</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Data seluruh siswa dalam sistem
                 </p>
               </div>
-              <i class="ion ion-log-in text-4xl"></i>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-person-stalker text-4xl"></i>
+              </div>
             </div>
-            <a
-              href="/mataPelajaran"
-              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
-            >
-              Lihat detail <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a href="/students" class="flex items-center hover:underline">
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Updated</span
+              >
+            </div>
           </div>
 
+          <!-- Data Guru -->
           <div
-            class="bg-cyan text-white rounded-xl shadow-md p-6 flex flex-col justify-between min-h-[160px]"
+            class="bg-gradient-to-r from-green-500 to-green-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl min-h-[180px] flex flex-col justify-between"
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-3xl md:text-4xl font-bold text-white">8</h3>
-                <p class="text-sm md:text-base font-semibold">Data Jabatan</p>
+                <h3 class="text-4xl text-white font-extrabold">{{ totalTeachers }}</h3>
+                <p class="mt-1 text-base font-semibold">Total Guru</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Guru aktif dalam sistem
+                </p>
               </div>
-              <i class="ion ion-log-in text-4xl"></i>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-people text-4xl"></i>
+              </div>
             </div>
-            <a
-              href="/indexMasterJabatan"
-              class="mt-4 text-sm text-white hover:underline flex items-center gap-1"
-            >
-              Lihat detail <i class="fas fa-arrow-circle-right"></i>
-            </a>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a href="/teachers" class="flex items-center hover:underline">
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Aktif</span
+              >
+            </div>
+          </div>
+
+          <!-- Data Kelas -->
+          <div
+            class="bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl min-h-[180px] flex flex-col justify-between"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-4xl text-white font-extrabold">{{ totalClasses }}</h3>
+                <p class="mt-1 text-base font-semibold">Total Kelas</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Kelas terdaftar tahun ini
+                </p>
+              </div>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-university text-4xl"></i>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a href="/kelas" class="flex items-center hover:underline">
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Tahun Ajaran</span
+              >
+            </div>
+          </div>
+
+          <!-- Data Mapel -->
+          <div
+            class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl min-h-[180px] flex flex-col justify-between"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-4xl text-white font-extrabold">{{ totalMapel }}</h3>
+                <p class="mt-1 text-base font-semibold">Total Mata Pelajaran</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Mapel aktif di sistem
+                </p>
+              </div>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-ios-book text-4xl"></i>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/mataPelajaran"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Semester ini</span
+              >
+            </div>
+          </div>
+
+          <!-- Data Jabatan -->
+          <div
+            class="bg-gradient-to-r from-cyan-500 to-cyan-700 text-white rounded-2xl shadow-lg p-6 transition hover:shadow-xl min-h-[180px] flex flex-col justify-between"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-4xl text-white font-extrabold">{{ totalJabatan }}</h3>
+                <p class="mt-1 text-base font-semibold">Total Jabatan</p>
+                <p class="mt-1 text-xs text-white/80 italic">
+                  Jabatan guru dan staf lainnya
+                </p>
+              </div>
+              <div
+                class="flex items-center justify-center w-16 h-16 bg-white/10 rounded-full"
+              >
+                <i class="ion ion-briefcase text-4xl"></i>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm">
+              <a
+                href="/indexMasterJabatan"
+                class="flex items-center hover:underline"
+              >
+                Lihat detail <i class="fas fa-arrow-circle-right ml-2"></i>
+              </a>
+              <span class="bg-white/10 px-2 py-1 rounded text-xs font-medium"
+                >Struktur aktif</span
+              >
+            </div>
           </div>
         </div>
       </div>
@@ -492,14 +531,6 @@ const barChartOptions = {
           </div>
         </div>
       </div>
-      <!--
-             <p>
-                Catatan: Melihat data siswa, mengelola data siswa, melihat data
-                guru, mengelola data guru, melihat presensi siswa, mengelola
-                presensi siswa, melihat presensi guru mengelola presensi guru,
-                melihat mata pelajaran, mengelola mata pelajaran,
-            </p>
-            -->
     </main>
 
     <!-- Sidebar -->

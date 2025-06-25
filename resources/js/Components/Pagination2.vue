@@ -21,17 +21,19 @@ console.log('Data asli:', toRaw(props.data.items));
 console.log('Links:', props.data.meta.links);
 
 const checkButtonStatus = (label) => {
+  const links = props.data?.meta?.links || [];
+
   let button;
 
-  if (label === 'First')
-    button = props.data.meta.links[1]; // First setelah tombol Previous
-  else if (label === 'Previous')
-    button = props.data.meta.links[0]; // Previous selalu ada di index pertama
-  else if (label === 'Next')
-    button = props.data.meta.links[props.data.meta.links.length - 1];
-  // Next selalu di index terakhir
-  else if (label === 'Last')
-    button = props.data.meta.links[props.data.meta.links.length - 2]; // Last sebelum Next
+  if (label === 'First') {
+    button = links[1];
+  } else if (label === 'Previous') {
+    button = links[0];
+  } else if (label === 'Next') {
+    button = links[links.length - 1];
+  } else if (label === 'Last') {
+    button = links[links.length - 2];
+  }
 
   console.log(
     `${label} Button:`,
@@ -93,13 +95,17 @@ const validLinks = computed(() => {
           <div class="mr-10">
             <p class="text-sm text-gray-700">
               Showing
-              <span class="font-medium">{{ data.meta.current_page }}</span>
+              <span class="font-medium">
+                {{ (meta.current_page - 1) * meta.per_page + 1 }}
+              </span>
               to
-              <span class="font-medium">{{
-                Math.min(meta.current_page * meta.per_page, meta.total)
-              }}</span>
+              <span class="font-medium">
+                {{ Math.min(meta.current_page * meta.per_page, meta.total) }}
+              </span>
               of
-              <span class="font-medium">{{ data.meta.total }}</span>
+              <span class="font-medium">
+                {{ meta.total }}
+              </span>
               results
             </p>
           </div>

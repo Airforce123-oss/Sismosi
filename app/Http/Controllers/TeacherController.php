@@ -87,13 +87,47 @@ class TeacherController extends Controller
         return Teacher::with('masterMapel')->get();
     }
 
-    public function membuatTugasSiswa()
-    {
-        $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])
-            ->paginate(5)
-            ->appends(request()->query());
+public function membuatTugasSiswa(Request $request)
+{
+    $classId = $request->input('class_id');
 
-        $teachers = Teacher::with('masterMapel')->get()->map(function ($teacher) {
+    $query = Tugas::with(['mapel', 'student', 'teacher', 'kelas']);
+
+    if (!empty($classId)) {
+        $query->where('class_id', $classId);
+    }
+
+    $tugas = $query->paginate(5)->appends($request->query());
+
+    // Konversi ke array agar links jadi array biasa (bukan HTML)
+    $paginationArray = json_decode(json_encode($tugas), true);
+
+    $result = [
+        'tugas' => [
+            'data' => collect($tugas->items())->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'title' => $t->title,
+                    'mapel' => $t->mapel,
+                    'student' => $t->student,
+                    'teacher' => $t->teacher,
+                    'kelas' => $t->kelas,
+                    'description' => $t->description,
+                    'created_at' => $t->created_at,
+                    'updated_at' => $t->updated_at,
+                ];
+            }),
+            'meta' => [
+                'current_page' => $tugas->currentPage(),
+                'from' => $tugas->firstItem(),
+                'to' => $tugas->lastItem(),
+                'last_page' => $tugas->lastPage(),
+                'per_page' => $tugas->perPage(),
+                'total' => $tugas->total(),
+            ],
+            'links' => $paginationArray['links'], // ← pakai dari hasil json_decode
+        ],
+        'teachers' => Teacher::with('masterMapel')->get()->map(function ($teacher) {
             return [
                 'id' => $teacher->id,
                 'name' => $teacher->name,
@@ -106,11 +140,9 @@ class TeacherController extends Controller
                     ];
                 }),
             ];
-        });
-
-        $students = Student::all();
-
-        $mapels = \DB::table('teacher_mapel')
+        }),
+        'students' => Student::all(),
+        'mapels' => \DB::table('teacher_mapel')
             ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
             ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
             ->select(
@@ -121,30 +153,13 @@ class TeacherController extends Controller
                 'master_mapel.mapel as mapel_name',
                 'teachers.name as teacher_name'
             )
-            ->get();
+            ->get(),
+        'classes_for_student' => Classes::all(),
+    ];
 
-        $classes_for_student = Classes::all();
+    return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', $result);
+}
 
-        return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', [
-            'tugas' => [
-                'data' => $tugas->items(),
-                'meta' => [
-                    'current_page' => $tugas->currentPage(),
-                    'from' => $tugas->firstItem(),
-                    'to' => $tugas->lastItem(),
-                    'last_page' => $tugas->lastPage(),
-                    'per_page' => $tugas->perPage(),
-                    'total' => $tugas->total(),
-                ],
-                'links' => $tugas->linkCollection()->toArray(),
-            ],
-            'teachers' => $teachers,
-            'students' => $students,
-            'mapels' => $mapels,
-            'classes_for_student' => $classes_for_student,
-        ]);
-
-    }
     public function createTugasSiswa(Request $request)
     {
         $validated = $request->validate([
