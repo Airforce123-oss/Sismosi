@@ -153,6 +153,7 @@ class StudentController extends Controller
             ->filter() // hilangkan null
             ->unique('id') // hanya mapel unik
             ->values(); // reset index
+            
 
         return Inertia::render('Students/melihatDataAbsensiSiswa', [
             'attendanceRecords' => $attendanceRecords,
@@ -160,7 +161,7 @@ class StudentController extends Controller
             'student_id' => $studentId,
             'student_name' => $studentName,
             'student' => $student,
-            'subjects' => $subjects, // ✅ kirim array of courses
+            'subjects' => $subjects, 
         ]);
     }
 

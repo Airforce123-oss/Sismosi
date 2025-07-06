@@ -52,44 +52,30 @@ class MataPelajaranController extends Controller
 
         $role = $user->roles->first()?->name ?? 'guest';
 
-        // Ambil parameter pagination dari request
-        $perPage = $request->input('itemsPerPage', 5);
-        $currentPage = $request->input('page', 1);
+        // Ambil parameter pagination dari request (default 5)
+        $perPage = (int) $request->input('itemsPerPage', 5);
+        $currentPage = (int) $request->input('page', 1);
 
         $query = Mapel::query();
 
-        // Optional: pencarian jika diperlukan (sesuaikan field pencarian jika ada)
+        // Jika ada parameter pencarian
         if ($search = $request->input('search')) {
-            $query->where('nama_mapel', 'like', '%' . $search . '%');
+            $query->where('mapel', 'like', '%' . $search . '%');
         }
 
-        // Paginate dengan append query string agar link pagination sesuai
+        // Paginate query dan tetap bawa query string saat navigasi halaman
         $paginator = $query->paginate($perPage, ['*'], 'page', $currentPage)
-            ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
+            ->appends($request->only(['search', 'itemsPerPage', 'page']));
 
-        // Transformasi pakai Resource dan convert jadi array
-        $mapelData = MapelResource::collection($paginator->items())->resolve();
+        // Gunakan MapelResource langsung, tanpa resolve()
+        $mapelData = MapelResource::collection($paginator);
 
         return inertia('MataPelajaran/index', [
-            'master_mapel' => [
-                'data' => $mapelData,
-                'meta' => [
-                    'current_page' => $paginator->currentPage(),
-                    'last_page' => $paginator->lastPage(),
-                    'per_page' => $paginator->perPage(),
-                    'total' => $paginator->total(),
-                    'from' => $paginator->firstItem(),
-                    'to' => $paginator->lastItem(),
-                ],
-                'links' => [
-                    'first' => $paginator->url(1),
-                    'last' => $paginator->url($paginator->lastPage()),
-                    'prev' => $paginator->previousPageUrl(),
-                    'next' => $paginator->nextPageUrl(),
-                ],
-            ],
+            'master_mapel' => $mapelData, // Inertia akan otomatis handle data + pagination
             'role_type' => $role,
-            'auth' => ['user' => $user],
+            'auth' => [
+                'user' => $user,
+            ],
         ]);
     }
 
@@ -904,30 +890,35 @@ class MataPelajaranController extends Controller
         ]);
     }
 
-
     // Menyimpan mata pelajaran baru
     public function store(Request $request)
     {
         $validated = $request->validate([
             'kode_mapel' => 'required|string|max:40',
             'mapel' => 'required|string|max:60',
+            'hari' => 'required|string|max:20',
+            'jam_ke' => 'required|integer|min:1',
         ]);
 
-        $existingMapel = Mapel::where('kode_mapel', $validated['kode_mapel'])->first(); // Menggunakan model Mapel
+        $existingMapel = Mapel::where('kode_mapel', $validated['kode_mapel'])->first();
         if ($existingMapel) {
             Log::info('Failed to store mata pelajaran: Duplicate kode_mapel', [
                 'kode_mapel' => $validated['kode_mapel'],
             ]);
 
-            return redirect()->back()->withErrors(['kode_mapel' => 'Kode Mapel sudah ada.'])->withInput();
+            return redirect()->back()->withErrors([
+                'kode_mapel' => 'Kode Mapel sudah ada.'
+            ])->withInput();
         }
 
-        $newMapel = Mapel::create($validated); // Menggunakan model Mapel
+        $newMapel = Mapel::create($validated);
 
         Log::info('Successfully stored new mata pelajaran', [
             'id' => $newMapel->id,
             'kode_mapel' => $newMapel->kode_mapel,
             'mapel' => $newMapel->mapel,
+            'hari' => $newMapel->hari,
+            'jam_ke' => $newMapel->jam_ke,
         ]);
 
         return redirect()->route('matapelajaran.index')->with('success', 'Data berhasil disimpan!');

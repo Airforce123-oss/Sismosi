@@ -5,22 +5,31 @@ import { Head } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { initFlowbite } from 'flowbite';
 import SidebarStudent from '@/Components/SidebarStudent.vue';
-import VueApexCharts from 'vue3-apexcharts';
-import { Link, useForm, usePage } from '@inertiajs/vue3';
-import $ from 'jquery';
+import { Link, useForm, usePage, router } from '@inertiajs/vue3';
+import Pagination from '@/Components/Pagination14.vue';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 
 const userName = ref('');
 const { props } = usePage();
 const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
-const query = new URLSearchParams(window.location.search);
-const student_id = computed(() => query.get('student_id'));
-const student_name = computed(() => query.get('student_name'));
+
+watch(
+  () => props.tugas,
+  (newTugas) => {
+    tugas.value = newTugas;
+  }
+);
+
+const student_id = computed(() => props.student?.id);
+const student_name = computed(() => props.student?.name);
+
 const auth = usePage().props.auth;
 
-console.log('✅ Student Name dari query:', student_name.value);
-console.log('✅ Student ID dari query:', student_id.value);
 console.log('✅ User:', auth?.user);
+console.log('✅ Student ID:', student_id.value);
+console.log('✅ Student Name:', student_name.value);
+console.log('✅ Kelas:', props.student?.class);
+console.log('✅ Tugas:', tugas.value);
 
 // Fungsi bantu untuk memotong deskripsi jadi 5 kata
 const getShortDescription = (text, limit = 5) => {
@@ -68,6 +77,21 @@ const fetchSessionData = async () => {
   } catch (error) {
     console.error('There was an error fetching the session data:', error);
   }
+};
+
+const updatedPageNumber = (page) => {
+  router.get(
+    route('melihatTugas'),
+    {
+      page,
+      student_id: student_id.value,
+    },
+    {
+      preserveScroll: true,
+      preserveState: true,
+      only: ['tugas'],
+    }
+  );
 };
 
 onMounted(() => {
@@ -145,28 +169,6 @@ onMounted(() => {
           </a>
         </div>
         <div class="flex items-center lg:order-2">
-          <!--
-                                        <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-                    -->
           <!-- Apps -->
           <button
             type="button"
@@ -250,97 +252,146 @@ onMounted(() => {
 
       <!-- Tabel -->
       <div
-        class="w-full overflow-x-auto overflow-y-auto max-h-[80vh] bg-white rounded-xl shadow-lg mb-8"
+        class="w-full max-w-screen-xl mx-auto bg-white rounded-xl shadow-lg mb-8 overflow-x-auto max-h-[80vh]"
       >
-        <table class="min-w-full table-auto border-collapse">
-          <thead class="bg-gray-100 sticky top-0 z-10">
-            <tr>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                ID
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Mata Pelajaran
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Judul
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Deskripsi
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Guru
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Kelas
-              </th>
-              <th
-                class="px-4 py-3 text-left text-sm font-semibold text-gray-700"
-              >
-                Aksi
-              </th>
-            </tr>
-          </thead>
-          <tbody class="text-gray-700 text-sm md:text-base">
-            <tr
-              v-for="task in tugas.data"
-              :key="task.id"
-              class="border-b hover:bg-gray-50 transition duration-150"
+        <!-- Header Info -->
+        <div
+          class="px-4 sm:px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50 via-blue-100 to-indigo-200 rounded-t-xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        >
+          <!-- Ikon & Judul -->
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-indigo-100 text-indigo-600 rounded-full shadow-inner"
             >
-              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                {{ task.mapel?.mapel ?? '—' }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                {{ task.title ?? '—' }}
-              </td>
-              <td class="px-4 py-3 whitespace-pre-wrap">
-                {{ getShortDescription(task.description) }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                {{ task.teacher?.name ?? '—' }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                {{ task.kelas?.name ?? '—' }}
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center justify-center space-x-2">
-                  <button
-                    @click="editTask(task)"
-                    class="inline-flex items-center gap-2 bg-blue-500 text-white h-9 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 sm:w-6 sm:h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 20h9M12 4h9M3 4h.01M3 12h.01M3 20h.01M7 4h2a2 2 0 012 2v12a2 2 0 01-2 2H7V4z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2
+                class="text-xl sm:text-2xl font-bold text-gray-800 leading-snug"
+              >
+                Daftar Tugas 📚
+              </h2>
+              <p class="text-sm text-gray-600">
+                Selamat belajar,
+                <span class="font-semibold text-indigo-600">{{
+                  student_name
+                }}</span
+                >!
+              </p>
+            </div>
+          </div>
+
+          <!-- Info Jumlah -->
+          <div class="text-sm sm:text-base text-gray-700 text-right">
+            <span
+              class="inline-block bg-white rounded-full px-3 py-1 font-medium text-indigo-600 shadow"
+            >
+              {{ tugas.data.length }} Tugas Aktif
+            </span>
+          </div>
+        </div>
+
+        <!-- Scrollable Table -->
+        <div class="overflow-auto">
+          <table
+            class="min-w-full table-auto border-collapse text-sm sm:text-base"
+          >
+            <thead
+              class="bg-gray-100 sticky top-0 z-10 font-semibold text-gray-700"
+            >
+              <tr>
+                <th class="px-4 py-3 text-left">ID</th>
+                <th class="px-4 py-3 text-left">Mata Pelajaran</th>
+                <th class="px-4 py-3 text-left">Judul</th>
+                <th class="px-4 py-3 text-left">Deskripsi</th>
+                <th class="px-4 py-3 text-left">Guru</th>
+                <th class="px-4 py-3 text-left">Kelas</th>
+                <th class="px-4 py-3 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-700">
+              <tr
+                v-for="(task, index) in tugas.data"
+                :key="task.id"
+                :class="[
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                  'border-b hover:bg-blue-50 transition duration-150',
+                ]"
+              >
+                <td class="px-4 py-3 whitespace-nowrap">{{ task.no }}</td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-block bg-indigo-100 text-indigo-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                    {{ task.mapel?.mapel ?? '—' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  {{ task.title ?? '—' }}
+                </td>
+                <td class="px-4 py-3 whitespace-pre-wrap">
+                  {{ getShortDescription(task.description) }}
+                  <div class="mt-1 text-xs text-gray-400 italic">
+                    {{ task.description?.length ?? 0 }} karakter
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-block bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                  >
+                    {{ task.teacher?.name ?? '—' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-block bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                  >
+                    {{ task.kelas?.name ?? '—' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button
+                      @click="editTask(task)"
+                      class="inline-flex items-center gap-2 bg-blue-500 text-white h-9 px-4 rounded-lg hover:bg-blue-600 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-150"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536M9 11l6-6m2 2L11 15H9v-2l6-6z"
-                      />
-                    </svg>
-                    Detail
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15.232 5.232l3.536 3.536M9 11l6-6m2 2L11 15H9v-2l6-6z"
+                        />
+                      </svg>
+                      Detail
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginasi -->
+        <Pagination :data="tugas" :updatedPageNumber="updatedPageNumber" />
 
         <!-- Modal Detail Tugas -->
         <div
@@ -348,11 +399,10 @@ onMounted(() => {
           class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-neutral-800/50 to-neutral-900/70 backdrop-blur-sm transition-opacity duration-300"
           @click.self="showModal = false"
         >
-          <!-- Modal Container -->
           <div
             class="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl p-6 transition-all transform duration-300 scale-95 hover:scale-100"
           >
-            <!-- Close Button -->
+            <!-- Tombol Tutup -->
             <button
               @click="showModal = false"
               class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition duration-200"
@@ -374,7 +424,7 @@ onMounted(() => {
               </svg>
             </button>
 
-            <!-- Modal Header -->
+            <!-- Header Modal -->
             <div class="text-center mb-6">
               <div
                 class="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-blue-100 rounded-full"
@@ -400,14 +450,33 @@ onMounted(() => {
               </p>
             </div>
 
-            <!-- Modal Body -->
+            <!-- Info Tugas -->
+            <div class="mb-4 space-y-1 text-left text-sm sm:text-base">
+              <p class="font-semibold text-gray-700">
+                 {{ selectedTask?.title ?? '—' }}
+              </p>
+              <p class="text-gray-600">
+                 Guru:
+                <strong>{{ selectedTask?.teacher?.name ?? '—' }}</strong>
+              </p>
+              <p class="text-gray-600">
+                 Mapel:
+                <strong>{{ selectedTask?.mapel?.mapel ?? '—' }}</strong>
+              </p>
+              <p class="text-gray-600">
+                 Kelas:
+                <strong>{{ selectedTask?.kelas?.name ?? '—' }}</strong>
+              </p>
+            </div>
+
+            <!-- Isi Deskripsi -->
             <div
               class="mb-6 text-gray-700 whitespace-pre-wrap leading-relaxed text-base"
             >
               {{ selectedTask?.description }}
             </div>
 
-            <!-- Modal Footer -->
+            <!-- Tombol Tutup -->
             <div>
               <button
                 @click="showModal = false"

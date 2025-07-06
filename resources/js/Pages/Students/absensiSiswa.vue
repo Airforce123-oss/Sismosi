@@ -14,43 +14,16 @@ import axios from 'axios';
 import { initFlowbite } from 'flowbite';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
-import { useForm, usePage, Head } from '@inertiajs/vue3';
+import { useForm, usePage, Head, router } from '@inertiajs/vue3';
 import { Inertia } from '@inertiajs/inertia';
 import '@assets/plugins/simple-calendar/jquery.simple-calendar.js';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
-import { createRouter, createWebHistory, useRoute } from 'vue-router';
 import AbsensiSiswa from './absensiSiswa.vue';
 import AbsensiSiswaJanuari from './absensiSiswaJanuari.vue';
 
-const routes = [
-  {
-    path: '/absensi/:kelas/:year/:mapel/:month',
-    name: 'absensi', // Harus sesuai dengan nama route di Laravel
-    component: AbsensiSiswa, // Komponen tampilan absensi
-  },
-];
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-});
-
-console.log('Daftar rute yang terdaftar dalam router:', router.getRoutes());
-
-/*
-const app = createApp({
-  template: `
-   <div>
-         <h1>Selamat Datang di Aplikasi Vue!</h1>
-       </div>
-  `,
-});
-app.use(router);
-app.mount('#app');
-*/
-
 const userName = ref('');
 const { props } = usePage();
+console.log('isi props: ', props);
 
 //const teacherClass = ref(props.teacherClass || 'Tidak ada kelas terkait');
 const teacherClass = ref(
@@ -63,7 +36,7 @@ const teacherClass = ref(
 
 const mapelList = ref([]);
 const auth = props.auth;
-//console.log('Props received:', JSON.stringify(props, null, 2));
+
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
@@ -370,6 +343,7 @@ const onMapelChange = async (event) => {
 
 // Fungsi yang dipanggil ketika komponen dimuat
 onMounted(async () => {
+  hasMounted.value = true;
   console.log('✅ selectedKelas sebelum fetch:', teacherClass.value);
 
   // Jika props.teacherClass tersedia, set ke selectedKelas
@@ -420,8 +394,8 @@ const currentMonth = [
 // Pemilihan Tahun dan Bulan untuk filter
 const selectedYear = ref(years[0]);
 console.log('✅ currentMonth sebelum ref:', currentMonth);
-//const selectedMonth = ref(currentMonth);
-const selectedMonth = ref('Januari');
+const selectedMonth = ref('');
+const isUserChangingMonth = ref(false);
 console.log('✅ selectedMonth setelah ref:', selectedMonth.value);
 
 const selectedMapel = ref([]);
@@ -437,9 +411,9 @@ console.log('Sebelum mengirim props ke anak:', {
 //const selectedKelas = ref('');
 //const selectedKelas = ref(null);
 const selectedStudentId = ref(null);
-const selectedAttendanceStatus = ref(null);
 console.log('Default Kelas:', props.defaultKelas);
 console.log('🔍 selectedKelas setelah update:', teacherClass.value);
+console.log('📌 selectedMonth.value sebelum generateUrl:', selectedMonth.value);
 
 const generateUrl = (year, month, mapel, selectedKelas) => {
   console.log('🧐 [generateUrl] Input awal:', {
@@ -449,127 +423,150 @@ const generateUrl = (year, month, mapel, selectedKelas) => {
     selectedKelas,
   });
 
-  console.log('📦 selectedKelas type:', typeof selectedKelas);
-  console.log('📦 selectedKelas is reactive ref:', !!teacherClass?.value);
-  console.log(
-    '📦 selectedKelas.id:',
-    teacherClass?.id ?? teacherClass?.value?.id
-  );
-
-  // Cek fungsi route dari Ziggy
   if (typeof route !== 'function') {
-    console.error('❌ [generateUrl] Ziggy route helper tidak tersedia!');
+    console.error('❌ Ziggy route helper tidak tersedia!');
     return '#';
   }
 
-  // Cek dan ambil selectedKelas jika belum ada
-  if (!selectedKelas) {
-    const userId = props.auth?.user?.id;
-    console.log(
-      '🔍 [generateUrl] selectedKelas tidak ada, cek userId:',
-      userId
-    );
+  // Ambil kelas ID
+  let kelasId = selectedKelas?.value?.id ?? selectedKelas?.id ?? null;
 
-    if (userId) {
-      const match = kelasList.value.find((k) => k.wali_kelas_id === userId);
-      if (match) {
-        console.log(
-          '✅ [generateUrl] Ditemukan kelas berdasarkan user_id:',
-          match
-        );
-        selectedKelas = match;
-      } else {
-        console.warn(
-          '⚠️ [generateUrl] Tidak ada kelas cocok untuk user_id:',
-          userId
-        );
-      }
-    } else {
-      console.error('❌ [generateUrl] user_id tidak ditemukan di props.auth!');
-      return '#';
+  // Fallback jika kelasId belum valid
+  if (!kelasId && props.auth?.user?.id && Array.isArray(kelasList.value)) {
+    const fallback = kelasList.value.find(
+      (k) => k.wali_kelas_id === props.auth.user.id
+    );
+    if (fallback) {
+      kelasId = fallback.id;
+      console.log('✅ Kelas fallback:', fallback);
     }
   }
 
-  // Ambil id kelas dengan fallback jika reactive
-  const kelasId = selectedKelas?.id ?? selectedKelas?.value?.id ?? null;
-
-  console.log('🧾 [generateUrl] selectedKelas saat ini:', selectedKelas);
-  console.log('🧾 [generateUrl] kelasId terdeteksi:', kelasId);
-
   if (!kelasId) {
-    console.error(
-      '❌ [generateUrl] Tidak bisa generate URL karena kelasId tidak valid!',
-      { selectedKelas }
-    );
+    console.error('❌ Tidak bisa generate URL karena kelasId tidak valid!');
     return '#';
   }
 
-  // Persiapan mapel
-  let mapelList = [];
-  if (Array.isArray(mapel)) {
-    mapelList = mapel.map((m) => (typeof m === 'object' ? m.mapel : m));
-  } else if (Array.isArray(mapel?.value)) {
-    mapelList = mapel.value.map((m) => (typeof m === 'object' ? m.mapel : m));
-  } else if (typeof mapel === 'string') {
-    mapelList = [mapel];
-  }
-
-  console.log(
-    '📚 [generateUrl] Daftar mapel yang akan dibersihkan:',
-    mapelList
-  );
+  // Format mapel menjadi string untuk URL
+  const mapelList = Array.isArray(mapel?.value)
+    ? mapel.value
+    : Array.isArray(mapel)
+    ? mapel
+    : [mapel];
 
   const cleanMapel = mapelList
+    .filter(Boolean)
     .map((m) =>
-      String(m).trim().replace(/\s+/g, '-').replace(/[()]/g, '').toLowerCase()
+      String(typeof m === 'object' ? m.mapel : m)
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[()]/g, '')
+        .toLowerCase()
     )
     .join(',');
 
-  // Persiapan bulan
-  const cleanMonth = Array.isArray(month)
-    ? month[0]
-    : String(month || '')
-        .trim()
-        .toLowerCase();
+  // Format bulan
+  let cleanMonth =
+    typeof month === 'string'
+      ? month.trim().toLowerCase()
+      : typeof month?.value === 'string'
+      ? month.value.trim().toLowerCase()
+      : '';
 
-  // Tahun validasi
+  if (!cleanMonth) {
+    console.error('❌ Bulan tidak valid, tidak bisa generate URL.');
+    return '#';
+  }
+
+  // Tahun valid
   const validYear = year && !isNaN(year) ? year : new Date().getFullYear();
 
-  console.log('🧾 [generateUrl] Final Param:', {
-    kelas: kelasId,
-    year: validYear,
-    mapel: cleanMapel,
-    month: cleanMonth || selectedMonth.value || '',
-  });
+  // Validasi akhir
+  const params = [kelasId, validYear, cleanMapel, cleanMonth];
 
-  // Generate URL
-  const url = route('absensiSiswaJanuari', {
-    kelas: kelasId,
-    year: validYear,
-    mapel: cleanMapel || '',
-    month: cleanMonth || selectedMonth.value || '',
-  });
+  // Validasi: tidak boleh ada nilai kosong string, null, atau undefined
+  const invalidParam = params.find(
+    (p) =>
+      p === null ||
+      p === undefined ||
+      (typeof p === 'string' && p.trim() === '')
+  );
 
-  console.log('✅ [generateUrl] URL yang dihasilkan:', url);
-  return url;
+  if (invalidParam !== undefined) {
+    console.error('❌ Param tidak lengkap atau ada string kosong:', params);
+    return '#';
+  }
+
+  console.log('✅ [route params]:', [
+    kelasId,
+    validYear,
+    cleanMapel,
+    cleanMonth,
+  ]);
+
+  try {
+    const url = route('absensiSiswa', params);
+    console.log('✅ [generateUrl] URL yang dihasilkan:', url);
+    return url;
+  } catch (err) {
+    console.error('❌ Gagal generate URL:', err);
+    return '#';
+  }
 };
 
 const attendanceData = ref([]);
 const errorMessage = ref('');
 
-/*
-watch(selectedKelas, (newVal) => {
-  if (newVal && typeof newVal === 'object' && newVal.id) {
-    //localStorage.setItem('selectedKelas', JSON.stringify(newVal));
-    //console.log('✅ Disimpan ke localStorage:', newVal);
-  } else {
-    console.warn(
-      '❌ Tidak menyimpan selectedKelas karena tidak valid:',
-      newVal
-    );
+const navigateToAbsensi = () => {
+  const classId = teacherClass.value?.id;
+
+  if (!classId) {
+    console.warn('⛔️ Belum ada classId saat navigasi.');
+    return;
   }
+
+  const year = selectedYear.value?.toLowerCase();
+  const month = selectedMonth.value?.toLowerCase();
+  const mapelObj = selectedMapel.value?.[0];
+  const mapel = mapelObj?.mapel?.toLowerCase().replace(/\s+/g, '-');
+
+  if (!year || !month || !mapel) {
+    console.error('❌ Parameter tidak lengkap:', { year, month, mapel });
+    return;
+  }
+
+  // 🔁 Nama route Laravel tergantung bulan
+  const routeName = 'absensiSiswa' + capitalize(month); // e.g., 'absensiSiswaFebruari'
+
+  console.log('📌 Navigasi ke route:', routeName);
+
+  const url = route(routeName, {
+    kelas: classId, // perhatikan: parameternya harus `kelas` bukan `classId` karena route kamu pakai `kelas`
+    year,
+    mapel,
+  });
+
+  console.log('🔗 Final URL:', url);
+
+  router.visit(url, {
+    preserveState: false,
+    preserveScroll: true,
+  });
+};
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const showAbsensiButton = computed(() => {
+  return (
+    selectedYear.value &&
+    selectedMapel.value?.length > 0 &&
+    teacherClass.value?.id &&
+    selectedMonth.value &&
+    selectedMonth.value !== ''
+  );
 });
-*/
 
 watch(
   () => props.selectedMapel,
@@ -612,55 +609,66 @@ const fetchAttendanceData = async (month, year) => {
   }
 };
 
-/*
-watch(mapelList, (newValue) => {
-  console.log('mapelList berubah:', newValue);
-  if (Array.isArray(newValue)) {
-    console.log('mapelList adalah array');
-    newValue.forEach((mapel, index) => {
-      //console.log(`Mapel ${index + 1}:`, mapel);
-    });
-  } else {
-    console.error('mapelList bukan array');
-  }
-});
-*/
+const lastSelectedMonth = ref(null);
 
-const isManualChange = ref(false); // Jadikan reactive agar perubahan terdeteksi
+const hasMounted = ref(false);
+
+const handleMonthChange = () => {
+  nextTick(() => {
+    console.log('🔥 selectedMonth setelah update:', selectedMonth.value);
+    navigateToAbsensi(); // langsung arahkan setelah bulan berubah
+  });
+};
+
+const isUpdating = ref(false);
 
 watch(
   [selectedMonth, teacherClass],
   ([newMonth, newKelas], [oldMonth, oldKelas]) => {
     console.log(`🔥 selectedMonth berubah dari ${oldMonth} ke ${newMonth}`);
 
-    // Pastikan oldMonth memiliki nilai sebelum melakukan pengecekan
-    if (!oldMonth) return;
+    if (!oldMonth || newMonth === oldMonth) return;
 
-    // **Cegah reset bulan ke Februari tanpa input user**
-    if (
-      !isManualChange.value &&
-      newMonth === 'Februari' &&
-      oldMonth !== 'Februari'
-    ) {
-      console.warn(
-        '🚨 selectedMonth kembali ke Februari tanpa input user! Kembalikan ke nilai sebelumnya.'
-      );
-      isManualChange.value = true; // Set flag agar tidak looping
-      selectedMonth.value = oldMonth;
-      setTimeout(() => (isManualChange.value = false), 100); // Reset flag
+    const monthChanged = newMonth !== oldMonth;
+    const classChanged = newKelas !== oldKelas;
+
+    if (isUpdating.value) {
+      console.log('🔁 Sedang mengembalikan nilai, abaikan loop ini.');
+      return;
     }
 
-    // **Cegah perubahan bulan karena perubahan kelas**
-    if (!isManualChange.value && oldKelas && newMonth === 'Februari') {
-      console.warn(
-        '⚠️ selectedMonth di-reset setelah kelas berubah, mengembalikan ke nilai sebelumnya.'
+    // Jika berasal dari input user, valid
+    if (newMonth === lastSelectedMonth.value) {
+      console.log(
+        '🟢 Perubahan bulan berasal dari input user, tidak diabaikan.'
       );
-      isManualChange.value = true;
-      selectedMonth.value = oldMonth;
-      setTimeout(() => (isManualChange.value = false), 100);
+      return;
     }
-  }
+
+    // Cegah perubahan tak disengaja
+    console.warn(
+      `🚨 selectedMonth berubah ke ${newMonth} tanpa input user! Kembalikan ke nilai sebelumnya (${oldMonth}).`
+    );
+    isUpdating.value = true;
+    selectedMonth.value = oldMonth;
+    nextTick(() => (isUpdating.value = false));
+  },
+  { flush: 'post' }
 );
+
+watchEffect(() => {
+  console.log('🧪 Kondisi tombol absensi:');
+  console.log(' selectedYear:', selectedYear.value);
+  console.log(' selectedMonth:', selectedMonth.value);
+  console.log(' selectedMapel:', selectedMapel.value);
+  console.log(' selectedMapel.length:', selectedMapel.value?.length);
+  console.log(' teacherClass:', teacherClass.value);
+  console.log(' teacherClass.id:', teacherClass.value?.id);
+});
+
+watchEffect(() => {
+  console.log('🔄 selectedMonth:', selectedMonth.value);
+});
 </script>
 
 <style scoped>
@@ -893,6 +901,10 @@ watch(
               v-model="selectedMonth"
               class="p-3 border rounded-lg shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-50 transition-colors duration-200"
             >
+              <!-- ✅ Tambahkan ini -->
+              <option disabled value="">Pilih Bulan</option>
+
+              <!-- ✅ Looping bulan -->
               <option
                 v-for="(month, index) in currentMonth"
                 :key="index"
@@ -908,18 +920,10 @@ watch(
 
       <!-- Kartu Bulan -->
       <div class="flex justify-center mt-15">
-        <div
-          v-if="selectedYear && selectedMapel && teacherClass && selectedMonth"
-        >
+        <div v-if="showAbsensiButton">
           <a
-            :href="
-              generateUrl(
-                selectedYear,
-                selectedMonth,
-                selectedMapel,
-                toRaw(teacherClass)
-              )
-            "
+            href="#"
+            @click.prevent="navigateToAbsensi"
             class="flex items-center bg-blue-500 text-white p-4 rounded-md shadow-md hover:bg-blue-600 transition"
           >
             <span class="text-2xl mr-4">
@@ -943,8 +947,8 @@ watch(
               alt=""
           /></span>
           <span class="block text-lg font-bold text-center">
-            Silakan pilih tahun ajaran, bulan ajaran, mata pelajaran, dan kelas
-            untuk melihat absensi.
+            Silakan pilih tahun ajaran, bulan ajaran, dan mata pelajaran untuk
+            melihat absensi.
           </span>
         </div>
       </div>

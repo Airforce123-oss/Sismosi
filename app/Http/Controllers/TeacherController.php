@@ -87,78 +87,82 @@ class TeacherController extends Controller
         return Teacher::with('masterMapel')->get();
     }
 
-public function membuatTugasSiswa(Request $request)
-{
-    $classId = $request->input('class_id');
+    public function membuatTugasSiswa(Request $request)
+    {
+        $user = auth()->user();
+        $teacher = $user->teacher;
 
-    $query = Tugas::with(['mapel', 'student', 'teacher', 'kelas']);
+        // Ambil class_id dari request atau fallback ke milik teacher login
+        $classId = $request->input('class_id') ?? $teacher?->class_id;
 
-    if (!empty($classId)) {
-        $query->where('class_id', $classId);
-    }
+        $query = Tugas::with(['mapel', 'student', 'teacher', 'kelas']);
 
-    $tugas = $query->paginate(5)->appends($request->query());
+        if (!empty($classId)) {
+            $query->where('class_id', $classId);
+        }
 
-    // Konversi ke array agar links jadi array biasa (bukan HTML)
-    $paginationArray = json_decode(json_encode($tugas), true);
+        $tugas = $query->paginate(5)->appends($request->query());
 
-    $result = [
-        'tugas' => [
-            'data' => collect($tugas->items())->map(function ($t) {
-                return [
-                    'id' => $t->id,
-                    'title' => $t->title,
-                    'mapel' => $t->mapel,
-                    'student' => $t->student,
-                    'teacher' => $t->teacher,
-                    'kelas' => $t->kelas,
-                    'description' => $t->description,
-                    'created_at' => $t->created_at,
-                    'updated_at' => $t->updated_at,
-                ];
-            }),
-            'meta' => [
-                'current_page' => $tugas->currentPage(),
-                'from' => $tugas->firstItem(),
-                'to' => $tugas->lastItem(),
-                'last_page' => $tugas->lastPage(),
-                'per_page' => $tugas->perPage(),
-                'total' => $tugas->total(),
-            ],
-            'links' => $paginationArray['links'], // ← pakai dari hasil json_decode
-        ],
-        'teachers' => Teacher::with('masterMapel')->get()->map(function ($teacher) {
-            return [
-                'id' => $teacher->id,
-                'name' => $teacher->name,
-                'nip' => $teacher->nip,
-                'class_id' => $teacher->class_id,
-                'masterMapel' => $teacher->masterMapel->map(function ($mapel) {
+        $paginationArray = json_decode(json_encode($tugas), true);
+
+        $result = [
+            'tugas' => [
+                'data' => collect($tugas->items())->map(function ($t) {
                     return [
-                        'id' => $mapel->id,
-                        'nama_mapel' => $mapel->mapel,
+                        'id' => $t->id,
+                        'title' => $t->title,
+                        'mapel' => $t->mapel,
+                        'student' => $t->student,
+                        'teacher' => $t->teacher,
+                        'kelas' => $t->kelas,
+                        'description' => $t->description,
+                        'created_at' => $t->created_at,
+                        'updated_at' => $t->updated_at,
                     ];
                 }),
-            ];
-        }),
-        'students' => Student::all(),
-        'mapels' => \DB::table('teacher_mapel')
-            ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
-            ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
-            ->select(
-                'teacher_mapel.id',
-                'teacher_mapel.teacher_id',
-                'teacher_mapel.mapel_id',
-                'teacher_mapel.kode_mapel',
-                'master_mapel.mapel as mapel_name',
-                'teachers.name as teacher_name'
-            )
-            ->get(),
-        'classes_for_student' => Classes::all(),
-    ];
+                'meta' => [
+                    'current_page' => $tugas->currentPage(),
+                    'from' => $tugas->firstItem(),
+                    'to' => $tugas->lastItem(),
+                    'last_page' => $tugas->lastPage(),
+                    'per_page' => $tugas->perPage(),
+                    'total' => $tugas->total(),
+                ],
+                'links' => $paginationArray['links'],
+            ],
+            'teachers' => Teacher::with('masterMapel')->get()->map(function ($teacher) {
+                return [
+                    'id' => $teacher->id,
+                    'name' => $teacher->name,
+                    'nip' => $teacher->nip,
+                    'class_id' => $teacher->class_id,
+                    'masterMapel' => $teacher->masterMapel->map(function ($mapel) {
+                        return [
+                            'id' => $mapel->id,
+                            'nama_mapel' => $mapel->mapel,
+                        ];
+                    }),
+                ];
+            }),
+            'students' => Student::all(),
+            'mapels' => \DB::table('teacher_mapel')
+                ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
+                ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
+                ->select(
+                    'teacher_mapel.id',
+                    'teacher_mapel.teacher_id',
+                    'teacher_mapel.mapel_id',
+                    'teacher_mapel.kode_mapel',
+                    'master_mapel.mapel as mapel_name',
+                    'teachers.name as teacher_name'
+                )
+                ->get(),
+            'classes_for_student' => Classes::all(),
+            'selected_class_id' => $classId, // biar bisa dipakai di frontend
+        ];
 
-    return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', $result);
-}
+        return Inertia::render('Teachers/TugasSiswa/membuatTugasSiswa', $result);
+    }
 
     public function createTugasSiswa(Request $request)
     {
@@ -200,90 +204,88 @@ public function membuatTugasSiswa(Request $request)
     
     public function index(Request $request)
     {
-        $teacherQuery = Teacher::query()->with(['class', 'masterMapel', 'user', 'jabatan']);
+        // Ambil data guru beserta relasinya
+        $teacherQuery = Teacher::with([
+            'class',
+            'masterMapel',
+            'user',
+            'jabatan',
+            'waliKelas.kelas', // Wajib untuk menampilkan kelas yang diampu wali
+        ]);
 
-
-        // Apply search filter if present
+        // Filter pencarian jika ada
         $this->applySearch($teacherQuery, $request->search);
 
-        // Pagination
-        //$wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
-        //$wali_kelas = $teacherQuery->paginate(5)->appends($request->query());
-        $wali_kelas = $teacherQuery->paginate(5)->appends($request->only('search'));
+        // Pagination untuk data guru
+        $waliKelas = $teacherQuery->paginate(5)->appends($request->only('search'));
 
-        //dd($wali_kelas);
 
+        // Jika minta JSON
         if ($request->wantsJson()) {
-            return response()->json($wali_kelas);
+            return response()->json($waliKelas);
         }
 
-        //dd($wali_kelas->items());
+        // Ambil parameter pagination untuk data kelas siswa
+        $itemsPerPage = $request->input('itemsPerPage', 20);
+        $currentPage = $request->input('currentPage', 1);
 
-        $itemsPerPage = $request->input('itemsPerPage', 20); // Default to 20 items per page
-        $currentPage = $request->input('currentPage', 1); // Default to page 1
-
-        // Ambil data classes yang relevan
-        $classesQuery = Classes::query();
-
-        // Ambil data master_mapel yang relevan
-        $mapelQuery = Mapel::query();
-        $mapelData = $mapelQuery->get();
-
-        // Ambil data teacher berdasarkan ID jika diberikan dalam request
-        $teacherId = $request->input('teacher_id'); // Ambil ID guru dari request jika ada
+        // Ambil data mapel
+        $mapelData = Mapel::all();
+        
+        // Ambil data teacher tertentu jika diminta
+        $teacherId = $request->input('teacher_id');
         $teacher = $teacherId ? Teacher::with('masterMapel')->find($teacherId) : null;
 
-        //Cek apakah data `mapel` ditemukan
-        // dd($mapelData);
-
-        $classes_for_student = $classesQuery->paginate($itemsPerPage, ['*'], 'page', $currentPage)
+        // Ambil data kelas siswa
+        $classesForStudent = Classes::paginate($itemsPerPage, ['*'], 'page', $currentPage)
             ->appends($request->only('search', 'itemsPerPage', 'currentPage'));
 
-        return inertia('Teachers/index', [
-            'wali_kelas' => TeacherResource::collection($wali_kelas),
-            'search' => $request->input('search', ''),
-            'classes_for_student' => $classes_for_student ?? [],
-            'mapel' => $mapelData ?? [],
-            'teacher' => $teacher ?? null,
-            'meta' => [
-                'total' => $wali_kelas->total(),
-                'per_page' => $wali_kelas->perPage(),
-                'current_page' => $wali_kelas->currentPage(),
-                'last_page' => $wali_kelas->lastPage(),
-                'links' => array_merge(
+        // Siapkan data meta pagination manual (opsional jika tidak pakai Laravel default pagination links)
+        $meta = [
+            'total' => $waliKelas->total(),
+            'per_page' => $waliKelas->perPage(),
+            'current_page' => $waliKelas->currentPage(),
+            'last_page' => $waliKelas->lastPage(),
+            'links' => array_merge(
+                [
                     [
-                        [
-                            'url' => $wali_kelas->url(1),
-                            'label' => 'First',
-                            'active' => $wali_kelas->currentPage() == 1,
-                        ]
-                    ],
-                    collect(range(1, $wali_kelas->lastPage()))->map(function ($page) use ($wali_kelas) {
-                        return [
-                            'url' => $wali_kelas->url($page),
-                            'label' => $page,
-                            'active' => $wali_kelas->currentPage() == $page,
-                        ];
-                    })->toArray(),
-                    [
-                        [
-                            'url' => $wali_kelas->previousPageUrl(),
-                            'label' => 'Previous',
-                            'active' => $wali_kelas->previousPageUrl() !== null,
-                        ],
-                        [
-                            'url' => $wali_kelas->nextPageUrl(),
-                            'label' => 'Next',
-                            'active' => $wali_kelas->nextPageUrl() !== null,
-                        ],
-                        [
-                            'url' => $wali_kelas->url($wali_kelas->lastPage()),
-                            'label' => 'Last',
-                            'active' => $wali_kelas->currentPage() == $wali_kelas->lastPage(),
-                        ]
+                        'url' => $waliKelas->url(1),
+                        'label' => 'First',
+                        'active' => $waliKelas->currentPage() == 1,
                     ]
-                ),
-            ],
+                ],
+                collect(range(1, $waliKelas->lastPage()))->map(fn ($page) => [
+                    'url' => $waliKelas->url($page),
+                    'label' => $page,
+                    'active' => $waliKelas->currentPage() == $page,
+                ])->toArray(),
+                [
+                    [
+                        'url' => $waliKelas->previousPageUrl(),
+                        'label' => 'Previous',
+                        'active' => $waliKelas->previousPageUrl() !== null,
+                    ],
+                    [
+                        'url' => $waliKelas->nextPageUrl(),
+                        'label' => 'Next',
+                        'active' => $waliKelas->nextPageUrl() !== null,
+                    ],
+                    [
+                        'url' => $waliKelas->url($waliKelas->lastPage()),
+                        'label' => 'Last',
+                        'active' => $waliKelas->currentPage() == $waliKelas->lastPage(),
+                    ]
+                ]
+            ),
+        ];
+
+        return inertia('Teachers/index', [
+            'wali_kelas' => TeacherResource::collection($waliKelas),
+            'search' => $request->input('search', ''),
+            'classes_for_student' => $classesForStudent,
+            'mapel' => $mapelData,
+            'teacher' => $teacher,
+            'meta' => $meta,
         ]);
     }
 
@@ -382,9 +384,12 @@ public function membuatTugasSiswa(Request $request)
         $mapelQuery = Mapel::query();
         $mapelData = $mapelQuery->get()->toArray();
 
+        $teachers = TeacherResource::collection(Teacher::with('class')->get());
+
         return inertia('Teachers/create', [
             'classes' => $classes,
             'mapels' => $mapelData,
+            'teachers' => $teachers,
         ]);
     }
 
@@ -410,21 +415,25 @@ public function membuatTugasSiswa(Request $request)
 
     public function edit(Teacher $teacher)
     {
-        // Eager load relasi masterMapel dan class
+        // Eager load relasi yang diperlukan
         $teacher->load('masterMapel', 'class');
 
         $jabatans = MasterJabatan::select('id', 'nama_jabatan')->get();
+        $classes = Classes::with('waliKelas')->get();
+        $mapelData = Mapel::all();
 
-        $classes = ClassesResource::collection(Classes::all());
-        $mapelQuery = Mapel::query();
-        $mapelData = $mapelQuery->get();
+        // Ambil ID mapel yang dimiliki guru
+        $assignedMapelIds = $teacher->masterMapel->pluck('id');
 
         return inertia('Teachers/edit', [
             'teacher' => $teacher,
-            'mapel' => $mapelData ?? [],
+            'mapel' => $mapelData,
+            'mapel_ids' => $assignedMapelIds,
             'jabatans' => $jabatans,
+            'classes' => $classes,
         ]);
     }
+
 
     public function update(UpdateTeacherRequest $request, Teacher $teacher)
     {

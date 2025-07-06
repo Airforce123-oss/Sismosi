@@ -21,6 +21,17 @@ class TeacherResource extends JsonResource
             'class' => new ClassResource($this->whenLoaded('class')),
             'master_mapel' => MapelResource::collection($this->whenLoaded('masterMapel')),
             'jabatan' => new JabatanResource($this->whenLoaded('jabatan')),
+            'wali_kelas' => $this->whenLoaded('waliKelas', function () {
+            $waliKelas = $this->waliKelas;
+
+            if (!$waliKelas) return null;
+
+            return [
+                'id' => $waliKelas->id,
+                'nama_guru' => $waliKelas->name, // ✅ Ambil nama guru dari tabel wali_kelas
+            ];
+        }),
+
             'created_at' => $this->created_at ? $this->created_at->toDateTimeString() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toDateTimeString() : null,
         ];

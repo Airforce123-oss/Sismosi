@@ -143,9 +143,6 @@ Route::post('/attendances/batch-update', [AttendanceController::class, 'batchUpd
 
 Route::get('/api-schedule', [MataPelajaranController::class, 'apiJadwal']);
 
-
-Route::post('/komentar-siswa', [ParentController::class, 'storeKomentarSiswa']);
-
 Route::get('/enrollments/students', [EnrollmentController::class, 'getStudentsByClass']);
 
 Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']);
@@ -157,6 +154,15 @@ Route::post('/student-login', [AuthController::class, 'studentLogin']);
 Route::delete('/tugas/{id}', [TugasController::class, 'destroy']);
 
 Route::put('matapelajaran/{id}', [MataPelajaranController::class, 'update'])->name('matapelajaran.update');
+
+Route::delete('/attendances', [AttendanceController::class, 'destroy']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/komentar-siswa', [ParentController::class, 'storeKomentarSiswa']);
+    Route::put('/komentar-siswa/{komentar}', [ParentController::class, 'updateKomentarSiswa']);
+});
+
+
 
 
 

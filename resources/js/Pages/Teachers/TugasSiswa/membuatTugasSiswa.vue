@@ -8,7 +8,6 @@ import { useForm, usePage, Head, router, Link } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import axios from 'axios';
 
-// Amb
 const { props } = usePage();
 const students = ref(props.students || []);
 const filteredCourses = ref([]);
@@ -17,16 +16,16 @@ const mapels = ref(props.mapels || []);
 const courses = ref(props.courses || []);
 const tugas = ref(props.tugas || { data: [], meta: {}, links: {} });
 const classesForStudent = ref(props.classes_for_student || []);
+const selectedClassId = computed(() => props.selected_class_id ?? null);
+console.log('✅ selected_class_id:', selectedClassId.value);
 
-const meta = ref(props.meta || {});
-const links = ref(props.links || {});
-
-//const totalCourses = computed(() => tugas.value?.data?.length ?? 0);
 const totalCourses = computed(() => props.tugas?.meta?.total ?? 0);
+console.log('📊 Total tugas:', totalCourses.value);
 
-//console.log('🔍 Props.students:', props.students);
-//console.log('Props.teachers toRaw:', toRaw(props.teachers));
-//console.log('🔎 Contoh teacher id 1:', toRaw(teachers.value)[1]);
+const student = computed(() => props.student || {});
+const classId = computed(() => student.value.class_id || null);
+
+console.log('🎯 class_id:', classId.value);
 for (let i = 0; i < props.teachers.length; i++) {
   const teacher = props.teachers[i];
   const masterMapel = toRaw(teacher.masterMapel);
@@ -92,7 +91,9 @@ const editForm = ref({
 
 // Pagination & Search Data
 const totalPages = ref(1);
-const currentPage = ref(1);
+//const currentPage = ref(1);
+const currentPage = computed(() => props.tugas?.meta?.current_page ?? 1);
+const perPage = computed(() => props.tugas?.meta?.per_page ?? 5);
 
 console.log('taskForm yang dikirim:', taskForm.value);
 
@@ -161,9 +162,6 @@ const closeTaskModal = () => {
   isTaskModalOpen.value = false;
   console.log('Closing modal - after', isTaskModalOpen.value);
 };
-
-const selectedClassId = ref(null);
-const student = ref(props.student || {});
 
 const defaultClassId = computed(() => {
   return selectedClassId.value ?? student.value?.kelas_id ?? 1; // 👈 fallback default class_id yang valid
@@ -613,16 +611,6 @@ const editTask = (task) => {
   };
 
   showTaskModal.value = true;
-
-  // Log per bidang (lebih mudah dibaca dan didiagnosis)
-  console.log('📥 Memulai Edit Task');
-  console.log('🆔 ID:', taskForm.value.id);
-  console.log('📘 Title:', taskForm.value.title);
-  console.log('📚 Mapel ID:', taskForm.value.mapel_id);
-  console.log('👤 Guru ID:', taskForm.value.teacher_id);
-  console.log('🏫 Kelas ID:', taskForm.value.class_id);
-  console.log('🎓 Siswa ID (opsional):', taskForm.value.student_id);
-  console.log('📝 Deskripsi:', taskForm.value.description);
 };
 
 const deleteTask = async (id) => {
@@ -1207,7 +1195,9 @@ watchEffect(() => {
               :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
               class="transition duration-150 hover:bg-indigo-50"
             >
-              <td class="px-4 py-3 whitespace-nowrap">{{ task.id }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                {{ index + 1 + (currentPage - 1) * perPage }}
+              </td>
               <td class="px-4 py-3 whitespace-nowrap">
                 {{ task.title || '—' }}
               </td>

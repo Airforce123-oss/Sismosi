@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Tugas;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ParentController extends Controller
@@ -41,18 +42,27 @@ class ParentController extends Controller
 
         $tugas = $query->paginate(5)->appends(request()->query());
 
-        $tugas->setCollection(
-            $tugas->getCollection()->map(function ($t) {
-                return [
-                    'id' => $t->id,
-                    'mapel' => $t->mapel,
-                    'teacher' => $t->teacher,
-                    'kelas' => $t->kelas,
-                    'description' => $t->description,
-                    'created_at' => $t->created_at,
-                    'updated_at' => $t->updated_at,
-                ];
-            })
+        $tugasTransformed = collect($tugas->items())->map(function ($t) {
+            return [
+            'id' => $t->id,
+            'mapel' => $t->mapel,
+            'teacher' => $t->teacher,
+            'kelas' => $t->kelas,
+            'description' => $t->description,
+            'created_at' => $t->created_at,
+            'updated_at' => $t->updated_at,
+            ];
+        });
+
+        $tugas = new LengthAwarePaginator(
+            $tugasTransformed,
+            $tugas->total(),
+            $tugas->perPage(),
+            $tugas->currentPage(),
+            [
+            'path' => request()->url(),
+            'query' => request()->query(),
+            ]
         );
         return Inertia::render('Parents/memeriksaTugasSubmit', [
             'tugas' => [
@@ -96,21 +106,43 @@ class ParentController extends Controller
         ]);
     }
 
-    public function storeKomentarSiswa(Request $request)
-    {
-        $request->validate([
-            'student_id' => 'required|exists:students,id',
-            'komentar' => 'required|string|max:255',
-        ]);
+public function storeKomentarSiswa(Request $request)
+{
+    $request->validate([
+        'student_id' => 'required|exists:students,id',
+        'komentar' => 'required|string|max:255',
+    ]);
 
-        KomentarSiswa::create([
-            'student_id' => $request->student_id,
-            'komentar' => $request->komentar,
-            'parent_id' => auth()->id(), // jika ingin simpan parent yang memberi komentar
-        ]);
+    $student = Student::findOrFail($request->student_id);
 
-        return response()->json(['message' => 'Komentar berhasil disimpan']);
+    // Pastikan parent yang login adalah parent dari siswa tsb
+    if ($student->parent_id !== auth()->id()) {
+        return response()->json(['message' => 'Tidak diizinkan'], 403);
     }
+
+    $komentar = KomentarSiswa::create([
+        'student_id' => $student->id,
+        'komentar' => $request->komentar,
+        'parent_id' => $student->parent_id,
+    ]);
+
+    return response()->json([
+        'message' => 'Komentar berhasil disimpan',
+        'data' => [
+        'id' => $komentar->id,
+        'student_id' => $komentar->student_id,
+        'komentar' => $komentar->komentar,
+        'parent_id' => $komentar->parent_id,
+        'created_at' => $komentar->created_at,
+        'updated_at' => $komentar->updated_at,
+    ],
+        'debug' => [
+            'student_id' => $student->id,
+            'parent_id' => $student->parent_id,
+        ]
+    ]);
+}
+
     public function melihatPresensiSiswa(Request $request)
     {
         $classId = $request->input('class_id');
@@ -283,6 +315,34 @@ class ParentController extends Controller
             ], 500);
         }
     }
+
+        public function updateKomentarSiswa(Request $request, KomentarSiswa $komentar)
+    {
+
+          Log::info('Update komentar siswa debug:', [
+        'auth_id' => auth()->id(),
+        'komentar_parent_id' => $komentar->parent_id,
+        'komentar_id' => $komentar->id,
+        'komentar_value' => $request->komentar,
+    ]);
+        $request->validate([
+            'komentar' => 'required|string|max:255',
+        ]);
+        
+
+        // Pastikan yang edit adalah parent yang sama
+        if ($komentar->parent_id !== auth()->id()) {
+            return response()->json(['message' => 'Tidak diizinkan'], 403);
+        }
+
+        $komentar->update([
+            'komentar' => $request->komentar,
+        ]);
+        
+
+        return response()->json(['message' => 'Komentar berhasil diperbarui']);
+    }
+
 
 
 }

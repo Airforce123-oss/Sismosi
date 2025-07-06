@@ -44,11 +44,32 @@ const deleteJabatan = async (id) => {
   });
 
   if (result.isConfirmed) {
+    // Tampilkan loading state
+    Swal.fire({
+      title: 'Menghapus...',
+      text: 'Mohon tunggu sebentar',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     try {
       await router.delete(route('master-jabatan.destroy', id));
-      Swal.fire('Terhapus!', 'Data jabatan berhasil dihapus.', 'success');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Terhapus!',
+        text: 'Data jabatan berhasil dihapus.',
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (error) {
-      Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus.', 'error');
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal!',
+        text: 'Terjadi kesalahan saat menghapus.',
+      });
     }
   }
 };

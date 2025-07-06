@@ -3,21 +3,27 @@ import { initFlowbite } from 'flowbite';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { ref, onMounted, watch } from 'vue';
+import Multiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
+
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 
 const props = defineProps({
   jabatans: Array,
   mapel: Array,
+  mapel_ids: Array, // ← tambahkan properti ini
   teacher: Object,
+  classes: Array,
 });
 
-// Logging untuk debugging
+// Debug props
 console.log('✅ Props received in edit.vue:', props);
 
 // Reactive refs
 const jabatans = ref(props.jabatans || []);
 const mapels = ref(props.mapel || []);
+const classes = ref(props.classes || []);
 
 // Gunakan useForm untuk binding form
 const formData = useForm({
@@ -25,7 +31,8 @@ const formData = useForm({
   nip: '',
   email: '',
   jabatan_id: '',
-  mapel_id: '',
+  mapel_ids: [], // ← multi mapel
+  class_id: '',
 });
 
 // Isi data awal saat mount
@@ -35,14 +42,19 @@ onMounted(() => {
     formData.nip = props.teacher.nip ?? '';
     formData.email = props.teacher.email ?? '';
     formData.jabatan_id = props.teacher.jabatan_id ?? '';
-    formData.mapel_id = props.teacher.mapel_id ?? '';
+    formData.class_id = props.teacher.class_id ?? '';
+
+    // ✅ Convert array of IDs (mapel_ids) ke array of mapel objects
+    formData.mapel_ids =
+      props.mapel_ids
+        ?.map((id) => mapels.value.find((m) => m.id === id))
+        .filter(Boolean) ?? [];
   }
-  
 
   initFlowbite();
 });
 
-// Update mapels jika berubah
+// Watch perubahan mapel dari props
 watch(
   () => props.mapel,
   (newMapels) => {
@@ -235,7 +247,7 @@ const submit = () => {
                       Informasi Guru
                     </h3>
                     <p class="mt-1 text-sm text-gray-500">
-                      Gunakan Form ini untuk mengisi data guru
+                      Gunakan Form ini untuk mengupdate data guru
                     </p>
                   </div>
 
@@ -284,6 +296,39 @@ const submit = () => {
                       </div>
                     </div>
 
+                    <!-- Wali Kelas -->
+                    <div class="col-span-6 sm:col-span-3">
+                      <label
+                        for="class_id"
+                        class="block text-sm font-medium text-gray-700"
+                      >
+                        Wali Kelas
+                      </label>
+                      <select
+                        v-model="formData.class_id"
+                        id="class_id"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
+                        :class="
+                          formData.errors.class_id ? 'border-red-500' : ''
+                        "
+                      >
+                        <option value="">Pilih Wali Kelas</option>
+                        <option
+                          v-for="kelas in classes"
+                          :key="kelas.id"
+                          :value="kelas.id"
+                        >
+                          {{ kelas.wali_kelas?.name || 'Tidak Ada Wali' }}
+                        </option>
+                      </select>
+                      <div
+                        v-if="formData.errors.class_id"
+                        class="text-sm text-red-600 mt-1"
+                      >
+                        {{ formData.errors.class_id }}
+                      </div>
+                    </div>
+
                     <!-- Dropdown Jabatan -->
                     <div class="col-span-6 sm:col-span-3">
                       <label
@@ -317,37 +362,57 @@ const submit = () => {
                       </div>
                     </div>
 
-                    <!-- Mapel -->
-                    <div class="col-span-6 sm:col-span-3">
+                    <!-- MAPEL (Multi-select pakai vue-multiselect) -->
+                    <div class="col-span-6 sm:col-span-6">
                       <label
-                        for="mapel_id"
+                        for="mapel_ids"
                         class="block text-sm font-medium text-gray-700"
                       >
                         Mata Pelajaran
                       </label>
-                      <select
-                        id="mapel_id"
-                        v-model="formData.mapel_id"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
-                        :class="
-                          formData.errors.mapel_id ? 'border-red-500' : ''
-                        "
+
+                      <Multiselect
+                        id="mapel_ids"
+                        v-model="formData.mapel_ids"
+                        :options="mapels"
+                        :multiple="true"
+                        :close-on-select="false"
+                        :clear-on-select="false"
+                        :preserve-search="true"
+                        placeholder="Pilih mata pelajaran"
+                        label="mapel"
+                        track-by="id"
+                        class="mt-1"
                       >
-                        <option value="">Pilih Mapel</option>
-                        <option
-                          v-for="mapel in mapels"
-                          :key="mapel.id"
-                          :value="mapel.id"
-                        >
-                          {{ mapel.mapel }} ({{ mapel.hari }}, Jam
-                          {{ mapel.jam_ke }})
-                        </option>
-                      </select>
+                        <!-- Optional slot untuk custom option -->
+                        <template #option="{ option }">
+                          {{ option.mapel }} ({{ option.hari }}, Jam
+                          {{ option.jam_ke }})
+                        </template>
+
+                        <template #selection="{ values, isOpen }">
+                          <span
+                            v-if="values.length === 0"
+                            class="multiselect__placeholder text-gray-400"
+                          >
+                            Pilih mata pelajaran
+                          </span>
+                          <span
+                            v-else
+                            v-for="(mapel, index) in values"
+                            :key="index"
+                            class="inline-block bg-indigo-600 text-white text-xs font-medium mr-1 mb-1 px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            {{ mapel.mapel }}
+                          </span>
+                        </template>
+                      </Multiselect>
+
                       <div
-                        v-if="formData.errors.mapel_id"
+                        v-if="formData.errors.mapel_ids"
                         class="text-sm text-red-600 mt-1"
                       >
-                        {{ formData.errors.mapel_id }}
+                        {{ formData.errors.mapel_ids }}
                       </div>
                     </div>
                   </div>

@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Tugas;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 
 class StudentRoleController extends Controller
@@ -83,12 +84,63 @@ class StudentRoleController extends Controller
     }
     public function melihatTugas()
     {
-        // Ambil data tugas beserta relasinya
+        $user = auth()->user();
+        $isStudent = $user->role_type === 'siswa';
+
+        // Ambil student dari login, atau dari query jika bukan siswa
+        $student = $isStudent
+            ? $user->student
+            : Student::with('class')->find(request('student_id'));
+
+        // Jika student tidak ditemukan atau tidak punya class_id
+        if (!$student || !$student->class_id) {
+            return Inertia::render('Students/melihatTugasSiswa', [
+                'student' => [
+                    'id' => $student?->id ?? null,
+                    'name' => $student?->name ?? '-',
+                    'class' => $student?->class?->name ?? '-',
+                ],
+                'tugas' => [
+                    'data' => [],
+                    'meta' => [],
+                    'links' => [],
+                ],
+                'teachers' => [],
+                'students' => [],
+                'mapels' => [],
+                'classes_for_student' => [],
+            ]);
+        }
+
+        $student->load('class');
+
+        // Filter tugas berdasarkan class_id dari student
         $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])
-            ->paginate(10)
+            ->where('class_id', $student->class_id)
+            ->orderByDesc('id')
+            ->paginate(5)
             ->appends(request()->query());
 
-        // Ambil data guru beserta mapel yang diajarkan
+            $formattedTugas = collect($tugas->items())->values()->map(function ($t, $index) use ($tugas) {
+                $currentPage = $tugas->currentPage();
+                $perPage = $tugas->perPage();
+                $no = ($currentPage - 1) * $perPage + $index + 1;
+
+                return [
+                    'no' => $no, // ← Tambahkan nomor urut lokal dimulai dari 1
+                    'id' => $t->id,
+                    'title' => $t->title,
+                    'mapel' => $t->mapel,
+                    'student' => $t->student,
+                    'teacher' => $t->teacher,
+                    'kelas' => $t->kelas,
+                    'description' => $t->description,
+                    'created_at' => $t->created_at,
+                    'updated_at' => $t->updated_at,
+                ];
+            });
+
+        // Ambil data lainnya
         $teachers = Teacher::with('masterMapel')->get()->map(function ($teacher) {
             return [
                 'id' => $teacher->id,
@@ -104,11 +156,10 @@ class StudentRoleController extends Controller
             ];
         });
 
-        // Ambil semua data siswa
         $students = Student::all();
+        $classes_for_student = Classes::all();
 
-        // Ambil semua data mapel yang diajarkan guru
-        $mapels = \DB::table('teacher_mapel')
+        $mapels = DB::table('teacher_mapel')
             ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
             ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
             ->select(
@@ -121,34 +172,14 @@ class StudentRoleController extends Controller
             )
             ->get();
 
-        // Ambil semua data kelas
-        $classes_for_student = Classes::all();
-
-        // Ambil data student yang sedang login beserta kelasnya
-        $student = auth()->user()->student;
-        $student?->load('class');
-
-        // Simpan hasil yang akan dikirim ke frontend ke dalam array
-        $result = [
+        return Inertia::render('Students/melihatTugasSiswa', [
             'student' => [
-                'id' => $student?->id,
-                'name' => $student?->name,
-                'class' => $student?->class?->name,
+                'id' => $student->id,
+                'name' => $student->name,
+                'class' => $student->class->name,
             ],
             'tugas' => [
-                'data' => collect($tugas->items())->map(function ($t) {
-                    return [
-                        'id' => $t->id,
-                        'title' => $t->title, 
-                        'mapel' => $t->mapel,
-                        'student' => $t->student,
-                        'teacher' => $t->teacher,
-                        'kelas' => $t->kelas,
-                        'description' => $t->description,
-                        'created_at' => $t->created_at,
-                        'updated_at' => $t->updated_at,
-                    ];
-                }),
+                'data' => $formattedTugas,
                 'meta' => [
                     'current_page' => $tugas->currentPage(),
                     'from' => $tugas->firstItem(),
@@ -157,56 +188,56 @@ class StudentRoleController extends Controller
                     'per_page' => $tugas->perPage(),
                     'total' => $tugas->total(),
                 ],
-                'links' => [
-                    'first' => $tugas->url(1),
-                    'last' => $tugas->url($tugas->lastPage()),
-                    'prev' => $tugas->previousPageUrl(),
-                    'next' => $tugas->nextPageUrl(),
-                ],
+            'links' => $tugas->linkCollection(), 
             ],
             'teachers' => $teachers,
             'students' => $students,
             'mapels' => $mapels,
             'classes_for_student' => $classes_for_student,
-        ];
-
-        // Dump semua data yang akan dikirim ke frontend
-        //  dd($result);
-
-        // (Tidak dijalankan karena dd menghentikan eksekusi)
-        return Inertia::render('Students/melihatTugasSiswa', $result);
+        ]);
     }
 
     public function melihatDataAbsensiSiswa(Request $request)
     {
-        $user = auth()->user();
+        $studentId = $request->query('student_id');
+        $month = $request->query('month');
+        $year = $request->query('year');
 
-        if (!$user || !$user->student) {
-            return redirect()->route('login')->with('error', 'Sesi login tidak valid.');
+        // Ambil data siswa
+        if ($studentId) {
+            $student = Student::with('class')->findOrFail($studentId);
+        } else {
+            $user = auth()->user();
+
+            if (!$user || !$user->student) {
+                return redirect()->route('login')->with('error', 'Sesi login tidak valid.');
+            }
+
+            $student = $user->student->load('class');
         }
 
-        $student = $user->student->load('class');
+        // Query absensi
+        $query = Attendance::where('student_id', $student->id);
 
-        $month = $request->input('month', Carbon::now()->format('m'));
-        $year = $request->input('year', Carbon::now()->format('Y'));
+        // Tambahkan filter bulan dan tahun jika tersedia
+        if ($month && $year) {
+            $query->whereMonth('tanggal_kehadiran', $month)
+                ->whereYear('tanggal_kehadiran', $year);
+        }
 
-        // Ambil data absensi untuk siswa ini
-        $absensi = Attendance::where('student_id', $student->id)
-            ->whereMonth('tanggal_kehadiran', $month)
-            ->whereYear('tanggal_kehadiran', $year)
-            ->orderBy('tanggal_kehadiran')
-            ->get();
+        $attendanceData = $query->orderByDesc('tanggal_kehadiran')
+                                ->paginate(5)
+                                ->withQueryString();
 
-        // Pluck status kehadiran per tanggal (jika masih dibutuhkan)
-        $attendanceData = $absensi->pluck('status_kehadiran', 'tanggal_kehadiran');
-
-        // Ambil semua mapel unik dari field string `mapel`
-        $subjects = $absensi->pluck('mapel')->filter()->unique()->values();
+        // Ambil list mapel (optional)
+        $subjects = Attendance::where('student_id', $student->id)
+            ->pluck('mapel')
+            ->filter()
+            ->unique()
+            ->values();
 
         return Inertia::render('Students/melihatDataAbsensiSiswa', [
             'attendanceData' => $attendanceData,
-            'month' => $month,
-            'year' => $year,
             'student' => $student,
             'subjects' => $subjects,
         ]);

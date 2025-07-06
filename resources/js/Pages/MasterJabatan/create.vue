@@ -1,75 +1,72 @@
 <script setup>
-import { defineProps, ref, watchEffect, onMounted } from 'vue';
-import { useForm, router, Link } from '@inertiajs/vue3';
-import SidebarAdmin from '@/Components/SidebarAdmin.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import axios from 'axios';
-import Swal from 'sweetalert2';
+import { defineProps, ref, watch, onMounted } from 'vue';
 import { initFlowbite } from 'flowbite';
+import { useForm, router, Link } from '@inertiajs/vue3';
+import axios from 'axios';
+import SidebarAdmin from '@/Components/SidebarAdmin.vue';
 import InputError from '@/Components/InputError.vue';
+import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import Swal from 'sweetalert2';
+// Form handling using Inertia
 
-// Props dari server
 const props = defineProps({
-  auth: Object,
-  kode_mapel: Object, // Jika menampilkan daftar mapel yang sudah ada
+  auth: { type: Object },
 });
 
-// State form
 const form = useForm({
-  kode_mapel: '',
-  mapel: '',
-  hari: '',
-  jam_ke: '',
+  nama_jabatan: '',
+  deskripsi: '',
   name: props.auth?.user?.name || '',
   email: props.auth?.user?.email || '',
   role_type: props.auth?.user?.role_type || '',
 });
+const sections = ref([]); // Store sections for the selected class
 
-// Debug perubahan form secara reaktif
-watchEffect(() => {
-  console.log('[watchEffect] Perubahan form:', {
-    kode_mapel: form.kode_mapel,
-    mapel: form.mapel,
-    hari: form.hari,
-    jam_ke: form.jam_ke,
-  });
-});
+// Watch for class_id change to load related sections
+watch(
+  () => form.class_id,
+  (newClassId) => {
+    if (newClassId) {
+      getSections(newClassId);
+    }
+  }
+);
 
-// Submit form ke server
-const submitForm = () => {
-  console.log('[submitForm] Mengirim data:', {
-    kode_mapel: form.kode_mapel,
-    mapel: form.mapel,
-    hari: form.hari,
-    jam_ke: form.jam_ke,
-  });
+// Fetch sections based on class_id
+const getSections = async (class_id) => {
+  try {
+    const response = await axios.get(`/api/sections?class_id=${class_id}`);
+    sections.value = response.data;
+  } catch (error) {
+    console.error('Error fetching sections:', error);
+  }
+};
 
-  form.post(route('matapelajaran.store'), {
+// Submit form function
+function submitForm() {
+  form.post(route('master-jabatan.store'), {
     onSuccess: () => {
-      console.log('[submitForm] Data berhasil disimpan.');
       Swal.fire({
         title: 'Berhasil!',
-        text: 'Data mata pelajaran berhasil disimpan.',
+        text: 'Data jabatan berhasil ditambahkan.',
         icon: 'success',
         confirmButtonText: 'Ok',
       }).then(() => {
-        router.visit(route('matapelajaran.index'), { replace: true });
+        router.visit(route('master-jabatan.index'), { replace: true });
       });
     },
     onError: (errors) => {
-      console.error('[submitForm] Terjadi kesalahan:', errors);
+      console.error('Error:', errors);
       Swal.fire({
         title: 'Gagal!',
-        text: 'Terjadi kesalahan saat menyimpan data.',
+        text: 'Terjadi kesalahan saat menyimpan data jabatan.',
         icon: 'error',
         confirmButtonText: 'Ok',
       });
     },
   });
-};
-
-// Inisialisasi komponen eksternal saat mounted
-onMounted(() => {
+}
+onMounted(async () => {
   initFlowbite();
 });
 </script>
@@ -200,131 +197,83 @@ onMounted(() => {
             <form @submit.prevent="submitForm">
               <div class="shadow sm:rounded-md sm:overflow-hidden">
                 <div class="bg-white py-6 px-4 space-y-6 sm:p-6">
-                  <!-- Judul -->
                   <div>
                     <h3 class="text-lg leading-6 font-medium text-gray-900">
-                      Informasi Mata Pelajaran
+                      Tambah Jabatan
                     </h3>
                     <p class="mt-1 text-sm text-gray-500">
-                      Gunakan Form ini untuk mengisi data mata pelajaran
+                      Gunakan form ini untuk menambahkan data jabatan baru.
                     </p>
                   </div>
 
-                  <!-- Grid Input -->
                   <div class="grid grid-cols-6 gap-6">
-                    <!-- Kode Mata Pelajaran -->
+                    <!-- Nama Jabatan -->
                     <div class="col-span-6 sm:col-span-3">
                       <label
-                        for="kode_mapel"
+                        for="nama_jabatan"
                         class="block text-sm font-medium text-gray-700"
                       >
-                        Kode Mata Pelajaran
+                        Nama Jabatan
                       </label>
                       <input
-                        v-model="form.kode_mapel"
-                        id="kode_mapel"
+                        v-model="form.nama_jabatan"
+                        id="nama_jabatan"
                         type="text"
-                        placeholder="Masukkan Kode Mata Pelajaran"
-                        required
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="{
-                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
-                            form.errors.kode_mapel,
-                        }"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
+                        :class="
+                          form.errors.nama_jabatan ? 'border-red-500' : ''
+                        "
                       />
-                      <InputError
-                        class="mt-2"
-                        :message="form.errors.kode_mapel"
-                      />
+                      <div
+                        v-if="form.errors.nama_jabatan"
+                        class="text-sm text-red-600 mt-1"
+                      >
+                        {{ form.errors.nama_jabatan }}
+                      </div>
                     </div>
 
-                    <!-- Nama Mata Pelajaran -->
+                    <!-- Deskripsi -->
                     <div class="col-span-6 sm:col-span-3">
                       <label
-                        for="mapel"
+                        for="deskripsi"
                         class="block text-sm font-medium text-gray-700"
                       >
-                        Nama Mata Pelajaran
+                        Deskripsi
                       </label>
-                      <input
-                        v-model="form.mapel"
-                        id="mapel"
-                        type="text"
-                        placeholder="Masukkan Nama Mata Pelajaran"
-                        required
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="{
-                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
-                            form.errors.mapel,
-                        }"
-                      />
-                      <InputError class="mt-2" :message="form.errors.mapel" />
-                    </div>
-
-                    <!-- Hari -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="hari"
-                        class="block text-sm font-medium text-gray-700"
+                      <textarea
+                        v-model="form.deskripsi"
+                        id="deskripsi"
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"
+                        :class="form.errors.deskripsi ? 'border-red-500' : ''"
+                      ></textarea>
+                      <div
+                        v-if="form.errors.deskripsi"
+                        class="text-sm text-red-600 mt-1"
                       >
-                        Hari
-                      </label>
-                      <input
-                        v-model="form.hari"
-                        id="hari"
-                        type="text"
-                        placeholder="Contoh: Senin"
-                        required
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="{
-                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
-                            form.errors.hari,
-                        }"
-                      />
-                      <InputError class="mt-2" :message="form.errors.hari" />
-                    </div>
-
-                    <!-- Jam Ke -->
-                    <div class="col-span-6 sm:col-span-3">
-                      <label
-                        for="jam_ke"
-                        class="block text-sm font-medium text-gray-700"
-                      >
-                        Jam Ke
-                      </label>
-                      <input
-                        v-model.number="form.jam_ke"
-                        id="jam_ke"
-                        type="number"
-                        min="1"
-                        required
-                        placeholder="Masukkan jam ke-"
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="{
-                          'text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500':
-                            form.errors.jam_ke,
-                        }"
-                      />
-                      <InputError class="mt-2" :message="form.errors.jam_ke" />
+                        {{ form.errors.deskripsi }}
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  <!-- Tombol Submit -->
-                  <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
-                    <div class="flex items-center justify-end space-x-4">
-                      <Link
-                        :href="route('matapelajaran.index')"
-                        class="inline-flex items-center px-4 py-2 bg-indigo-100 text-sm font-medium rounded-md"
-                      >
-                        Batal
-                      </Link>
-                      <button
-                        type="submit"
-                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
-                      >
-                        Simpan
-                      </button>
-                    </div>
+                <!-- ACTION BUTTONS -->
+                <div
+                  class="px-4 py-3 bg-gray-50 text-right sm:px-6 flex justify-end"
+                >
+                  <div class="flex items-center space-x-4">
+                    <Link
+                      :href="route('master-jabatan.index')"
+                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Batal
+                    </Link>
+                    <button
+                      type="submit"
+                      class="btn btn-primary border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      :disabled="form.processing"
+                    >
+                      {{ form.processing ? 'Menyimpan...' : 'Simpan' }}
+                    </button>
                   </div>
                 </div>
               </div>

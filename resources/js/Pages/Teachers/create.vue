@@ -29,6 +29,8 @@ const formData = useForm({
   name: '',
   class_id: '',
   mapel_ids: [],
+  nip: '',
+  wali_teacher_id: '',
 });
 
 // Watch untuk props.mapels
@@ -270,6 +272,38 @@ onMounted(() => {
                       <InputError class="mt-2" :message="formData.errors.nip" />
                     </div>
 
+                    <!-- Wali Kelas -->
+                    <div class="col-span-6 sm:col-span-3">
+                      <label
+                        for="wali_teacher_id"
+                        class="block text-sm font-medium text-gray-700"
+                      >
+                        Wali Kelas
+                      </label>
+                      <select
+                        v-model="formData.wali_teacher_id"
+                        id="wali_teacher_id"
+                        class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        :class="{
+                          'text-red-900 focus:ring-red-500 focus:border-red-500 border-red-300':
+                            formData.errors.wali_teacher_id,
+                        }"
+                      >
+                        <option value="">Pilih Guru</option>
+                        <option
+                          v-for="teacher in teachers.data"
+                          :key="teacher.id"
+                          :value="teacher.id"
+                        >
+                          {{ teacher.name }}
+                        </option>
+                      </select>
+                      <InputError
+                        class="mt-2"
+                        :message="formData.errors.wali_teacher_id"
+                      />
+                    </div>
+
                     <!-- Mapel -->
                     <div class="col-span-6 sm:col-span-3">
                       <label
@@ -291,7 +325,7 @@ onMounted(() => {
                       />
                       <InputError class="mt-2" :message="formData.errors.nip" />
                     </div>
-                    
+
                     <!-- Kelas -->
                     <div class="col-span-6 sm:col-span-3">
                       <label

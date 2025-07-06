@@ -17,9 +17,12 @@ protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
-        'id',
         'kode_mapel',
         'mapel',
+        'hari',
+        'jam_ke',
+        'guru_id',
+        'kelas_id',
     ];
 
     public function tugas()

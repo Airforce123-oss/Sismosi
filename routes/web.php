@@ -239,7 +239,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Attendance Routes
     Route::get('/absensiSiswaTeacher', [TeacherController::class, 'absensiSiswa'])->name('teachersabsensiSiswa');
-    Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])->name('studentsabsensiSiswa');
+    Route::get('/absensiSiswa', [AttendanceController::class, 'absensiSiswa'])
+        ->name('students.absensiSiswa'); // Ganti dari 'absensiSiswa'
     Route::get('/indexx', [AttendanceTeacherController::class, 'absensiGuru1'])->name('studentsabsensiGuru');
     Route::get('/dataAbsensiGuru', [AttendanceTeacherController::class, 'dataAbsensiGuru'])->name('teachersabsensiGuru');
     Route::get('/attendance-teachers', [AttendanceTeacherController::class, 'getAttendanceTeachers']);
@@ -250,10 +251,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/update/{id}/tanggal/{tanggal_kehadiran}', [AttendanceController::class, 'update'])->name('update');
     Route::get('/kelolaAbsensiSiswa', [AttendanceController::class, 'kelolaAbsensiSiswa'])->name('studentkelolaAbsensiSiswa');
 
-    // Custom Attendance Views
-    //Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [TeacherController::class, 'showAbsensi'])->name('absensi');  
-    Route::get('/absensi/{classId}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaJanuari'])->name('absensiSiswaJanuari');
-    Route::get('/absensi/{kelas}/{year}/{mapel}/januari', [AttendanceController::class, 'absensiJanuari'])->name('absensiSiswaJanuari');
+// routes/web.php
+    Route::get('/absensi/{kelas}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswaByMonth']);
+
     Route::get('/absensi/{kelas}/{year}/{mapel}/februari', [AttendanceController::class, 'absensiFebruari'])->name('absensiSiswaFebruari');
     Route::get('/absensi/{kelas}/{year}/{mapel}/maret', [AttendanceController::class, 'absensiMaret'])->name('absensiSiswaMaret');
     Route::get('/absensi/{kelas}/{year}/{mapel}/april', [AttendanceController::class, 'absensiApril'])->name('absensiSiswaApril');
@@ -265,6 +265,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/absensi/{kelas}/{year}/{mapel}/oktober', [AttendanceController::class, 'absensiOktober'])->name('absensiSiswaOktober');
     Route::get('/absensi/{kelas}/{year}/{mapel}/november', [AttendanceController::class, 'absensiNovember'])->name('absensiSiswaNovember');
     Route::get('/absensi/{kelas}/{year}/{mapel}/desember', [AttendanceController::class, 'absensiDesember'])->name('absensiSiswaDesember');
+
+    Route::get('/absensi/{classId}/{year}/{mapel}/{month}', [AttendanceController::class, 'absensiSiswa'])
+    ->where([
+        'classId' => '[0-9]+',
+        'year' => '[0-9]{4}',
+        'mapel' => '[a-z0-9\-,]+',
+        'month' => '[a-z]+',
+    ])
+    ->name('absensiSiswa');
     // Other Routes
     Route::get('/tugasTambah', [TugasController::class, 'tambahTugas'])->name('tugastambah');
     Route::get('/mataPelajaran', [MataPelajaranController::class, 'mataPelajaran'])->name('matapelajaran.index');

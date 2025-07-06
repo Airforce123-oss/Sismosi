@@ -137,6 +137,9 @@ const updatedPageNumber = (link) => {
 };
 
 onMounted(() => {
+  waliKelas.value.data.forEach((teacher) => {
+    console.log('Wali Kelas untuk guru:', teacher.name, teacher.wali_kelas);
+  });
   initFlowbite();
 });
 
@@ -393,6 +396,12 @@ watch(
                           NIP
                         </th>
                         <th
+                          class="w-48 py-3.5 px-3 text-left font-semibold text-gray-900"
+                        >
+                          Wali Kelas
+                        </th>
+
+                        <th
                           class="w-40 py-3.5 px-3 text-left font-semibold text-gray-900"
                         >
                           Mapel
@@ -433,6 +442,10 @@ watch(
                         <td class="whitespace-nowrap py-4 px-3 text-gray-900">
                           {{ teacher.nip ?? '-' }}
                         </td>
+                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                          {{ teacher.wali_kelas?.nama_guru ?? '-' }}
+                        </td>
+
                         <td class="whitespace-nowrap py-4 px-3 text-gray-900">
                           {{ getTeacherMapel(teacher) }}
                         </td>

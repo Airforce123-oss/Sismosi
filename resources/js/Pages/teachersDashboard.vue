@@ -7,11 +7,14 @@ import { Link, useForm, usePage, Head } from '@inertiajs/vue3';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 
 const { props } = usePage();
+console.log('usePage().props:', props);
 const form = useForm({
   name: props.auth.user.name,
   email: props.auth.user.email,
   role_type: props.auth.user.role_type,
 });
+
+console.log('Form initial state:', form);
 
 defineProps({
   totalStudents: Number,
@@ -45,50 +48,6 @@ onMounted(() => {
     'December',
   ];
   let currentDate = new Date();
-
-  function renderCalendar() {
-    daysContainer.innerHTML = '';
-    monthYearDisplay.textContent = `${
-      months[currentDate.getMonth()]
-    } ${currentDate.getFullYear()}`;
-
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    ).getDay();
-    const daysInMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).getDate();
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      daysContainer.appendChild(document.createElement('div'));
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayElement = document.createElement('div');
-      dayElement.textContent = day;
-      dayElement.classList.add(
-        'flex',
-        'items-center',
-        'justify-center',
-        'w-12',
-        'h-12'
-      );
-
-      if (
-        day === currentDate.getDate() &&
-        currentDate.getMonth() === new Date().getMonth() &&
-        currentDate.getFullYear() === new Date().getFullYear()
-      ) {
-        dayElement.classList.add('bg-blue-500', 'text-white', 'rounded-full');
-      }
-
-      daysContainer.appendChild(dayElement);
-    }
-  }
 });
 </script>
 

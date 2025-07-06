@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
  * @property int|null $religion_id
  * @property int|null $no_induk_id
  * @property int|null $user_id
+* @property int|null $parent_id
  *
  * @property \App\Models\NoInduk $noInduk
  * @property \App\Models\Classes $class

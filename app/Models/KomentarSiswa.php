@@ -11,5 +11,6 @@ class KomentarSiswa extends Model
     protected $fillable = [
     'student_id',
     'komentar',
+    'parent_id',
 ];
 }

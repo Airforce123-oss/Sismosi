@@ -17,7 +17,7 @@ class WaliKelas extends Model
 
     public function kelas()
     {
-        return $this->hasMany(Classes::class, 'wali_kelas_id');
+        return $this->belongsTo(Classes::class, 'class_id');
     }
 
     public function students()

@@ -10,6 +10,7 @@ import {
   reactive,
   watchEffect,
 } from 'vue';
+import Swal from 'sweetalert2';
 import axios from 'axios';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { throttle } from 'lodash';
@@ -957,27 +958,25 @@ const handleAttendance = async (status) => {
   console.log(`Status selected: ${status}`);
 
   if (!['P', 'A', 'S', 'I'].includes(status)) {
-    alert('Status tidak valid!');
+    Swal.fire({
+      icon: 'warning',
+      title: 'Status tidak valid!',
+      text: 'Silakan pilih status yang sesuai: P, A, S, atau I.',
+    });
     return;
   }
 
-  // Pastikan selectedDate.value adalah objek Date, dan formatkan menjadi Y-m-d (ISO string)
   const dateObj = new Date(selectedDate.value);
   const formattedDate = dateObj.toLocaleDateString('en-CA');
 
-  // 🔍 Tambahan log untuk debugging
   console.log('📍 User memilih tanggal:', selectedDate.value);
-  console.log('🕓 Date sekarang (new Date()):', new Date());
   console.log('🧠 Diformat ke:', new Date(selectedDate.value).toISOString());
-
-  console.log('🎯 selectedDate.value:', selectedDate.value);
-  console.log('📅 Date object:', dateObj);
   console.log('✅ Formatted date (YYYY-MM-DD):', formattedDate);
 
   const newRecord = {
     teacher_id: selectedTeacherId.value,
-    class_id: selectedClassId.value, // pastikan selectedClassId tersedia
-    attendance_date: formattedDate, // Tanggal yang sudah diformat
+    class_id: selectedClassId.value,
+    attendance_date: formattedDate,
     status: status,
   };
 
@@ -1000,15 +999,28 @@ const handleAttendance = async (status) => {
       attendanceRecords.value.push(newRecord);
     }
 
-    // 💾 Simpan ke localStorage setelah update
     localStorage.setItem(
       'attendanceRecords',
       JSON.stringify(attendanceRecords.value)
     );
-    //console.log('📦 Data disimpan ke localStorage.');
+
+    // ✅ SweetAlert2 sukses
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil!',
+      text: 'Data kehadiran berhasil disimpan.',
+      timer: 2000,
+      showConfirmButton: false,
+    });
   } catch (error) {
     console.error('❌ Gagal menyimpan:', error);
-    alert('Gagal menyimpan data kehadiran!');
+
+    // ❌ SweetAlert2 error
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal!',
+      text: 'Gagal menyimpan data kehadiran. Silakan coba lagi.',
+    });
   }
 
   isModalVisible.value = false; // Tutup modal setelah submit

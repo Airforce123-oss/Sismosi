@@ -11,7 +11,7 @@ import '@assets/plugins/simple-calendar/simple-calendar.css';
 // Ambil props dari Inertia
 const userName = ref('');
 const page = usePage();
-const props = usePage().props;
+const props = usePage().props; 
 
 const student_id = computed(() => props.student_id);
 const student_name = computed(() => props.student_name);

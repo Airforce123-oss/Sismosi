@@ -81,7 +81,7 @@ class TugasController extends Controller
             ],
             'description' => 'required|string',
             'student_id' => 'required|exists:students,id',
-            'title' => 'nullable|string|max:255',
+            'title' => 'required|string|max:255',
         ]);
 
         // Simpan data tugas
@@ -103,7 +103,7 @@ class TugasController extends Controller
             'description' => 'required|string',
             'teacher_id' => 'required|exists:teachers,id',
             'class_id' => 'required|exists:classes,id',
-            'title' => 'nullable|string|max:255',
+            'title' => 'required|string|max:255',
             // 'student_id' => 'required|exists:students,id', ← hapus jika tidak ada di tabel
         ]);
 

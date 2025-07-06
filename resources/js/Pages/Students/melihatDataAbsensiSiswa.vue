@@ -1,41 +1,92 @@
 <script setup>
-import { onMounted, ref, defineProps, computed } from 'vue';
+import { onMounted, ref, computed, watchEffect, watch } from 'vue';
 import axios from 'axios';
 import { initFlowbite } from 'flowbite';
-import { useForm, usePage, Head } from '@inertiajs/vue3';
+import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import SidebarStudent from '@/Components/SidebarStudent.vue';
+import Pagination from '@/Components/Pagination13.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import VueApexCharts from 'vue3-apexcharts';
 import ApexCharts from 'apexcharts';
 import $ from 'jquery';
 
-// Plugin untuk kalender
+// Plugin kalender
 import '@assets/plugins/simple-calendar/jquery.simple-calendar.js';
 import '@assets/plugins/simple-calendar/simple-calendar.css';
 
-// Inisialisasi data
-//const props = defineProps();
+// Ambil data dari props inertia
 const { props } = usePage();
+const page = usePage();
+
+// Data dasar
 const currentDate = ref('');
-const data = ref([]); // Inisialisasi data sebagai array kosong
-const loading = ref(true); // Status loading
+const loading = ref(true);
 const userName = ref('');
+const data = ref([]);
 
-console.log('🧾 props.subjects:', props.subjects);
-
-// Pastikan props.auth dan props.auth.user terdefinisi sebelum mengaksesnya
+// User login info
 const form = useForm({
-  name: props.auth?.user?.name || '', // Gunakan optional chaining
+  name: props.auth?.user?.name || '',
   email: props.auth?.user?.email || '',
   role_type: props.auth?.user?.role_type || '',
 });
 
+// Ambil data siswa dari query atau props
+const query = new URLSearchParams(window.location.search);
+const studentId = ref(query.get('student_id'));
+const studentName = ref(query.get('student_name'));
+const student = computed(() => page.props.student ?? null);
+
+const student_id = computed(() => studentId.value ?? student.value?.id ?? '');
+const student_name = computed(
+  () => studentName.value ?? student.value?.name ?? ''
+);
+
+// Sinkronkan selectedMonth dan selectedYear dari query URL (bila tersedia)
+const selectedMonth = ref(new Date().getMonth() + 1);
+const selectedYear = ref(new Date().getFullYear());
+
+const monthFromQuery = parseInt(query.get('month'));
+const yearFromQuery = parseInt(query.get('year'));
+
+if (!isNaN(monthFromQuery)) {
+  selectedMonth.value = monthFromQuery;
+}
+if (!isNaN(yearFromQuery)) {
+  selectedYear.value = yearFromQuery;
+}
+
+// Absensi penuh
 const attendanceData = computed(() => props.attendanceData || {});
 console.log('isi attendance Data: ', attendanceData.value);
-const month = computed(() => props.month);
-const year = computed(() => props.year);
 
-function formatDate(dateStr) {
+// Mata pelajaran
+const subjectsArray = computed(() => {
+  if (Array.isArray(props.subjects)) {
+    return props.subjects;
+  } else if (props.subjects) {
+    return [props.subjects];
+  }
+  return [];
+});
+
+const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+const yearOptions = computed(() => {
+  const data = attendanceData.value?.data || [];
+  const years = data
+    .map((item) => {
+      const d = new Date(item.tanggal_kehadiran);
+      return isNaN(d) ? null : d.getFullYear();
+    })
+    .filter((y) => y !== null);
+
+  return [...new Set(years)].sort((a, b) => b - a);
+});
+
+const paginatedAttendance = computed(() => props.attendanceData);
+
+// Format tanggal
+const formatDate = (dateStr) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString('id-ID', {
     weekday: 'long',
@@ -43,89 +94,79 @@ function formatDate(dateStr) {
     month: 'long',
     year: 'numeric',
   });
-}
+};
 
-// Ambil langsung dari props
-const page = usePage();
-
-// Pastikan akses properti yang benar dari `page.props.value`
-const student = computed(() => page.props.student ?? null);
-
-// Ambil student_id dan student_name dari query string URL
-const query = new URLSearchParams(window.location.search);
-const studentId = ref(query.get('student_id'));
-const studentName = ref(query.get('student_name'));
-
-// Jika kamu ingin computed juga bisa:
-const student_id = computed(() => studentId.value ?? student.value?.id ?? '');
-
-const student_name = computed(
-  () => studentName.value ?? student.value?.name ?? ''
-);
-
-// Debug
-console.log('✅ student_id dari query:', student_id.value);
-console.log('✅ student_name dari query:', student_name.value);
-
-const formattedMonth = computed(() => {
-  const date = new Date(2000, Number(props.month) - 1);
-  return date.toLocaleDateString('id-ID', { month: 'long' });
-});
-
+// Ambil nama user dari session (opsional)
 const fetchSessionData = async () => {
   try {
     const response = await axios.get('/api/session-name');
     userName.value = response.data.name;
   } catch (error) {
-    console.error('There was an error fetching the session data:', error);
+    console.error('Gagal mengambil data session:', error);
   }
 };
 
-// Menggunakan onMounted untuk mengambil data saat komponen dimuat
 onMounted(() => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  currentDate.value = `${year}-${month}-${day}`;
+  currentDate.value = now.toISOString().split('T')[0];
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const month = parseInt(urlParams.get('month'));
+  const year = parseInt(urlParams.get('year'));
+
+  if (!isNaN(month)) selectedMonth.value = month;
+  if (!isNaN(year)) selectedYear.value = year;
+
   fetchSessionData();
   initFlowbite();
 });
 
-// Contoh penggunaan data
-const itemCount = computed(() => {
-  return data.value ? data.value.length : 0;
-});
-
-const subjectsArray = computed(() => {
-  if (Array.isArray(props.subjects)) {
-    return props.subjects;
-  } else if (props.subjects) {
-    return [props.subjects]; // bungkus satu objek ke dalam array
-  }
-  return [];
-});
-
-console.log('📚 Mata pelajaran (props.subjects):', props.subjects);
-
-const totalAbsensi = computed(() => {
-  const totals = {
-    H: 0,
-    A: 0,
-    S: 0,
-    I: 0,
-    P: 0,
-    total: 0, // ⬅️ total keseluruhan langsung dihitung di sini
-  };
-
-  for (const status of Object.values(attendanceData.value)) {
-    if (totals.hasOwnProperty(status)) {
-      totals[status]++;
-      totals.total++; // ⬅️ naikkan total untuk setiap status valid
+const updatedPageNumber = (page) => {
+  router.get(
+    route('melihatDataAbsensiSiswa'),
+    {
+      student_id: student_id.value,
+      student_name: student_name.value,
+      month: selectedMonth.value,
+      year: selectedYear.value,
+      page,
+    },
+    {
+      preserveState: true,
+      preserveScroll: true,
     }
-  }
+  );
+};
 
-  return totals;
+watchEffect(() => {
+  console.log('📦 paginatedAttendance:', paginatedAttendance.value);
+});
+
+watch([selectedMonth, selectedYear], () => {
+  router.get(
+    route('melihatDataAbsensiSiswa'),
+    {
+      student_id: student_id.value,
+      student_name: student_name.value,
+      month: selectedMonth.value,
+      year: selectedYear.value,
+    },
+    {
+      preserveState: true,
+      replace: true,
+    }
+  );
+});
+
+watchEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const month = parseInt(urlParams.get('month'));
+  const year = parseInt(urlParams.get('year'));
+
+  console.log('🔁 Sync from URL:', { month, year });
+
+  if (!isNaN(month)) selectedMonth.value = month;
+  if (!isNaN(year)) selectedYear.value = year;
 });
 </script>
 
@@ -203,28 +244,6 @@ const totalAbsensi = computed(() => {
           </a>
         </div>
         <div class="flex items-center lg:order-2">
-          <!--
-                                        <button
-                        type="button"
-                        data-drawer-toggle="drawer-navigation"
-                        aria-controls="drawer-navigation"
-                        class="p-2 mr-1 text-gray-500 rounded-lg md:hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Toggle search</span>
-                        <svg
-                            class="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                clip-rule="evenodd"
-                                fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            ></path>
-                        </svg>
-                    </button>
-                    -->
           <!-- Apps -->
           <button
             type="button"
@@ -298,147 +317,158 @@ const totalAbsensi = computed(() => {
     </nav>
     <!-- Main -->
 
-    <main class="p-7 md:ml-64 h-screen pt-20">
+    <main class="min-h-screen pt-20 px-4 sm:px-6 md:px-8 bg-gray-100 md:ml-64">
       <Head title="Melihat Data Absensi Siswa" />
-      <div>
-        <div class="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto">
+
+      <div class="w-full overflow-x-auto bg-white rounded-xl shadow-lg mb-8">
+        <div class="p-6">
+          <!-- Judul -->
           <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Laporan Absensi Bulan {{ formattedMonth }}/{{ year }}
+            Laporan Absensi Bulan
+            {{
+              new Date(2000, selectedMonth - 1).toLocaleString('id-ID', {
+                month: 'long',
+              })
+            }}
+            / {{ selectedYear }}
           </h2>
+
+          <div
+            class="mb-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 bg-gradient-to-br from-indigo-50 via-white to-indigo-100 rounded-2xl shadow-lg p-6 border border-indigo-200"
+          >
+            <!-- Nama Siswa -->
+            <div class="w-full">
+              <p class="text-sm text-gray-700">
+                Nama Siswa:
+                <span class="font-semibold">{{ studentName }}</span>
+              </p>
+            </div>
+
+            <!-- Kartu Dropdown Bulan -->
+            <div class="w-full sm:w-auto">
+              <label class="block text-sm font-semibold text-indigo-700 mb-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-calendar-alt text-indigo-500"></i>
+                  Pilih Bulan
+                </div>
+              </label>
+              <select
+                v-model.number="selectedMonth"
+                class="w-full sm:w-56 bg-white border border-indigo-300 text-indigo-700 text-sm rounded-xl px-4 py-2 shadow-md focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 transition duration-300 ease-in-out hover:shadow-lg"
+              >
+                <option v-for="m in monthOptions" :key="m" :value="m">
+                  {{
+                    new Date(2000, m - 1).toLocaleString('id-ID', {
+                      month: 'long',
+                    })
+                  }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Kartu Dropdown Tahun -->
+            <div class="w-full sm:w-auto">
+              <label class="block text-sm font-semibold text-indigo-700 mb-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-clock text-indigo-500"></i>
+                  Pilih Tahun
+                </div>
+              </label>
+              <select
+                v-model.number="selectedYear"
+                class="w-full sm:w-44 bg-white border border-indigo-300 text-indigo-700 text-sm rounded-xl px-4 py-2 shadow-md focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 transition duration-300 ease-in-out hover:shadow-lg"
+              >
+                <option v-for="y in yearOptions" :key="y" :value="y">
+                  {{ y }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tabel Absensi -->
           <div class="overflow-x-auto">
             <table
-              class="min-w-full table-auto border-separate border-spacing-0 bg-gray-50 rounded-lg"
+              class="min-w-full table-auto bg-gray-50 rounded-lg overflow-hidden"
             >
-              <caption
-                class="text-left px-6 py-3 text-gray-700 text-sm font-medium"
-              >
-                Data Absensi Siswa Bulan
-                {{
-                  month
-                }}
-                {{
-                  year
-                }}
-              </caption>
-
               <thead>
-                <!-- Informasi Siswa -->
-                <tr class="bg-white mb-10">
-                  <th
-                    colspan="3"
-                    class="px-6 py-2 text-left text-sm text-gray-700"
-                  >
-                    Nama Siswa:
-                    <span class="font-semibold">{{ studentName }}</span>
-                  </th>
-                </tr>
-
-                <!-- Header kolom utama -->
-                <tr class="bg-gray-200">
-                  <th
-                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
-                  >
-                    Tanggal
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
-                  >
-                    Mapel
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-medium text-gray-600"
-                  >
-                    Status
-                  </th>
+                <tr class="bg-white"></tr>
+                <tr class="bg-gray-200 text-sm text-gray-600">
+                  <th class="px-6 py-3 text-left font-medium">Tanggal</th>
+                  <th class="px-6 py-3 text-left font-medium">Mapel</th>
+                  <th class="px-6 py-3 text-left font-medium">Status</th>
                 </tr>
               </thead>
 
               <tbody>
                 <tr
-                  v-for="(status, tanggal, index) in attendanceData"
-                  :key="tanggal"
-                  :class="[
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
-                    'border-b',
-                  ]"
+                  v-for="(row, index) in paginatedAttendance.data"
+                  :key="row.id || index"
+                  :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+                  class="border-b"
                 >
                   <td class="px-6 py-4 text-sm text-gray-700">
-                    {{ formatDate(tanggal) }}
+                    {{ formatDate(row.tanggal_kehadiran) }}
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-700">
-                    <ul>
-                      <li
-                        v-for="(subject, index) in subjectsArray"
-                        :key="index"
-                        class="text-sm text-gray-700"
-                      >
-                        {{ subject || 'Tidak tersedia' }}
-                      </li>
-                    </ul>
-
-                    <!-- Menampilkan mapel -->
+                    {{ row.mapel || 'Tidak tersedia' }}
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-700">
                     <span
-                      v-if="status === 'H'"
+                      v-if="row.status_kehadiran === 'P'"
                       class="text-green-600 font-semibold"
                       >Hadir</span
                     >
                     <span
-                      v-if="status === 'A'"
+                      v-else-if="row.status_kehadiran === 'A'"
                       class="text-red-600 font-semibold"
                       >Absen</span
                     >
                     <span
-                      v-if="status === 'S'"
+                      v-else-if="row.status_kehadiran === 'S'"
                       class="text-yellow-600 font-semibold"
                       >Sakit</span
                     >
                     <span
-                      v-if="status === 'I'"
+                      v-else-if="row.status_kehadiran === 'I'"
                       class="text-blue-600 font-semibold"
                       >Izin</span
                     >
-                  </td>
-                </tr>
-
-                <tr v-if="Object.keys(attendanceData).length === 0">
-                  <td colspan="3" class="text-center py-4 text-gray-500">
-                    Tidak ada data absensi.
+                    <span v-else class="text-gray-500">-</span>
                   </td>
                 </tr>
               </tbody>
-              <!--          <pre>{{ props.subject.mapel }}</pre>-->
             </table>
+            <Pagination
+              :data="paginatedAttendance"
+              :updatedPageNumber="updatedPageNumber"
+            />
+          </div>
 
-            <!-- Keterangan status -->
-            <div
-              class="px-6 py-3 text-sm text-gray-700 flex flex-wrap items-center gap-4 bg-gray-100 rounded-lg mt-4"
-            >
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-block w-3 h-3 bg-green-500 rounded-full"
-                ></span>
-                Hadir
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-block w-3 h-3 bg-red-500 rounded-full"
-                ></span>
-                Absen
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-block w-3 h-3 bg-yellow-400 rounded-full"
-                ></span>
-                Sakit
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-block w-3 h-3 bg-blue-500 rounded-full"
-                ></span>
-                Izin
-              </div>
+          <!-- Keterangan status -->
+          <div
+            class="mt-6 px-6 py-4 bg-gray-100 rounded-lg flex flex-wrap gap-4 text-sm text-gray-700"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-block w-3 h-3 bg-green-500 rounded-full"
+              ></span>
+              Hadir
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
+              Absen
+            </div>
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-block w-3 h-3 bg-yellow-400 rounded-full"
+              ></span>
+              Sakit
+            </div>
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-block w-3 h-3 bg-blue-500 rounded-full"
+              ></span>
+              Izin
             </div>
           </div>
         </div>
@@ -446,6 +476,9 @@ const totalAbsensi = computed(() => {
     </main>
 
     <!-- Sidebar -->
-    <SidebarStudent :student_id="student_id" :student_name="student_name" />
+    <SidebarStudent
+      :student_id="props.student_id"
+      :student_name="props.student_name"
+    />
   </div>
 </template>
