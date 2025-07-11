@@ -344,6 +344,10 @@ const isSunday = (dateObj) => {
   return dateObj.getDay() === 0; // 0 = Minggu
 };
 
+const isSaturday = (date) => {
+  return new Date(date).getDay() === 6;
+};
+
 const tanggal_kehadiran = ref('');
 const isNavigating = ref(false);
 const isAddModalVisible = ref(false);
@@ -1675,11 +1679,7 @@ const getAttendanceClass = (student, tanggal_kehadiran) => {
     return 'bg-light text-dark';
   }
 
-  const dateObj = new Date(tanggal_kehadiran);
-  const day = dateObj.getDay();
-  const isWeekend = day === 0 || day === 6;
-
-  if (isWeekend) {
+  if (isWeekend(tanggal_kehadiran)) {
     return 'bg-red-500 text-white italic cursor-not-allowed';
   }
 
@@ -1745,13 +1745,17 @@ const injectStatusesFromAttendances = (students) => {
 };
 
 function getStatusTooltip(student, date) {
-  const formatted = formattedDate(date);
+  const formatted = formattedDate(date); // '2025-07-13'
   const match = student.attendances?.find((a) => {
     const attendanceDate =
       typeof a.tanggal === 'string' ? a.tanggal : formattedDate(a.tanggal);
     return attendanceDate === formatted;
   });
-  const status = isWeekend(date) ? 'Libur' : match?.status || 'Belum diabsen';
+
+  // Gunakan formatted, BUKAN date langsung
+  const status = isWeekend(formatted)
+    ? 'Libur'
+    : match?.status || 'Belum diabsen';
 
   return `${student.name} - ${formatted} → ${status}`;
 }
@@ -1763,7 +1767,9 @@ function getStatusText(student, date) {
       typeof a.tanggal === 'string' ? a.tanggal : formattedDate(a.tanggal);
     return attendanceDate === formatted;
   });
-  return isWeekend(date) ? 'Libur' : match?.status || 'Belum diabsen';
+
+  // Gunakan formatted, BUKAN date langsung
+  return isWeekend(formatted) ? 'Libur' : match?.status || 'Belum diabsen';
 }
 
 onMounted(async () => {
@@ -2372,7 +2378,9 @@ watch(
                   v-for="(date, index) in totalDaysInMonth"
                   :key="'day-' + index"
                   class="text-center"
-                  :class="{ 'bg-danger text-white': isSunday(date) }"
+                  :class="{
+                    'bg-danger text-white': isSunday(date) || isSaturday(date),
+                  }"
                 >
                   {{ getDayName(date) }}
                 </th>
@@ -2389,9 +2397,7 @@ watch(
                   :class="[
                     getAttendanceClass(student, formattedDate(date)),
                     'text-center',
-                    isWeekend(date)
-                      ? 'bg-red-500 text-white italic cursor-not-allowed'
-                      : 'cursor-pointer',
+                    !isWeekend(date) && 'cursor-pointer',
                   ]"
                   :title="getStatusTooltip(student, date)"
                   @click="

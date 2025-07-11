@@ -242,7 +242,7 @@ onMounted(() => {
     </nav>
     <!-- Main -->
 
-    <main class="p-7 md:ml-64 h-screen pt-5">
+    <main class="p-7 md:ml-64 h-screen pt-5 flex flex-col">
       <Head title="Melihat Tugas" />
       <h2
         class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mt-10 mb-6 text-center"
@@ -252,7 +252,7 @@ onMounted(() => {
 
       <!-- Tabel -->
       <div
-        class="w-full max-w-screen-xl mx-auto bg-white rounded-xl shadow-lg mb-8 overflow-x-auto max-h-[80vh]"
+        class="w-full max-w-screen-xl mx-auto bg-white rounded-xl shadow-lg mb-8"
       >
         <!-- Header Info -->
         <div
@@ -321,7 +321,9 @@ onMounted(() => {
                 <th class="px-4 py-3 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody class="text-gray-700">
+
+            <!-- ✅ DATA TERSEDIA -->
+            <tbody v-if="tugas.data.length" class="text-gray-700">
               <tr
                 v-for="(task, index) in tugas.data"
                 :key="task.id"
@@ -383,6 +385,29 @@ onMounted(() => {
                       </svg>
                       Detail
                     </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- ❌ DATA KOSONG -->
+            <tbody v-else>
+              <tr>
+                <td colspan="7">
+                  <div
+                    class="flex flex-col items-center justify-center py-16 text-center text-gray-600"
+                  >
+                    <img
+                      src="/images/noTugas.png"
+                      alt="Tidak ada tugas"
+                      class="w-60 h-80 opacity-80"
+                    />
+                    <h3 class="text-lg font-semibold text-gray-700">
+                      Belum ada tugas tersedia
+                    </h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                      Saat ini tidak ada data tugas untuk ditampilkan.
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -453,18 +478,18 @@ onMounted(() => {
             <!-- Info Tugas -->
             <div class="mb-4 space-y-1 text-left text-sm sm:text-base">
               <p class="font-semibold text-gray-700">
-                 {{ selectedTask?.title ?? '—' }}
+                {{ selectedTask?.title ?? '—' }}
               </p>
               <p class="text-gray-600">
-                 Guru:
+                Guru:
                 <strong>{{ selectedTask?.teacher?.name ?? '—' }}</strong>
               </p>
               <p class="text-gray-600">
-                 Mapel:
+                Mapel:
                 <strong>{{ selectedTask?.mapel?.mapel ?? '—' }}</strong>
               </p>
               <p class="text-gray-600">
-                 Kelas:
+                Kelas:
                 <strong>{{ selectedTask?.kelas?.name ?? '—' }}</strong>
               </p>
             </div>

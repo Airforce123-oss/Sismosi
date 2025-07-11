@@ -93,6 +93,15 @@ const newMark = ref({
 const isMarkModalVisible = ref(false);
 const isEnrollmentModalVisible = ref(false);
 
+const isEditModalVisible = ref(false);
+const editEnrollmentData = ref({
+  id: null,
+  courseId: '',
+  enrollment_date: '',
+  status: '',
+  class_id: '',
+});
+
 const markEnrollment = async (enrollmentId, studentId, mapelId) => {
   selectedEnrollmentId.value = enrollmentId;
 
@@ -196,14 +205,16 @@ const closeAddMarkModal = () => {
   emit('close');
 };
 
-const closeModal = () => {
-  isModalVisible.value = false;
-  selectedEnrollmentId.value = null; // Reset ID enrollment setelah modal ditutup
-};
 const hideAddModal = () => {
   console.log('Modal ditutup');
   isEnrollmentModalVisible.value = false;
 };
+
+const hideEditModal = () => {
+  console.log('Modal edit ditutup');
+  isEditModalVisible.value = false;
+};
+
 const hideMarkModal = () => {
   console.log('Modal ditutup');
   isMarkModalVisible.value = false;
@@ -635,6 +646,30 @@ const addEnrollment = async () => {
 
 console.log('Enrollments:', enrollments.value);
 console.log('New Enrollment Status:', newEnrollment.value.status);
+
+const editEnrollment = (id) => {
+  const enrollment = enrollments.value.find((e) => e.id === id);
+  if (!enrollment) return;
+
+  editEnrollmentData.value = {
+    id: enrollment.id,
+    courseId: enrollment.courseId || enrollment.mapel_id, // tergantung struktur datamu
+    enrollment_date: enrollment.enrollment_date,
+    status: enrollment.status,
+    class_id: enrollment.class_id,
+  };
+  isEditModalVisible.value = true;
+};
+
+const updateEnrollment = () => {
+  // Kirim ke backend atau update lokal
+  console.log('Data yang diedit:', editEnrollmentData.value);
+
+  // TODO: kirim ke server (axios / Inertia)
+  // await axios.put(`/enrollments/${editEnrollmentData.value.id}`, editEnrollmentData.value)
+
+  isEditEnrollmentModalVisible.value = false;
+};
 
 const payload = {
   enrollment_id: newEnrollment.value.enrollmentId || null,
@@ -1212,6 +1247,112 @@ button:hover {
         </div>
       </div>
 
+      <!-- Modal Edit Enrollment -->
+      <div
+        v-if="isEditModalVisible"
+        class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center"
+      >
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+          <h3 class="text-lg font-bold text-center mb-2">Edit Enrollment</h3>
+          <form @submit.prevent="updateEnrollment">
+            <!-- Pilih Mata Pelajaran -->
+            <div class="mb-4">
+              <label
+                for="editCourseId"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Mata Pelajaran
+              </label>
+              <select
+                v-model="editEnrollmentData.courseId"
+                id="editCourseId"
+                :disabled="courses.length <= 1"
+                class="w-full px-4 py-2 border rounded-md bg-gray-100"
+              >
+                <option
+                  v-for="course in courses"
+                  :key="course.id"
+                  :value="course.id"
+                >
+                  {{ course.mapel }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Pilih Kelas -->
+            <div class="mb-4">
+              <label
+                for="editClassId"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Pilih Kelas
+              </label>
+              <select
+                v-model="editEnrollmentData.class_id"
+                id="editClassId"
+                class="w-full px-4 py-2 border rounded-md"
+              >
+                <option
+                  v-for="kelas in classes"
+                  :key="kelas.id"
+                  :value="kelas.id"
+                >
+                  {{ kelas.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Tanggal Enrollment -->
+            <div class="mb-4">
+              <label
+                for="editEnrollmentDate"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Tanggal Enrollment
+              </label>
+              <input
+                type="date"
+                v-model="editEnrollmentData.enrollment_date"
+                id="editEnrollmentDate"
+                required
+                class="w-full px-4 py-2 border rounded-md"
+              />
+            </div>
+
+            <!-- Status -->
+            <div class="mb-4">
+              <label
+                for="editStatus"
+                class="block text-sm font-medium text-gray-700"
+              >
+                Status
+              </label>
+              <select
+                v-model="editEnrollmentData.status"
+                id="editStatus"
+                required
+                class="w-full px-4 py-2 border rounded-md"
+              >
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak Aktif</option>
+              </select>
+            </div>
+
+            <!-- Tombol Submit -->
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="hideEditModal"
+                class="btn btn-secondary mr-3"
+              >
+                Batal
+              </button>
+              <button type="submit" class="btn btn-primary mr-2">Simpan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Modal Add Mark -->
       <div
         v-if="isMarkModalVisible"
@@ -1232,7 +1373,7 @@ button:hover {
 
           <!-- Judul Modal -->
           <h3 class="text-lg sm:text-xl font-bold text-center mb-4 sm:mb-6">
-            Tambah/Perbarui Data Kognitif & Keterampilan
+            Tambah/Perbarui Data Kognitif, Keterampilan, dan Nilai Akhir
           </h3>
 
           <!-- Form -->

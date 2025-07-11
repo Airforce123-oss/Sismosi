@@ -24,6 +24,8 @@ const dashboardProps = defineProps({
   totalJabatan: Number,
 });
 
+console.log('dashboardProps:', dashboardProps);
+
 // Untuk menampilkan di DOM, bisa gunakan nanti di <template>: {{ dashboardProps.total }}
 
 const apexChartElement = ref(null);
@@ -364,7 +366,9 @@ const barChartOptions = {
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl text-white font-extrabold">{{ totalTeachers }}</h3>
+                <h3 class="text-4xl text-white font-extrabold">
+                  {{ totalTeachers }}
+                </h3>
                 <p class="mt-1 text-base font-semibold">Total Guru</p>
                 <p class="mt-1 text-xs text-white/80 italic">
                   Guru aktif dalam sistem
@@ -392,7 +396,9 @@ const barChartOptions = {
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl text-white font-extrabold">{{ totalClasses }}</h3>
+                <h3 class="text-4xl text-white font-extrabold">
+                  {{ totalClasses }}
+                </h3>
                 <p class="mt-1 text-base font-semibold">Total Kelas</p>
                 <p class="mt-1 text-xs text-white/80 italic">
                   Kelas terdaftar tahun ini
@@ -420,7 +426,9 @@ const barChartOptions = {
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl text-white font-extrabold">{{ totalMapel }}</h3>
+                <h3 class="text-4xl text-white font-extrabold">
+                  {{ totalMapel }}
+                </h3>
                 <p class="mt-1 text-base font-semibold">Total Mata Pelajaran</p>
                 <p class="mt-1 text-xs text-white/80 italic">
                   Mapel aktif di sistem
@@ -451,7 +459,9 @@ const barChartOptions = {
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-4xl text-white font-extrabold">{{ totalJabatan }}</h3>
+                <h3 class="text-4xl text-white font-extrabold">
+                  {{ totalJabatan }}
+                </h3>
                 <p class="mt-1 text-base font-semibold">Total Jabatan</p>
                 <p class="mt-1 text-xs text-white/80 italic">
                   Jabatan guru dan staf lainnya

@@ -239,7 +239,7 @@ watch(
         <!-- Right Section (Form) -->
         <div class="md:w-1/2 w-full p-10 bg-white">
           <h2 class="text-2xl font-bold text-center text-[#064663] mb-6">
-            Selamat Datang 👋
+            Selamat Datang 
           </h2>
 
           <form @submit.prevent="submit" class="space-y-5">

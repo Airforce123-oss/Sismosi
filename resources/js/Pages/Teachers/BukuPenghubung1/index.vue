@@ -145,7 +145,7 @@ const handleSubmit = async () => {
 
     if (form.value.id) {
       console.log(`Update data dengan ID ${form.value.id}`);
-      await axios.put(`/buku-penghubung1/${form.value.id}`, form.value);
+      await axios.put(`/api/buku-penghubung1/${form.value.id}`, form.value);
       console.log('Update berhasil');
       Swal.fire('Berhasil', 'Data berhasil diperbarui.', 'success');
     } else {
@@ -236,7 +236,7 @@ const exportToPDF = () => {
     ],
   ];
 
-  const rows = entries.value.map((entry, index) => [
+  const rows = (entries.value.data || []).map((entry, index) => [
     index + 1,
     entry.date,
     entry.parentName,

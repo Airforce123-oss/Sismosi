@@ -162,6 +162,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/komentar-siswa/{komentar}', [ParentController::class, 'updateKomentarSiswa']);
 });
 
+Route::put('/buku-penghubung1/{bukuPenghubung1}', [BukuPenghubung1Controller::class, 'update']);
 
 
 
