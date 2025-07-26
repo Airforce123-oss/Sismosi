@@ -88,9 +88,14 @@ Route::middleware('role:student')->get('/students/profile', [StudentController::
 
 Route::post('/store-teacher', [TeacherController::class, 'store']);
 Route::post('/students', [StudentController::class, 'storeStudent']);
+Route::post('/detailstudents', [StudentController::class, 'storeDetailStudent']);
+
 Route::get('/detailstudents', [StudentController::class, 'indexApiDetailStudent']);
 // Menambahkan rute untuk update detail siswa
 Route::put('/detailstudents/{id}/detail', [TeacherController::class, 'updateStudentDetail']);
+
+Route::delete('/detailstudents/{id}/detail', [TeacherController::class, 'deleteDetailStudent']);
+
 
 Route::get('/buku-penghubung', [BukuPenghubung1Controller::class, 'index']);
 

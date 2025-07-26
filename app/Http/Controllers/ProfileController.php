@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Student;
 use App\Models\Attendance;
+use App\Models\Teacher;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,21 +57,52 @@ public function dashboard(Request $request)
 
     $totalStudents = cache()->remember('total_students', 60, fn () => Student::count());
 
+    // Tetap pakai query yang benar (gender_id 1 & 2)
+    $malePerMonth = Student::selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+        ->where('gender_id', '1')
+        ->whereYear('created_at', now()->year)
+        ->groupBy('month')
+        ->pluck('total', 'month')
+        ->toArray();
+
+    $femalePerMonth = Student::selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+        ->where('gender_id', '2')
+        ->whereYear('created_at', now()->year)
+        ->groupBy('month')
+        ->pluck('total', 'month')
+        ->toArray();
+
+    $maleData = [];
+    $femaleData = [];
+    for ($i = 1; $i <= 12; $i++) {
+        $maleData[] = $malePerMonth[$i] ?? 0;
+        $femaleData[] = $femalePerMonth[$i] ?? 0;
+    }
+
+    // Data tambahan untuk semua role
+    $sharedData = [
+        'total' => $totalStudents,
+        'role_type' => $role,
+        'totalMaleStudentsPerMonth' => $maleData,
+        'totalFemaleStudentsPerMonth' => $femaleData,
+    ];
+
     switch ($role) {
         case 'admin':
-            return Inertia::render('dashboard', [
-                'total' => $totalStudents,
-                'role_type' => $role,
-            ]);
+            $totalTeachers = cache()->remember('total_teachers', 60, fn () => Teacher::count());
+            $totalMaleStudents = cache()->remember('total_male_students', 60, fn () => Student::where('gender', 'L')->count());
+            $totalFemaleStudents = cache()->remember('total_female_students', 60, fn () => Student::where('gender', 'P')->count());
+
+            return Inertia::render('dashboard', array_merge($sharedData, [
+                'totalTeachers' => $totalTeachers,
+                'totalMaleStudents' => $totalMaleStudents,
+                'totalFemaleStudents' => $totalFemaleStudents,
+            ]));
 
         case 'teacher':
-            return Inertia::render('teachersDashboard', [
-                'total' => $totalStudents,
-                'role_type' => $role,
-            ]);
+            return Inertia::render('teachersDashboard', $sharedData);
 
         case 'student':
-            // ✅ Ambil data student via relasi yang sudah terbukti valid
             $student = $user->student;
 
             if (!$student) {
@@ -82,25 +114,15 @@ public function dashboard(Request $request)
 
             $studentId = $student->id;
             $studentName = $student->name;
-
-            // ✅ Hitung total absensi siswa
             $totalAbsensi = Attendance::where('student_id', $studentId)->count();
 
-            \Log::info('Mengirim data student ke frontend', [
-                'student_id' => $studentId,
-                'student_name' => $studentName,
-                'total_absensi' => $totalAbsensi,
-            ]);
-
-            return Inertia::render('studentsDashboard', [
-                'total' => $totalStudents,
-                'role_type' => $role,
+            return Inertia::render('studentsDashboard', array_merge($sharedData, [
                 'profileUrl' => route('profile.edit'),
                 'student_id' => $studentId,
                 'student_name' => $studentName,
                 'total_absensi' => $totalAbsensi,
                 'auth' => ['user' => $user],
-            ]);
+            ]));
 
         default:
             return Inertia::render('ErrorPage', [
@@ -108,6 +130,7 @@ public function dashboard(Request $request)
             ]);
     }
 }
+
 
     /**
      * Update the user's profile information.

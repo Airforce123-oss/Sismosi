@@ -84,15 +84,8 @@ class StudentRoleController extends Controller
     }
     public function melihatTugas()
     {
-        $user = auth()->user();
-        $isStudent = $user->role_type === 'siswa';
+        $student = $this->getStudentFromRequest();
 
-        // Ambil student dari login, atau dari query jika bukan siswa
-        $student = $isStudent
-            ? $user->student
-            : Student::with('class')->find(request('student_id'));
-
-        // Jika student tidak ditemukan atau tidak punya class_id
         if (!$student || !$student->class_id) {
             return Inertia::render('Students/melihatTugasSiswa', [
                 'student' => [
@@ -113,35 +106,80 @@ class StudentRoleController extends Controller
         }
 
         $student->load('class');
+        $tugas = $this->getTugasForStudent($student);
+        $teachers = $this->getTeachers();
+        $students = Student::all();
+        $classes_for_student = Classes::all();
+        $mapels = $this->getMapelOptions();
 
-        // Filter tugas berdasarkan class_id dari student
+        return Inertia::render('Students/melihatTugasSiswa', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'class' => $student->class->name,
+            ],
+            'tugas' => $tugas,
+            'teachers' => $teachers,
+            'students' => $students,
+            'mapels' => $mapels,
+            'classes_for_student' => $classes_for_student,
+        ]);
+    }
+
+    protected function getStudentFromRequest(): ?Student
+    {
+        $user = auth()->user();
+        $isStudent = $user->role_type === 'siswa';
+
+        return $isStudent
+            ? $user->student
+            : Student::with('class')->find(request('student_id'));
+    }
+
+    protected function getTugasForStudent(Student $student)
+    {
         $tugas = Tugas::with(['mapel', 'student', 'teacher', 'kelas'])
             ->where('class_id', $student->class_id)
             ->orderByDesc('id')
             ->paginate(5)
             ->appends(request()->query());
 
-            $formattedTugas = collect($tugas->items())->values()->map(function ($t, $index) use ($tugas) {
-                $currentPage = $tugas->currentPage();
-                $perPage = $tugas->perPage();
-                $no = ($currentPage - 1) * $perPage + $index + 1;
+        $formatted = collect($tugas->items())->values()->map(function ($t, $index) use ($tugas) {
+            $currentPage = $tugas->currentPage();
+            $perPage = $tugas->perPage();
+            $no = ($currentPage - 1) * $perPage + $index + 1;
 
-                return [
-                    'no' => $no, // ← Tambahkan nomor urut lokal dimulai dari 1
-                    'id' => $t->id,
-                    'title' => $t->title,
-                    'mapel' => $t->mapel,
-                    'student' => $t->student,
-                    'teacher' => $t->teacher,
-                    'kelas' => $t->kelas,
-                    'description' => $t->description,
-                    'created_at' => $t->created_at,
-                    'updated_at' => $t->updated_at,
-                ];
-            });
+            return [
+                'no' => $no,
+                'id' => $t->id,
+                'title' => $t->title,
+                'mapel' => $t->mapel,
+                'student' => $t->student,
+                'teacher' => $t->teacher,
+                'kelas' => $t->kelas,
+                'description' => $t->description,
+                'created_at' => $t->created_at,
+                'updated_at' => $t->updated_at,
+            ];
+        });
 
-        // Ambil data lainnya
-        $teachers = Teacher::with('masterMapel')->get()->map(function ($teacher) {
+        return [
+            'data' => $formatted,
+            'meta' => [
+                'current_page' => $tugas->currentPage(),
+                'from' => $tugas->firstItem(),
+                'to' => $tugas->lastItem(),
+                'last_page' => $tugas->lastPage(),
+                'per_page' => $tugas->perPage(),
+                'total' => $tugas->total(),
+            ],
+            'links' => $tugas->linkCollection(),
+        ];
+    }
+
+    protected function getTeachers()
+    {
+        return Teacher::with('masterMapel')->get()->map(function ($teacher) {
             return [
                 'id' => $teacher->id,
                 'name' => $teacher->name,
@@ -155,11 +193,11 @@ class StudentRoleController extends Controller
                 }),
             ];
         });
+    }
 
-        $students = Student::all();
-        $classes_for_student = Classes::all();
-
-        $mapels = DB::table('teacher_mapel')
+    protected function getMapelOptions()
+    {
+        return DB::table('teacher_mapel')
             ->join('master_mapel', 'teacher_mapel.mapel_id', '=', 'master_mapel.id')
             ->join('teachers', 'teacher_mapel.teacher_id', '=', 'teachers.id')
             ->select(
@@ -171,30 +209,6 @@ class StudentRoleController extends Controller
                 'teachers.name as teacher_name'
             )
             ->get();
-
-        return Inertia::render('Students/melihatTugasSiswa', [
-            'student' => [
-                'id' => $student->id,
-                'name' => $student->name,
-                'class' => $student->class->name,
-            ],
-            'tugas' => [
-                'data' => $formattedTugas,
-                'meta' => [
-                    'current_page' => $tugas->currentPage(),
-                    'from' => $tugas->firstItem(),
-                    'to' => $tugas->lastItem(),
-                    'last_page' => $tugas->lastPage(),
-                    'per_page' => $tugas->perPage(),
-                    'total' => $tugas->total(),
-                ],
-            'links' => $tugas->linkCollection(), 
-            ],
-            'teachers' => $teachers,
-            'students' => $students,
-            'mapels' => $mapels,
-            'classes_for_student' => $classes_for_student,
-        ]);
     }
 
     public function melihatDataAbsensiSiswa(Request $request)

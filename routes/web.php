@@ -109,12 +109,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $totalMapel = Mapel::count();
             $totalJabatan = MasterJabatan::count();
 
+            $malePerMonth = Student::selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+                ->where('gender_id', '1')
+                ->whereYear('created_at', now()->year)
+                ->groupBy('month')
+                ->pluck('total', 'month')
+                ->toArray();
+
+            $femalePerMonth = Student::selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+                ->where('gender_id', '2')
+                ->whereYear('created_at', now()->year)
+                ->groupBy('month')
+                ->pluck('total', 'month')
+                ->toArray();
+
+            $maleData = [];
+            $femaleData = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $maleData[] = $malePerMonth[$i] ?? 0;
+                $femaleData[] = $femalePerMonth[$i] ?? 0;
+            }
+
             return Inertia::render('dashboard', [
                 'total' => $totalStudents,
                 'totalTeachers' => $totalTeachers,
                 'totalClasses' => $totalClasses,
                 'totalMapel' => $totalMapel,
                 'totalJabatan' => $totalJabatan,
+                'totalMaleStudentsPerMonth' => $maleData,
+                'totalFemaleStudentsPerMonth' => $femaleData,
             ]);
         })->name('admin.dashboard');
 

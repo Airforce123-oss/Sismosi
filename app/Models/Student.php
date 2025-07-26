@@ -6,28 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-/**
- * App\Models\Student
- *
- * @property int $id
- * @property string $name
- * @property int|null $gender_id
- * @property int|null $class_id
- * @property int|null $religion_id
- * @property int|null $no_induk_id
- * @property int|null $user_id
-* @property int|null $parent_id
- *
- * @property \App\Models\NoInduk $noInduk
- * @property \App\Models\Classes $class
- * @property \App\Models\Gender $gender
- * @property \App\Models\Religion $religion
- * @property \Illuminate\Database\Eloquent\Collection|\App\Models\Attendance[] $attendances
- * @property \App\Models\Mapel $mapel
- * @property \App\Models\User $user
- * @property \Illuminate\Database\Eloquent\Collection|\App\Models\KomentarSiswa[] $komentarSiswas
- * @property-read \App\Models\Classes $kelas
- */
 class Student extends Model
 {
 
@@ -57,7 +35,6 @@ class Student extends Model
 
     public function gender()
     {
-        //return $this->belongsTo(Gender::class, 'gender_id');
         return $this->belongsTo(Gender::class, 'gender_id');
     }
 
@@ -100,5 +77,9 @@ class Student extends Model
         return \App\Models\Classes::find($this->class_id);
     }
 
+    public function detail()
+    {
+        return $this->hasOne(DetailStudent::class, 'student_db_id');
+    }
 
 }

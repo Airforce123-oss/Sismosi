@@ -1,14 +1,14 @@
 <script setup>
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, ref, computed, watch, isRef } from 'vue';
 import { initFlowbite } from 'flowbite';
 import axios from 'axios';
+import Swal from 'sweetalert2';
+import Pagination from '@/Components/Pagination15.vue';
+
 import SidebarTeacher from '@/Components/SidebarTeacher.vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 
-// State for student profile
-const studentProfile = ref({});
-const paginatedBooks = ref([]);
 const searchQuery = ref('');
 
 // Modal state
@@ -22,16 +22,20 @@ const openAddModal = () => {
 };
 
 const editStudent = (student) => {
-  // Set form fields with the current student data
   console.log('Student received in editStudent:', student);
-  form.name = student.name;
-  form.student_id = student.student_id;
-  form.gender = student.gender;
-  form.class_id = student.class_id;
-  form.parentName = student.parent_name;
-  form.address = student.address;
 
-  // Open the modal
+  form.id = student.id;
+  form.name = student.name || '';
+  form.student_id = student.student?.no_induk?.no_induk || '';
+  form.student_db_id = student.student?.id || '';
+
+  form.gender =
+    student.gender === '1' ? 'L' : student.gender === '2' ? 'P' : '';
+
+  form.class_id = student.class_id || '';
+  form.parentName = student.parent_name || '';
+  form.address = student.address || '';
+
   showModalEdit.value = true;
 };
 
@@ -41,10 +45,12 @@ const closeModal = () => {
   showModalEdit.value = false;
 };
 
-const students = ref([]);
-
 const props = defineProps({
   auth: { type: Object },
+  students: {
+    type: Object,
+    required: true,
+  },
   classes_for_student: {
     type: Object,
     required: true,
@@ -54,14 +60,74 @@ const props = defineProps({
     type: Array,
     default: () => [], // Pastikan `genders` adalah array meskipun kosong
   },
+  detailStudents: {
+    type: Object,
+    required: true,
+  },
+  selectedClassId: {
+    type: Number,
+    required: true,
+  },
 });
 
-console.log('Classes for student:', props.classes_for_student);
+const students = computed(() => {
+  return detailStudentsState.value.filter(
+    (student) => student.class_id === props.selectedClassId
+  );
+});
+
+const paginationData = ref({});
+
+const fetchDetailStudents = async (
+  classId = selectedClassId.value,
+  page = 1
+) => {
+  try {
+    const response = await axios.get('/api/detailstudents', {
+      params: {
+        class_id: classId,
+        page: page,
+      },
+    });
+
+    console.log('📦 Full response:', response.data);
+
+    const responseData = response.data?.data;
+
+    if (responseData && Array.isArray(responseData.data)) {
+      // 🟢 Berhasil ambil data siswa
+      detailStudentsState.value = responseData.data;
+
+      // 🟢 Simpan metadata pagination seperti current_page, total, dll
+      paginationData.value = responseData;
+
+      console.log(
+        '✅ detailStudentsState setelah fetch:',
+        detailStudentsState.value
+      );
+      console.log('✅ paginationData:', paginationData.value);
+    } else {
+      console.warn('❗️Data siswa tidak ditemukan atau tidak berbentuk array.');
+      detailStudentsState.value = [];
+      paginationData.value = null;
+    }
+  } catch (error) {
+    console.error('❌ Gagal memuat data detail siswa:', error);
+    detailStudentsState.value = [];
+    paginationData.value = null;
+  }
+};
+
+const updatedPageNumber = async (page) => {
+  currentPage.value = page;
+  await fetchDetailStudents(selectedClassId.value, page);
+};
 
 const classesForStudent = props.classes || {};
 console.log(classesForStudent);
 
 const detailStudentsState = ref([]);
+
 console.log(detailStudentsState.value);
 
 const getClassName = (classId) => {
@@ -69,13 +135,6 @@ const getClassName = (classId) => {
     (item) => item.id === classId
   );
   return classItem ? classItem.name : '-';
-};
-
-const genders = [...props.genders];
-
-const getGenderName = (id) => {
-  const genderItem = props.genders.find((item) => item.id === id); // Asumsi item memiliki `id`
-  return genderItem ? genderItem.name : '-';
 };
 
 watch(
@@ -86,91 +145,45 @@ watch(
 );
 
 const form = useForm({
+  id: '',
+  selectedStudent: '',
   name: '',
   student_id: '',
+  student_db_id: '',
   gender: '',
   class_id: '',
   parentName: '',
   address: '',
 });
 
+const onStudentChange = () => {
+  if (form.selectedStudent) {
+    form.name = form.selectedStudent.name;
+    form.student_id = form.selectedStudent.noInduk?.no_induk ?? '';
+    form.gender = form.selectedStudent.gender ?? '';
+    form.class_id = form.selectedStudent.class?.id ?? '';
+  } else {
+    form.name = '';
+    form.student_id = '';
+    form.gender = '';
+    form.class_id = '';
+  }
+};
+
 console.log('Form Data yang Dikirim:', {
   name: form.name,
   student_id: form.student_id,
   class_id: form.class_id,
-  gender: form.gender,
+  gender: form.gender_id,
   parent_name: form.parentName,
   address: form.address,
 });
-
-console.log('parentName:', form.parentName);
-
-const studentData = ref(null);
 
 const addStudentData = (newStudent) => {
   if (newStudent) {
     students.value.push(newStudent); // Menambahkan data siswa baru
   }
 };
-
-// Example entries
-const entries = ref([
-  {
-    date: '11 Okt 2023',
-    parentName: 'Nia Gustiani',
-    studentName: 'Rangea Pratama',
-    gender: 'L',
-    class: 'X IPS 3',
-    issue: 'Ketahuan membawa rokok ke sekolah',
-    action:
-      'Siswa diberi sanksi oleh BK dan orang tua diminta untuk bekerjasama memantau anak di rumah',
-    note: '',
-  },
-  {
-    date: '16 Nov 2023',
-    parentName: 'Dede Purwati',
-    studentName: 'Syifaus Saadah',
-    gender: 'P',
-    class: 'X IPS 3',
-    issue: 'Konsultasi beasiswa siswa berprestasi',
-    action:
-      'Siswa diarahkan mengikuti seleksi yang berkaitan dengan penambahan pengetahuan akademik',
-    note: '',
-  },
-  {
-    date: '20 Nov 2023',
-    parentName: 'Popon Rohayati',
-    studentName: 'Zakey Muhammad Husni',
-    gender: 'L',
-    class: 'X IPS 3',
-    issue: 'Konsultasi perihal pembelajaran di sekolah',
-    action:
-      'Siswa diberikan stimulus agar bisa lebih konsentrasi dan semangat mengikuti pembelajaran di sekolah',
-    note: '',
-  },
-]);
-
-const filter = ref({
-  class: '',
-  gender: '',
-});
-
-const uniqueClasses = computed(() => {
-  const classes = entries.value.map((entry) => entry.class);
-  return [...new Set(classes)];
-});
-
-const filteredEntries = computed(() => {
-  return entries.value.filter((entry) => {
-    const matchClass = filter.value.class
-      ? entry.class === filter.value.class
-      : true;
-    const matchGender = filter.value.gender
-      ? entry.gender === filter.value.gender
-      : true;
-    return matchClass && matchGender;
-  });
-});
 
 const books = ref({ data: [], total: 0, per_page: 5 });
 const currentPage = ref(1);
@@ -199,88 +212,37 @@ const prevPage = () => {
   }
 };
 
-// Fetch student data from API
-const fetchStudents = async () => {
-  let page = 1;
-  let allStudents = [];
-  try {
-    let response;
-    do {
-      response = await axios.get(
-        `http://127.0.0.1:8000/api/students?page=${page}`
-      );
-      console.log(`Fetched Page ${page}:`, response.data.data);
-      allStudents = [...allStudents, ...response.data.data];
-      page++;
-    } while (response.data.next_page_url);
-
-    students.value = allStudents;
-    console.log('All Students Fetched:', students.value);
-  } catch (error) {
-    console.error('Error fetching students:', error);
-  }
-};
-
-const fetchDetailStudents = async () => {
-  let page = 1;
-  let allDetails = []; // Array untuk menampung semua data
-  try {
-    let response;
-    do {
-      // Fetch data dari API detailstudents dengan parameter page
-      response = await axios.get(
-        `http://127.0.0.1:8000/api/detailstudents?page=${page}`
-      );
-      console.log(`Fetched Page ${page}:`, response.data.data);
-
-      // Gabungkan data dari halaman saat ini ke array allDetails
-      allDetails = [...allDetails, ...response.data.data];
-      page++;
-    } while (response.data.next_page_url); // Lanjutkan jika masih ada halaman berikutnya
-
-    console.log('All Detail Students Fetched:', allDetails);
-
-    // Simpan data ke state atau variabel
-    detailStudentsState.value = allDetails; // Misal, menggunakan Vue ref
-  } catch (error) {
-    console.error('Error fetching detail students:', error);
-  }
-};
-
 // Function to handle form submission
 const submitForm = async () => {
   console.log('Form Data Setelah Validasi:', {
     name: form.name,
     student_id: form.student_id,
-    gender: form.gender,
+    gender_id: typeof form.gender === 'object' ? form.gender.id : form.gender,
     class_id: form.class_id,
     parentName: form.parentName,
     address: form.address,
   });
 
   try {
-    // Mengirim data ke API yang benar (detailstudents)
-    const response = await axios.post('/api/students', {
+    const response = await axios.post('/api/detailstudents', {
       name: form.name,
-      student_id: form.student_id, // pastikan menggunakan student_id sesuai dengan field di tabel
-      class_id: form.class_id, // sesuai dengan field di tabel
-      gender: form.gender,
-      parent_name: form.parentName ?? null, // Send null if no parent name
-      address: form.address ?? null, // Send null if no address
+      student_id: form.student_id,
+      gender_id: typeof form.gender === 'object' ? form.gender.id : form.gender,
+      class_id: form.class_id,
+      parent_name: form.parentName,
+      address: form.address,
     });
 
     console.log('API Response:', response.data);
 
-    // Cek apakah statusnya 200 atau 201 dan pastikan pesan berisi "Siswa berhasil ditambahkan!"
-    if (
-      (response.status === 200 || response.status === 201) &&
-      response.data.message &&
-      response.data.message.includes('Siswa berhasil ditambahkan!')
-    ) {
-      // Menambahkan data siswa baru ke dalam array students
+    if (response.status === 200 || response.status === 201) {
       addStudentData(response.data.student);
 
-      // Reset form atau tindak lanjut lainnya
+      await fetchDetailStudents();
+
+      showModalAdd.value = false;
+
+      // Reset form
       form.name = '';
       form.student_id = '';
       form.gender = '';
@@ -288,54 +250,75 @@ const submitForm = async () => {
       form.parentName = '';
       form.address = '';
 
-      alert('Data siswa berhasil ditambahkan!');
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Data siswa berhasil ditambahkan.',
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } else {
-      alert(
-        'Terjadi kesalahan saat menambah siswa. Pesan: ' + response.data.message
-      );
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal!',
+        text:
+          'Terjadi kesalahan saat menambah siswa. Pesan: ' +
+          response.data.message,
+      });
     }
   } catch (error) {
-    console.error('Error during form submission:', error);
-    alert(
-      'Terjadi kesalahan saat mengirimkan data. Pesan kesalahan: ' +
-        error.message
-    );
+    if (error.response && error.response.status === 422) {
+      console.error('Validation errors:', error.response.data.errors);
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Validasi Gagal!',
+        text: 'Mohon periksa kembali data yang Anda masukkan.',
+      });
+    } else {
+      console.error('Error during form submission:', error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Kesalahan!',
+        text:
+          'Terjadi kesalahan saat mengirimkan data. Pesan: ' + error.message,
+      });
+    }
   }
 };
 
 const updateStudent = async () => {
+  console.log('form.id di updateStudent:', form.id);
+
   try {
-    console.log('Student ID:', form.student_id); // Pastikan student_id ada
-
-    let url = null;
-
-    if (form.student_id) {
-      url = `/api/detailstudents/${form.student_id}/detail`;
-      console.log('Generated URL:', url);
-    } else {
-      console.error(
-        'student_id tidak tersedia di form. Pastikan untuk mengisi student_id.'
-      );
-      return; // Hentikan eksekusi jika student_id tidak ada
+    if (!form.id) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'ID Tidak Ditemukan',
+        text: 'ID siswa tidak ditemukan.',
+      });
+      return;
     }
 
-    console.log('Request URL:', url);
+    const url = `/api/detailstudents/${form.id}/detail`;
 
+    console.log('Request URL:', url);
     console.log('Payload data:', {
       name: form.name,
       student_id: form.student_id,
+      student_db_id: form.student_db_id,
       gender: form.gender,
       class_id: form.class_id,
       parent_name: form.parentName,
       address: form.address,
     });
+    console.log('form.student_db_id:', form.student_db_id);
 
-    console.log('Form student_id:', form.student_id); // Pastikan student_id sudah ada
-
-    // Gunakan PUT untuk update
     const response = await axios.put(url, {
       name: form.name,
       student_id: form.student_id,
+      student_db_id: form.student_db_id,
       gender: form.gender,
       class_id: form.class_id,
       parent_name: form.parentName,
@@ -343,28 +326,101 @@ const updateStudent = async () => {
     });
 
     if (response.status === 200) {
-      alert('Data siswa berhasil diperbarui!');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Data siswa berhasil diperbarui.',
+      });
+
       showModalEdit.value = false;
-      fetchStudents();
+
+      await fetchDetailStudents(selectedClassId.value);
     }
   } catch (error) {
     console.error(
       'Error updating student:',
       error.response ? error.response.data : error.message
     );
-    alert('Terjadi kesalahan saat memperbarui data siswa.');
+
+    await Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memperbarui',
+      text: 'Terjadi kesalahan saat memperbarui data siswa.',
+    });
   }
 };
 
-// Call the fetch function when the component is mounted
+const deleteStudent = async (id) => {
+  try {
+    const result = await Swal.fire({
+      title: 'Yakin ingin menghapus siswa ini?',
+      text: 'Tindakan ini tidak dapat dibatalkan!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, hapus!',
+      cancelButtonText: 'Batal',
+    });
+
+    if (result.isConfirmed) {
+      const url = `/api/detailstudents/${id}/detail`; // tetap sama
+
+      await axios.delete(url); // metode DELETE tetap
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Terhapus!',
+        text: 'Data siswa berhasil dihapus.',
+      });
+
+      await fetchDetailStudents(selectedClassId.value); // refresh data
+    }
+  } catch (error) {
+    console.error(
+      '❌ Gagal menghapus siswa:',
+      error.response?.data || error.message
+    );
+    await Swal.fire({
+      icon: 'error',
+      title: 'Gagal!',
+      text: 'Terjadi kesalahan saat menghapus siswa.',
+    });
+  }
+};
+
+const selectedClassId = ref(props.selectedClassId || null);
+
+watch(selectedClassId, (newVal) => {
+  console.log('selectedClassId berubah:', newVal);
+  fetchDetailStudents(newVal);
+});
+
 onMounted(() => {
   console.log('Component Mounted');
-  getGenderName();
-  updateStudent();
-  fetchDetailStudents();
-  fetchStudents();
+  fetchDetailStudents(selectedClassId.value);
+  console.log('Classes dari wali login:', props.classes_for_student);
   initFlowbite();
 });
+
+watch(selectedClassId, (val) => {
+  fetchDetailStudents(val);
+});
+
+watch(
+  () => form.selectedStudent,
+  (newStudent) => {
+    if (newStudent) {
+      form.student_id = newStudent.noInduk?.no_induk ?? '';
+      form.gender = newStudent.gender ?? '';
+      form.class_id = newStudent.class?.id ?? '';
+    } else {
+      form.student_id = '';
+      form.gender = '';
+      form.class_id = '';
+    }
+  }
+);
 </script>
 
 <style>
@@ -546,7 +602,7 @@ table td {
               <th
                 class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
               >
-                Namaa
+                Nama
               </th>
               <th
                 class="px-4 py-2 text-left text-sm font-semibold text-gray-700"
@@ -585,20 +641,24 @@ table td {
               v-for="(student, index) in detailStudentsState"
               :key="student.id"
             >
-              <td class="px-4 py-2 text-sm text-gray-700">
-                {{ index + 1 }}
-              </td>
+              <td class="px-4 py-2 text-sm text-gray-700">{{ index + 1 }}</td>
               <td class="px-4 py-2 text-sm text-gray-700">
                 {{ student.name || '-' }}
               </td>
               <td class="px-4 py-2 text-sm text-gray-700">
-                {{ student.student_id || '-' }}
+                {{ student.student?.no_induk?.no_induk || '-' }}
               </td>
               <td class="px-4 py-2 text-sm text-gray-700">
                 {{ getClassName(student.class_id) || '-' }}
               </td>
               <td class="px-4 py-2 text-sm text-gray-700">
-                {{ student.gender }}
+                {{
+                  student.gender === '1'
+                    ? 'Laki-laki'
+                    : student.gender === '2'
+                    ? 'Perempuan'
+                    : '-'
+                }}
               </td>
               <td class="px-4 py-2 text-sm text-gray-700">
                 {{ student.parent_name || 'No Parent Name' }}
@@ -609,7 +669,7 @@ table td {
               <td class="px-4 py-2 text-sm text-gray-700 text-right">
                 <div class="flex justify-end gap-2">
                   <button
-                    @click="editStudent(student.id)"
+                    @click="editStudent(student)"
                     class="bg-blue-500 text-white py-1 px-4 rounded-lg hover:bg-blue-700"
                   >
                     Edit
@@ -625,6 +685,13 @@ table td {
             </tr>
           </tbody>
         </table>
+        <Pagination
+          v-if="
+            Array.isArray(paginationData.links) && paginationData.links.length
+          "
+          :data="paginationData"
+          :updatedPageNumber="updatedPageNumber"
+        />
       </div>
 
       <!-- Button to open the modal -->
@@ -642,19 +709,24 @@ table td {
             <div class="mb-4">
               <label for="name" class="block mb-2">Nama Siswa</label>
               <select
-                v-model="form.name"
+                v-model="form.selectedStudent"
+                @change="onStudentChange"
                 id="name"
                 class="w-full p-2 border rounded"
                 required
               >
                 <option value="">Pilih Nama Siswa</option>
-                <!-- Menampilkan opsi nama siswa dari API -->
                 <option
-                  v-for="student in students"
+                  v-for="student in props.students.data"
                   :key="student.id"
-                  :value="student.name"
+                  :value="student"
                 >
                   {{ student.name }}
+                  <!-- -
+                  {{ student.noInduk?.no_induk ?? 'Tanpa No Induk' }} -
+                  {{ student.class?.name ?? 'Tanpa Kelas' }} -
+                  {{ student.gender?.name ?? 'Tanpa Gender' }} 
+                   -->
                 </option>
               </select>
             </div>
@@ -665,26 +737,22 @@ table td {
               >
               <input
                 type="text"
-                placeholder="Nomor Induk Siswa"
-                v-model="form.student_id"
                 id="studentId"
-                class="w-full p-2 border rounded"
-                @input="validateNumber"
-                required
+                v-model="form.student_id"
+                class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed"
+                readonly
               />
             </div>
+
             <div class="mb-4">
               <label for="gender" class="block mb-2">Jenis Kelamin</label>
-              <select
-                v-model="form.gender"
+              <input
+                type="text"
                 id="gender"
-                class="w-full p-2 border rounded"
-                required
-              >
-                <option value="">Pilih Jenis Kelamin</option>
-                <option value="L">Laki-laki</option>
-                <option value="P">Perempuan</option>
-              </select>
+                class="w-full p-2 border rounded bg-gray-100"
+                :value="form.gender?.name ?? 'Tidak diketahui'"
+                readonly
+              />
             </div>
 
             <div class="mb-4">

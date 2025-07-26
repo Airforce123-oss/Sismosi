@@ -7,6 +7,7 @@ use App\Http\Resources\ClassesResource;
 use App\Http\Resources\TeacherResource;
 use App\Http\Resources\StudentResource;
 use App\Http\Resources\BukuPenghubungResource; //Import BukuPenghubungResource
+use App\Http\Resources\DetailStudentResource; // Import DetailStudentResource
 use App\Http\Requests\StoreStudentRequest;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreTeacherRequest;
@@ -16,8 +17,10 @@ use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Tugas;
 use App\Models\WaliKelas;
+use App\Models\NoInduk;
 use App\Models\Classes;
 use App\Models\AbsensiSiswa;
+use App\Models\DetailStudent;
 use App\Models\MasterJabatan;
 use App\Models\BukuPenghubung;
 use App\Models\Teacher;
@@ -73,12 +76,39 @@ class TeacherController extends Controller
         ]);
     }
 
-
-    public function bukuPenghubung()
+    public function bukuPenghubung(Request $request)
     {
-        $classes_for_student = Classes::all();
+        $userId = auth()->id();
+
+        // Ambil teacher_id berdasarkan user login
+        $teacher = Teacher::where('user_id', $userId)->firstOrFail();
+
+        // Ambil semua class_id yang diampu guru
+        $classIds = WaliKelas::where('teacher_id', $teacher->id)->pluck('class_id');
+
+        // Ambil class_id dari query string (jika ada), atau pakai yang pertama
+        $selectedClassId = $request->get('kelas_id', $classIds->first());
+
+        // Ambil data siswa berdasarkan selectedClassId saja
+        $students = Student::where('class_id', $selectedClassId)
+            ->with(['noInduk', 'class', 'gender'])
+            ->get();
+
+        // Ambil detail siswa berdasarkan selectedClassId saja
+        $detailStudents = DetailStudent::with([
+            'student.noInduk',
+            'student.gender',
+            'student.religion',
+            'student.class'
+        ])
+        ->where('class_id', $selectedClassId)
+        ->get();
+
         return inertia('Teachers/BukuPenghubung/bukuPenghubung', [
-            'classes_for_student' => $classes_for_student,
+            'students' => StudentResource::collection($students),
+            'classes_for_student' => Classes::whereIn('id', $classIds)->get(),
+            'detailStudents' => DetailStudentResource::collection($detailStudents),
+            'selectedClassId' => (int) $selectedClassId, // kirim ke frontend
         ]);
     }
 
@@ -506,9 +536,39 @@ class TeacherController extends Controller
         ]);
 
         try {
-            // Proses update data siswa di database
-            $student = Student::findOrFail($id);
-            $student->update($request->all());
+            // Cari DetailStudent berdasarkan ID
+            $detailStudent = DetailStudent::findOrFail($id);
+
+            // Konversi gender dari 'L'/'P' menjadi 1/2
+            $genderValue = $request->gender === 'L' ? 1 : ($request->gender === 'P' ? 2 : null);
+
+            // Cari NoInduk yang sesuai
+            $student = Student::find($request->student_db_id);
+
+            if (!$student) {
+            return response()->json(['error' => 'Siswa tidak ditemukan.'], 404);
+        }
+
+
+            Log::info('Data sebelum update:', [
+            'name' => $request->name,
+            'student_db_id' => $student->id,
+            'class_id' => $request->class_id,
+            'gender' => $genderValue,
+            'parent_name' => $request->parent_name,
+            'address' => $request->address,
+        ]);
+
+
+            // Update DetailStudent
+            $detailStudent->update([
+                'name' => $request->name,
+                'student_db_id' => $student->id,
+                'class_id' => $request->class_id,
+                'gender' => $genderValue,
+                'parent_name' => $request->parent_name,
+                'address' => $request->address,
+            ]);
 
             return response()->json([
                 'message' => 'Data siswa berhasil diperbarui!',
@@ -516,14 +576,32 @@ class TeacherController extends Controller
         } catch (\Exception $e) {
             Log::error('Error updating student:', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(), // Tambahkan untuk debug mendalam
             ]);
 
             return response()->json([
                 'error' => 'Gagal memperbarui data siswa.',
+                'message' => $e->getMessage(), // Kirim pesan error ke frontend juga (sementara waktu)
             ], 500);
         }
     }
 
+        public function deleteDetailStudent($id)
+    {
+        $student = DetailStudent::find($id);
+
+        if (!$student) {
+            return response()->json([
+                'error' => 'Data siswa tidak ditemukan.'
+            ], 404);
+        }
+
+        $student->delete();
+
+        return response()->json([
+            'message' => 'Data siswa berhasil dihapus.'
+        ], 200);
+    }
 
     // Menyimpan Buku Penghubung baru
     public function storeBukuPenghubung(Request $request)

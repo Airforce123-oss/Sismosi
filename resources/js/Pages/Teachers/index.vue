@@ -319,11 +319,11 @@ watch(
 
     <!-- start1 -->
 
-    <main class="p-4 md:ml-64 h-auto pt-20">
+    <main class="p-7 md:ml-64 h-auto pt-20">
       <Head title="Teachers" />
-      <div class="text-2xl col-sm-12 mb-10"></div>
-      <div class="mx-auto max-w-7xl sm:items-center">
-        <div class="px-4 py-4 sm:px-6 lg:px-8 -ml-10">
+      
+      <div class="w-full">
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
           <div class="sm:flex sm:items-center">
             <div class="sm:flex-auto">
               <h1 class="text-3xl font-semibold text-gray-900">Guru</h1>
@@ -334,7 +334,7 @@ watch(
               <!-- Link untuk tambah guru -->
               <Link
                 :href="route('teachers.create')"
-                class="btn btn-primary modal-title fs-5 inline-flex items-center gap-x-2 py-2 px-4 text-sm font-medium text-white border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
               >
                 <i class="fa fa-plus mr-2"></i> Tambah Guru
               </Link>
@@ -342,7 +342,9 @@ watch(
           </div>
 
           <div class="flex flex-col justify-between sm:flex-row mt-6">
-            <div class="relative text-sm text-gray-800 col-span-3">
+            <div
+              class="relative w-full sm:max-w-xs text-sm text-gray-800 col-span-3"
+            >
               <div
                 class="absolute pl-2 left-0 top-0 bottom-0 flex items-center pointer-events-none text-gray-500"
               >
@@ -369,115 +371,107 @@ watch(
             />
           </div>
 
-          <div class="mt-8 flex flex-col mr-20">
-            <div class="w-full overflow-x-auto">
+          <div class="w-full px-4 sm:px-6 lg:px-8">
+            <div class="mt-4">
               <div
-                class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8"
+                class="overflow-x-auto bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg"
               >
-                <div
-                  class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg"
-                >
-                  <table class="min-w-full bg-white text-sm">
-                    <thead class="bg-gray-50">
-                      <tr>
-                        <th
-                          class="w-12 py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
-                        >
-                          ID
-                        </th>
-                        <th
-                          class="w-40 py-3.5 px-3 text-left font-semibold text-gray-900"
-                        >
-                          Nama
-                        </th>
-                        <th
-                          class="w-36 py-3.5 px-3 text-left font-semibold text-gray-900"
-                        >
-                          NIP
-                        </th>
-                        <th
-                          class="w-48 py-3.5 px-3 text-left font-semibold text-gray-900"
-                        >
-                          Wali Kelas
-                        </th>
-
-                        <th
-                          class="w-40 py-3.5 px-3 text-left font-semibold text-gray-900"
-                        >
-                          Mapel
-                        </th>
-                        <th
-                          class="w-40 py-3.5 px-3 text-left font-semibold text-gray-900"
-                        >
-                          Jabatan
-                        </th>
-                        <th
-                          class="w-32 py-3.5 px-3 text-right font-semibold text-gray-900"
-                        >
-                          Aksi
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white">
-                      <tr
-                        v-for="(teacher, index) in waliKelas.data"
-                        :key="teacher.id"
-                        class="hover:bg-gray-50"
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th
+                        class="w-12 py-3.5 pl-4 pr-3 text-left font-semibold text-gray-900 sm:pl-6"
                       >
-                        <td
-                          class="whitespace-nowrap py-4 pl-4 pr-3 text-gray-900 sm:pl-6"
+                        ID
+                      </th>
+                      <th
+                        class="w-40 py-3.5 px-4 text-left font-semibold text-gray-900"
+                      >
+                        Nama
+                      </th>
+                      <th
+                        class="w-36 py-3.5 px-4 text-left font-semibold text-gray-900"
+                      >
+                        NIP
+                      </th>
+                      <th
+                        class="w-48 py-3.5 px-4 text-left font-semibold text-gray-900"
+                      >
+                        Wali Kelas
+                      </th>
+                      <th
+                        class="w-40 py-3.5 px-4 text-left font-semibold text-gray-900"
+                      >
+                        Mapel
+                      </th>
+                      <th
+                        class="w-40 py-3.5 px-4 text-left font-semibold text-gray-900"
+                      >
+                        Jabatan
+                      </th>
+                      <th
+                        class="w-32 py-3.5 px-4 text-right font-semibold text-gray-900"
+                      >
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 bg-white">
+                    <tr
+                      v-for="(teacher, index) in waliKelas.data"
+                      :key="teacher.id"
+                      class="hover:bg-gray-50"
+                    >
+                      <td
+                        class="whitespace-nowrap py-4 pl-4 pr-3 text-gray-900 sm:pl-6"
+                      >
+                        <span v-if="pageNumber && perPage">
+                          {{
+                            (Number(pageNumber) - 1) * Number(perPage) +
+                            index +
+                            1
+                          }}
+                        </span>
+                        <span v-else>Loading...</span>
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                        {{ teacher.name }}
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                        {{ teacher.nip ?? '-' }}
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                        {{ teacher.wali_kelas?.nama_guru ?? '-' }}
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                        {{ getTeacherMapel(teacher) }}
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-gray-900">
+                        {{ teacher.jabatan?.nama_jabatan ?? '-' }}
+                      </td>
+                      <td class="whitespace-nowrap py-4 px-3 text-right">
+                        <Link
+                          :href="route('teachers.edit', teacher.id)"
+                          class="text-indigo-600 hover:underline"
+                          >Edit</Link
                         >
-                          <span v-if="pageNumber && perPage">
-                            {{
-                              (Number(pageNumber) - 1) * Number(perPage) +
-                              index +
-                              1
-                            }}
-                          </span>
-                          <span v-else>Loading...</span>
-                        </td>
-                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
-                          {{ teacher.name }}
-                        </td>
-                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
-                          {{ teacher.nip ?? '-' }}
-                        </td>
-                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
-                          {{ teacher.wali_kelas?.nama_guru ?? '-' }}
-                        </td>
-
-                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
-                          {{ getTeacherMapel(teacher) }}
-                        </td>
-                        <td class="whitespace-nowrap py-4 px-3 text-gray-900">
-                          {{ teacher.jabatan?.nama_jabatan ?? '-' }}
-                        </td>
-                        <td class="whitespace-nowrap py-4 px-3 text-right">
-                          <Link
-                            :href="route('teachers.edit', teacher.id)"
-                            class="text-indigo-600 hover:underline"
-                          >
-                            Edit
-                          </Link>
-
-                          <button
-                            @click="deleteTeacher(teacher.id)"
-                            class="ml-2 text-red-600 hover:underline"
-                          >
-                            Hapus
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <Pagination
-                  v-if="wali_kelas && wali_kelas.meta"
-                  :data="{ meta: wali_kelas.meta, items: wali_kelas.data }"
-                  :updatedPageNumber="updatedPageNumber"
-                />
+                        <button
+                          @click="deleteTeacher(teacher.id)"
+                          class="ml-2 text-red-600 hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
+
+              <Pagination
+                v-if="wali_kelas && wali_kelas.meta"
+                :data="{ meta: wali_kelas.meta, items: wali_kelas.data }"
+                :updatedPageNumber="updatedPageNumber"
+              />
             </div>
           </div>
         </div>

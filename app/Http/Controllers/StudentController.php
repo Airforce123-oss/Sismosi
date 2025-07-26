@@ -40,6 +40,10 @@ class StudentController extends Controller
         $this->applySearch($studentQuery, $request->search);
         $studentQuery->orderBy('id');
 
+        if ($request->filled('class')) {
+    $studentQuery->where('class_id', $request->class);
+        }
+
         // Pagination
         $students = $studentQuery->paginate(5)->appends($request->only('search'));
 
@@ -53,12 +57,13 @@ class StudentController extends Controller
         return inertia('Students/index', [
             'students' => StudentResource::collection($students),
             'search' => $request->input('search', ''),
-            'classes' => $classes,  // Kirim data classes
-            'genders' => $genders,  // Kirim data genders
-            'no_induks' => $noInduks, // Kirim data noInduks
-            'religions' => $religions, // Kirim data religions
+            'classes' => $classes,
+            'genders' => $genders,
+            'no_induks' => $noInduks,
+            'religions' => $religions, 
         ]);
     }
+
     public function fetchAllStudents()
     {
         try {
@@ -403,47 +408,100 @@ class StudentController extends Controller
         return response()->json($student);
     }
 
-    public function indexApiDetailStudent(Request $request)
+    public function storeDetailStudent(Request $request)
     {
-        // Ambil data dari tabel detailstudents, misalnya dengan pagination
-        $students = DetailStudent::paginate(10);  // Sesuaikan pagination sesuai kebutuhan
-
-        return response()->json($students);
-    }
-
-public function storeStudent(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'student_id' => 'required|string|unique:students,student_id|max:255',
-        // Hapus validasi no_induk_id jika tidak digunakan lagi
-        'class_id' => 'required|exists:classes,id',
-        'gender_id' => 'required|exists:genders,id',
-        'religion_id' => 'required|exists:religions,id',
-    ]);
-
-    try {
-        $student = Student::create([
-            'name' => $validated['name'],
-            'student_id' => $validated['student_id'], // ← sekarang ini dianggap sebagai NIS
-            'class_id' => $validated['class_id'],
-            'gender_id' => $validated['gender_id'],
-            'religion_id' => $validated['religion_id'],
-            // Jangan isi no_induk_id kalau tidak dipakai
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'student_id' => 'required|string',
+            'gender_id' => 'required|exists:genders,id',
+            'class_id' => 'required|exists:classes,id',
+            'parent_name' => 'required|string',
+            'address' => 'required|string',
         ]);
 
+        $noInduk = NoInduk::where('no_induk', $validated['student_id'])->first();
+
+        if (!$noInduk) {
+            return response()->json(['error' => 'Nomor Induk tidak ditemukan di tabel no_induks.'], 404);
+        }
+
+        $student = Student::where('no_induk_id', $noInduk->id)->first();
+
+        if (!$student) {
+            return response()->json(['error' => 'Siswa dengan nomor induk tersebut tidak ditemukan di tabel students.'], 404);
+        }
+
+        $detail = DetailStudent::create([
+            'name' => $validated['name'],
+            'student_db_id' => $student->id, 
+            'class_id' => $validated['class_id'],
+            'gender' => $validated['gender_id'],
+            'parent_name' => $validated['parent_name'],
+            'address' => $validated['address'],
+        ]);
+
+        // Load relasi agar student_id bisa diakses dari accessor
+        $detail->load('student.noInduk');
+
         return response()->json([
-            'message' => 'Siswa berhasil ditambahkan!',
-            'student' => $student,
+            'message' => 'Data detail siswa berhasil disimpan.',
+            'data' => $detail,
         ], 201);
-    } catch (\Exception $e) {
-        Log::error('Error creating student:', ['error' => $e->getMessage()]);
-        return response()->json([
-            'error' => 'Terjadi kesalahan saat menyimpan data siswa',
-            'detail' => $e->getMessage(),
-        ], 500);
     }
-}
+
+    public function indexApiDetailStudent(Request $request)
+    {
+        $query = DetailStudent::with(['student.class', 'student.gender', 'student.noInduk']);
+
+        if ($request->has('class_id') && $request->class_id !== null) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('class_id', $request->class_id);
+            });
+        }
+
+        $students = $query->paginate(5);
+
+        return response()->json([
+        'message' => 'Sukses',
+        'data' => $students
+        ]);
+
+
+    }
+
+    public function storeStudent(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'student_id' => 'required|string|unique:students,student_id|max:255',
+            // Hapus validasi no_induk_id jika tidak digunakan lagi
+            'class_id' => 'required|exists:classes,id',
+            'gender_id' => 'required|exists:genders,id',
+            'religion_id' => 'required|exists:religions,id',
+        ]);
+
+        try {
+            $student = Student::create([
+                'name' => $validated['name'],
+                'student_id' => $validated['student_id'], // ← sekarang ini dianggap sebagai NIS
+                'class_id' => $validated['class_id'],
+                'gender_id' => $validated['gender_id'],
+                'religion_id' => $validated['religion_id'],
+                // Jangan isi no_induk_id kalau tidak dipakai
+            ]);
+
+            return response()->json([
+                'message' => 'Siswa berhasil ditambahkan!',
+                'student' => $student,
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating student:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Terjadi kesalahan saat menyimpan data siswa',
+                'detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
 
 }

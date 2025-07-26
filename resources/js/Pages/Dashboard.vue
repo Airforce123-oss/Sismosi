@@ -15,22 +15,13 @@ const form = useForm({
   role_type: props.auth.user.role_type,
 });
 
-// ✅ Ambil props dari backend (jumlah siswa)
-const dashboardProps = defineProps({
-  total: Number,
-  totalTeachers: Number,
-  totalClasses: Number,
-  totalMapel: Number,
-  totalJabatan: Number,
-});
+console.log('props:', props);
+const totalMaleStudentsPerMonth = props.totalMaleStudentsPerMonth;
+const totalFemaleStudentsPerMonth = props.totalFemaleStudentsPerMonth;
 
-console.log('dashboardProps:', dashboardProps);
 
-// Untuk menampilkan di DOM, bisa gunakan nanti di <template>: {{ dashboardProps.total }}
-
-const apexChartElement = ref(null);
-const barChartElement = ref(null);
-const mainChartElement = ref(null);
+console.log('Laki-laki per bulan:', totalMaleStudentsPerMonth);
+console.log('Perempuan per bulan:', totalFemaleStudentsPerMonth);
 
 // Chart options, watchers, observers... (tidak diubah)
 const chartOptions = ref(null);
@@ -101,36 +92,6 @@ onMounted(async () => {
   initFlowbite();
 });
 
-const observer = new MutationObserver((mutationsList) => {
-  mutationsList.forEach(() => {
-    const apexChartElement = document.querySelector('#apexcharts-area');
-    const barChartElement = document.querySelector('#bar');
-    const mainChartElement = document.querySelector('#chart');
-
-    if (
-      apexChartElement?.value?.length > 0 &&
-      barChartElement?.value?.length > 0 &&
-      mainChartElement?.value?.length > 0
-    ) {
-      setupCharts();
-    } else {
-      console.error('Chart elements still not found.');
-    }
-  });
-});
-
-function setupCharts() {
-  if (
-    apexChartElement?.value?.length > 0 &&
-    barChartElement?.value?.length > 0 &&
-    mainChartElement?.value?.length > 0
-  ) {
-    createChart(apexChartElement.value[0], lineChartOptions);
-    createChart(barChartElement.value[0], barChartOptions);
-    createChart(mainChartElement.value[0], chartOptions);
-  }
-}
-
 const createChart = (selector, options) => {
   const chartElement = document.querySelector(selector);
   if (!chartElement) {
@@ -148,9 +109,18 @@ const lineChartOptions = {
   dataLabels: { enabled: false },
   stroke: { curve: 'smooth' },
   series: [
-    { name: 'Guru', color: '#3D5EE1', data: [45, 60, 75, 51, 42, 42, 30] },
+    {
+      name: 'Guru',
+      color: '#3D5EE1',
+      data: [props.totalTeachers || 0],
+    },
+    {
+      name: 'Siswa',
+      color: '#70C4CF',
+      data: [props.total || 0],
+    },
   ],
-  xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'] },
+  xaxis: { categories: ['Total'] },
 };
 
 const barChartOptions = {
@@ -162,15 +132,30 @@ const barChartOptions = {
     {
       name: 'Laki-laki',
       color: '#70C4CF',
-      data: [420, 532, 516, 575, 519, 517, 454],
+      data: totalMaleStudentsPerMonth,
     },
     {
       name: 'Perempuan',
       color: '#3D5EE1',
-      data: [336, 612, 344, 647, 345, 563, 256],
+      data: totalFemaleStudentsPerMonth,
     },
   ],
-  xaxis: { categories: [2009, 2010, 2011, 2012, 2013, 2014, 2015] },
+  xaxis: {
+    categories: [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ],
+  },
 };
 </script>
 
@@ -337,7 +322,7 @@ const barChartOptions = {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-4xl text-white font-extrabold">
-                  {{ dashboardProps.total }}
+                  {{ props.total }}
                 </h3>
                 <p class="mt-1 text-base font-semibold">Total Siswa</p>
                 <p class="mt-1 text-xs text-white/80 italic">
@@ -367,7 +352,7 @@ const barChartOptions = {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-4xl text-white font-extrabold">
-                  {{ totalTeachers }}
+                  {{ props.totalTeachers }}
                 </h3>
                 <p class="mt-1 text-base font-semibold">Total Guru</p>
                 <p class="mt-1 text-xs text-white/80 italic">
@@ -397,7 +382,7 @@ const barChartOptions = {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-4xl text-white font-extrabold">
-                  {{ totalClasses }}
+                  {{ props.totalClasses }}
                 </h3>
                 <p class="mt-1 text-base font-semibold">Total Kelas</p>
                 <p class="mt-1 text-xs text-white/80 italic">
@@ -427,7 +412,7 @@ const barChartOptions = {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-4xl text-white font-extrabold">
-                  {{ totalMapel }}
+                  {{ props.totalMapel }}
                 </h3>
                 <p class="mt-1 text-base font-semibold">Total Mata Pelajaran</p>
                 <p class="mt-1 text-xs text-white/80 italic">
@@ -460,7 +445,7 @@ const barChartOptions = {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-4xl text-white font-extrabold">
-                  {{ totalJabatan }}
+                  {{ props.totalJabatan }}
                 </h3>
                 <p class="mt-1 text-base font-semibold">Total Jabatan</p>
                 <p class="mt-1 text-xs text-white/80 italic">

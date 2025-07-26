@@ -207,8 +207,7 @@ onMounted(() => {
 
     <!-- start1 -->
     <main class="p-4 md:ml-64 h-auto pt-20">
-      <div class="sm:flex sm:items-center">
-        <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-20">
+          <div class="max-w-full mx-auto py-6 sm:px-6 lg:px-8 mt-10">
           <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
             <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-12">
               <!-- Formulir Tambah Siswa -->
@@ -386,8 +385,8 @@ onMounted(() => {
               </form>
             </div>
           </div>
-        </div>
       </div>
+      
     </main>
 
     <!-- end1-->
